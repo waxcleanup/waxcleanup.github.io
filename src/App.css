@@ -1,38 +1,248 @@
-.App {
-  text-align: center;
+/* Global Styling */
+body {
+  background-color: #1a1a1a;
+  color: #e0e0e0;
+  font-family: 'Arial', sans-serif;
+  margin: 0;
+  padding: 0;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+/* Header Styling */
+.app-header {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+  padding: 20px;
+  background-color: #1a1a1a;
+  margin-bottom: 20px;
 }
 
-.App-link {
-  color: #61dafb;
+.app-logo {
+  width: 400px; /* Adjust size as needed */
+  height: auto;
+  margin-bottom: 10px;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
+.app-title {
+  color: #00bfff; /* Light blue color for title */
+  font-size: 48px;
+  font-weight: bold;
+  margin: 0;
+}
+
+/* Centered Login Button */
+.login-section {
+  text-align: center;
+  margin: 20px 0;
+}
+
+/* Heading Colors */
+h1, h2, h3 {
+  color: #00ff80; /* Change orange to green */
+  text-align: center;
+}
+
+/* Input and Button Styling */
+input[type="text"], select, button {
+  border-radius: 5px;
+  border: none;
+  padding: 10px;
+  font-size: 14px;
+}
+
+input[type="text"] {
+  background-color: #333;
+  color: #e0e0e0;
+  border: 1px solid #555;
+}
+
+input::placeholder {
+  color: #aaa;
+}
+
+button {
+  background-color: #00ff80; /* Green color for buttons */
+  color: #1a1a1a;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+button:hover {
+  background-color: #00cc66; /* Darker green on hover */
+}
+
+button:disabled {
+  background-color: #555;
+  cursor: not-allowed;
+}
+
+/* Table Styling */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  overflow-x: auto;
+}
+
+th, td {
+  padding: 10px;
+  border: 1px solid #333;
+  color: #e0e0e0;
+}
+
+th {
+  background-color: #2e2e2e;
+}
+
+tbody tr:nth-child(even) {
+  background-color: #252525;
+}
+
+tbody tr:nth-child(odd) {
+  background-color: #1f1f1f;
+}
+
+table img {
+  width: 50px;
+  border-radius: 5px;
+}
+
+/* Responsive Table Styling */
+@media (max-width: 768px) {
+  table, thead, tbody, th, td, tr {
+    display: block;
+    width: 100%;
   }
-  to {
-    transform: rotate(360deg);
+
+  /* Table Header */
+  thead {
+    display: none;
   }
+
+  /* Display each row as a block */
+  tr {
+    margin-bottom: 15px;
+    border-bottom: 2px solid #333;
+  }
+
+  td {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 5px;
+    text-align: left;
+  }
+
+  /* Label each cell with the corresponding header */
+  td::before {
+    content: attr(data-label);
+    font-weight: bold;
+    color: #00ff80; /* Green color for mobile labels */
+    margin-right: 10px;
+  }
+}
+
+/* Container Styling */
+div.container {
+  padding: 20px;
+  background-color: #282828;
+  border-radius: 10px;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+}
+
+/* Pagination Styling */
+.pagination button {
+  background-color: #3b3b3b;
+  color: #00ff80; /* Green for pagination button text */
+  border: 1px solid #00ff80;
+  padding: 5px 10px;
+  border-radius: 5px;
+  transition: background-color 0.3s;
+}
+
+.pagination button:hover {
+  background-color: #00cc66; /* Darker green on hover */
+}
+
+.pagination span {
+  color: #e0e0e0;
+  margin: 0 10px;
+}
+
+/* Modal Styling */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal {
+  background-color: #1a1a1a;
+  color: #e0e0e0;
+  padding: 20px;
+  border-radius: 10px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.7);
+  text-align: left;
+}
+
+.modal h2 {
+  color: #00ff80; /* Green for modal title */
+  margin-bottom: 15px;
+}
+
+.modal-field {
+  margin-bottom: 15px;
+}
+
+.modal-field label {
+  display: block;
+  margin-bottom: 5px;
+  color: #e0e0e0;
+}
+
+.modal-field input[type="text"] {
+  background-color: #333;
+  color: #e0e0e0;
+  padding: 10px;
+  width: 100%;
+  border-radius: 5px;
+  border: 1px solid #555;
+  font-size: 14px;
+}
+
+.modal button.submit {
+  background-color: #00ff80; /* Green for submit button in modal */
+  color: #1a1a1a;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+  margin-right: 10px;
+}
+
+.modal button.submit:hover {
+  background-color: #00cc66; /* Darker green on hover */
+}
+
+.modal button.close {
+  background-color: #dc3545;
+  color: #fff;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.modal button.close:hover {
+  background-color: #c82333;
 }

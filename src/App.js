@@ -1,23 +1,357 @@
-import logo from './logo.svg';
+import React, { useState, useEffect } from 'react';
 import './App.css';
+import logo from './assets/cleanupcentr.png';
+import { 
+  fetchCollections, 
+  fetchSchemas, 
+  fetchTemplates, 
+  fetchTemplateDetails, 
+  syncCollectionData,
+  fetchUserBalances 
+} from './services/api';
+import { submitProposal } from './services/eosActions';
+import useSession from './hooks/useSession';
+import ProposalModal from './components/ProposalModal';
 
 function App() {
+  const { session, handleLogin, handleLogout, error } = useSession();
+  const [collections, setCollections] = useState([]);
+  const [schemas, setSchemas] = useState([]);
+  const [templates, setTemplates] = useState([]);
+  const [selectedCollection, setSelectedCollection] = useState('');
+  const [selectedSchema, setSelectedSchema] = useState('');
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [selectedTemplateName, setSelectedTemplateName] = useState('');
+  const [selectedTemplateMedia, setSelectedTemplateMedia] = useState({ img: '', video: '' });
+  const [loading, setLoading] = useState(false);
+  const [loadingSync, setLoadingSync] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [pagination, setPagination] = useState({ totalItems: 0, currentPage: 1, totalPages: 1 });
+  const [trashFee, setTrashFee] = useState('10.000 TRASH');
+  const [cinderReward, setCinderReward] = useState('1.000 CINDER');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // State variables for user balances
+  const [waxBalance, setWaxBalance] = useState('0.00000000'); 
+  const [trashBalance, setTrashBalance] = useState('0.00000000'); 
+  const [cinderBalance, setCinderBalance] = useState('0.00000000'); 
+
+  // Load collections based on search term
+  useEffect(() => {
+    const loadCollections = async () => {
+      if (!searchTerm || !session) return;
+      setLoading(true);
+      try {
+        const data = await fetchCollections(pagination.currentPage, 10, searchTerm);
+        setCollections(data.collections);
+        setPagination({
+          totalItems: data.pagination.totalItems,
+          currentPage: data.pagination.currentPage,
+          totalPages: data.pagination.totalPages,
+        });
+      } catch (error) {
+        console.error('Error loading collections:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadCollections();
+  }, [searchTerm, pagination.currentPage, session]);
+
+  useEffect(() => {
+    setPagination((prev) => ({ ...prev, currentPage: 1 }));
+    setCollections([]);
+  }, [searchTerm]);
+
+  // Fetch user balances when the session is available
+  useEffect(() => {
+    const fetchBalances = async () => {
+      if (session) {
+        try {
+          const { wax, trash, cinder } = await fetchUserBalances(session.actor);
+          setWaxBalance(wax);
+          setTrashBalance(trash);
+          setCinderBalance(cinder);
+        } catch (error) {
+          console.error('Error fetching user balances:', error);
+        }
+      }
+    };
+    fetchBalances();
+  }, [session]);
+
+  // Sync and load schemas when a collection is selected
+  const handleSelectCollection = async (collectionName) => {
+    setLoadingSync(true);
+    setSelectedCollection(collectionName);
+    setSelectedSchema('');
+    setSchemas([]);
+    setTemplates([]);
+
+    try {
+      await syncCollectionData(collectionName);
+      const fetchedSchemas = await fetchSchemas(collectionName);
+      setSchemas(fetchedSchemas);
+    } catch (error) {
+      console.error(`Error syncing or fetching schemas for ${collectionName}:`, error);
+    } finally {
+      setLoadingSync(false);
+    }
+  };
+
+  // Load templates based on selected schema, fetching full details for each template
+  useEffect(() => {
+    const loadTemplatesWithDetails = async () => {
+      if (selectedSchema) {
+        try {
+          setLoading(true);
+          const data = await fetchTemplates(selectedCollection, selectedSchema);
+          const templatesWithDetails = await Promise.all(
+            data.map(async (template) => {
+              const details = await fetchTemplateDetails(selectedCollection, template.template_id);
+              return {
+                ...template,
+                template_name: details.template_name || 'Unnamed Template',
+                circulating_supply: details.circulating_supply || 0,
+              };
+            })
+          );
+          setTemplates(templatesWithDetails);
+        } catch (error) {
+          console.error('Error loading templates:', error);
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        setTemplates([]);
+      }
+    };
+    loadTemplatesWithDetails();
+  }, [selectedSchema]);
+
+  // Fetch template details for selected template
+  const loadTemplateDetails = async (templateId) => {
+    if (!selectedCollection || !templateId) return;
+    try {
+      const data = await fetchTemplateDetails(selectedCollection, templateId);
+      setSelectedTemplateName(data.template_name || 'Unnamed Template');
+      setSelectedTemplateMedia({
+        img: data.img ? `https://ipfs.io/ipfs/${data.img}` : '',
+        video: data.video ? `https://ipfs.io/ipfs/${data.video}` : '',
+      });
+    } catch (error) {
+      console.error('Error loading template details:', error);
+    }
+  };
+
+  // Handlers for selecting schema and template
+  const handleSelectSchema = (schemaName) => setSelectedSchema(schemaName);
+  const handleSelectTemplate = (templateId) => {
+    const template = templates.find((t) => t.template_id === Number(templateId));
+    setSelectedTemplate(template);
+    loadTemplateDetails(templateId);
+  };
+
+  // Pagination handlers
+  const handleNextPage = () => {
+    if (pagination.currentPage < pagination.totalPages) {
+      setPagination((prev) => ({ ...prev, currentPage: prev.currentPage + 1 }));
+    }
+  };
+  const handlePreviousPage = () => {
+    if (pagination.currentPage > 1) {
+      setPagination((prev) => ({ ...prev, currentPage: prev.currentPage - 1 }));
+    }
+  };
+
+  // Create proposal and open modal
+  const handleCreateProposal = () => {
+    if (!selectedTemplate) return;
+    setIsModalOpen(true);
+  };
+
+  // Submit proposal handler
+  const handleProposalSubmit = async () => {
+    if (!selectedTemplate || !session) return;
+    try {
+      setLoading(true);
+      await submitProposal({
+        session,
+        proposer: session.actor,
+        proposal_type: 'NFT Burn', // Set proposal type as NFT Burn
+        collection: selectedCollection,
+        schema: selectedSchema,
+        template_id: selectedTemplate.template_id,
+        trash_fee: trashFee,
+        cinder_reward: cinderReward,
+      });
+      alert('Proposal submitted successfully!');
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error('Error submitting proposal:', error);
+      alert('Failed to submit proposal.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
+      <header className="app-header">
+        <img src={logo} alt="Cleanup Logo" className="app-logo" />
+        <h1 className="app-title">TheCleanupCentr</h1>
       </header>
+
+      {error && <p style={{ color: 'red' }}>Error: {error}</p>}
+
+      <div className="login-section">
+        {!session ? (
+          <button onClick={() => handleLogin('anchor')}>Login</button>
+        ) : (
+          <button onClick={handleLogout}>Log out</button>
+        )}
+      </div>
+
+      {session && (
+        <div className="balances-section" style={{ textAlign: 'center', margin: '20px 0' }}>
+          <h3>User Balances</h3>
+          <p>WAX: {waxBalance}</p>
+          <p>TRASH: {trashBalance}</p>
+          <p>CINDER: {cinderBalance}</p>
+        </div>
+      )}
+
+      {(loading || loadingSync) && <p style={{ textAlign: 'center', color: '#888' }}>Loading...</p>}
+
+      {session && (
+        <>
+          <div className="search-container" style={{ textAlign: 'center', margin: '20px 0' }}>
+            <input
+              type="text"
+              placeholder="Search collections by name or author..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{
+                padding: '10px',
+                width: '80%',
+                maxWidth: '400px',
+                borderRadius: '5px',
+                border: '1px solid #555',
+                fontSize: '14px',
+              }}
+            />
+          </div>
+
+          <div className="selection-container" style={{ marginBottom: '20px', textAlign: 'center' }}>
+            <select onChange={(e) => handleSelectSchema(e.target.value)} style={{ marginRight: '10px', padding: '10px', borderRadius: '5px', border: '1px solid #555' }}>
+              <option value="">{schemas.length > 0 ? "Select Schema" : "No schemas found"}</option>
+              {schemas.map((schema) => (
+                <option key={schema.schema_name} value={schema.schema_name}>
+                  {schema.schema_name}
+                </option>
+              ))}
+            </select>
+
+            <select onChange={(e) => handleSelectTemplate(e.target.value)} style={{ marginRight: '10px', padding: '10px', borderRadius: '5px', border: '1px solid #555' }}>
+              <option value="">{templates.length > 0 ? "Select Template" : "No templates found"}</option>
+              {templates.map((template) => (
+                <option key={template.template_id} value={template.template_id}>
+                  {template.template_id} - {template.template_name || 'Unnamed Template'} (Supply: {template.circulating_supply})
+                </option>
+              ))}
+            </select>
+
+            {selectedTemplateName && (
+              <div style={{ color: '#00ff80', marginTop: '10px' }}>
+                <p>Selected Template: {selectedTemplateName}</p>
+                {selectedTemplateMedia.video ? (
+                  <video
+                    src={selectedTemplateMedia.video}
+                    alt={selectedTemplateName}
+                    controls
+                    autoPlay
+                    style={{ maxWidth: '200px', borderRadius: '5px', marginTop: '10px' }}
+                  />
+                ) : selectedTemplateMedia.img ? (
+                  <img
+                    src={selectedTemplateMedia.img}
+                    alt={selectedTemplateName}
+                    style={{ maxWidth: '200px', borderRadius: '5px', marginTop: '10px' }}
+                  />
+                ) : null}
+              </div>
+            )}
+
+            <button
+              onClick={handleCreateProposal}
+              disabled={!selectedTemplate}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: selectedTemplate ? '#28a745' : '#ccc',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '5px',
+                cursor: selectedTemplate ? 'pointer' : 'not-allowed',
+              }}
+            >
+              Create Proposal
+            </button>
+          </div>
+        </>
+      )}
+
+      {session && collections.length > 0 && (
+        <div className="collections-container">
+          <h2>Collections</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Collection Name</th>
+                <th>Image</th>
+                <th>Select</th>
+              </tr>
+            </thead>
+            <tbody>
+              {collections.map((collection) => (
+                <tr key={collection.collection_name}>
+                  <td>{collection.collection_name}</td>
+                  <td>
+                    {collection.imageUrl && (
+                      <img src={collection.imageUrl} alt={collection.collection_name} style={{ width: '50px', borderRadius: '5px' }} />
+                    )}
+                  </td>
+                  <td>
+                    <button onClick={() => handleSelectCollection(collection.collection_name)}>Select</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <div className="pagination">
+            <button onClick={handlePreviousPage} disabled={pagination.currentPage === 1}>
+              Previous
+            </button>
+            <span>Page {pagination.currentPage} of {pagination.totalPages}</span>
+            <button onClick={handleNextPage} disabled={pagination.currentPage === pagination.totalPages}>
+              Next
+            </button>
+          </div>
+        </div>
+      )}
+
+      {isModalOpen && (
+        <ProposalModal
+          templateId={selectedTemplate ? selectedTemplate.template_id : ''}
+          proposalType="NFT Burn" // Auto-populate proposal type as NFT Burn
+          trashFee={trashFee}
+          setTrashFee={setTrashFee}
+          cinderReward={cinderReward}
+          setCinderReward={setCinderReward}
+          handleProposalSubmit={handleProposalSubmit}
+          onClose={() => setIsModalOpen(false)}
+        />
+      )}
     </div>
   );
 }
