@@ -7,11 +7,13 @@ import {
   fetchTemplates, 
   fetchTemplateDetails, 
   syncCollectionData,
-  fetchUserBalances 
+  fetchUserBalances,
+  fetchProposals // Import fetchProposals
 } from './services/api';
-import { submitProposal } from './services/eosActions';
+import { submitProposal, voteOnProposal } from './services/eosActions'; // Import voteOnProposal
 import useSession from './hooks/useSession';
 import ProposalModal from './components/ProposalModal';
+import Proposals from './components/Proposals'; // Import the Proposals component
 
 function App() {
   const { session, handleLogin, handleLogout, error } = useSession();
@@ -35,6 +37,9 @@ function App() {
   const [waxBalance, setWaxBalance] = useState('0.00000000'); 
   const [trashBalance, setTrashBalance] = useState('0.00000000'); 
   const [cinderBalance, setCinderBalance] = useState('0.00000000'); 
+
+  // State for proposals
+  const [proposals, setProposals] = useState([]);
 
   // Load collections based on search term
   useEffect(() => {
@@ -78,6 +83,20 @@ function App() {
       }
     };
     fetchBalances();
+  }, [session]);
+
+  // Fetch proposals when session is available
+  useEffect(() => {
+    const loadProposals = async () => {
+      if (!session) return;
+      try {
+        const data = await fetchProposals();
+        setProposals(data);
+      } catch (error) {
+        console.error('Error fetching proposals:', error);
+      }
+    };
+    loadProposals();
   }, [session]);
 
   // Sync and load schemas when a collection is selected
@@ -195,12 +214,72 @@ function App() {
     }
   };
 
+  // Handle vote action for proposals
+  const handleVote = async (propId, voteFor) => {
+    try {
+      await voteOnProposal({ session, voter: session.actor, propId, voteFor });
+      alert(`Vote ${voteFor ? 'for' : 'against'} proposal ${propId} submitted successfully!`);
+
+      // Update the specific proposal's vote count in the state
+      setProposals((prevProposals) =>
+        prevProposals.map((proposal) => {
+          if (proposal.prop_id === propId) {
+            return {
+              ...proposal,
+              votes_for: voteFor
+                ? (parseFloat(proposal.votes_for) + 1).toFixed(2)
+                : proposal.votes_for,
+              votes_against: !voteFor
+                ? (parseFloat(proposal.votes_against) + 1).toFixed(2)
+                : proposal.votes_against,
+            };
+          }
+          return proposal;
+        })
+      );
+    } catch (error) {
+      console.error('Error voting on proposal:', error);
+      alert('Failed to submit vote.');
+    }
+  };
+
   return (
     <div className="App">
       <header className="app-header">
         <img src={logo} alt="Cleanup Logo" className="app-logo" />
         <h1 className="app-title">TheCleanupCentr</h1>
       </header>
+
+      {!session && (
+        <div style={{ 
+          textAlign: 'center', 
+          margin: '20px auto', 
+          maxWidth: '600px', 
+          padding: '20px', 
+          fontSize: '18px', 
+          color: '#333', 
+          backgroundColor: '#e0e0e0', 
+          borderRadius: '8px', 
+          boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)' 
+        }}>
+          Welcome to TheCleanupCentr Collection, where we lead the charge in digital sustainability. The CleanupCentr is a groundbreaking initiative aimed at reducing digital clutter on the blockchain by incentivizing the burning of old and unused NFTs. With our unique TRASH and CINDER tokens, users can actively participate in a cleaner digital ecosystem, earning rewards as they help streamline and optimize blockchain assets. Dive in, contribute to a cleaner crypto world, and collect rewards in a space where every action drives us closer to a sustainable digital future!
+        </div>
+      )}
+
+      {/* New informational box */}
+      <div style={{ 
+        textAlign: 'center', 
+        margin: '20px auto', 
+        maxWidth: '600px', 
+        padding: '20px', 
+        fontSize: '18px', 
+        color: '#555', 
+        backgroundColor: '#f8d7da', 
+        borderRadius: '8px', 
+        boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)' 
+      }}>
+        This is currently under construction. There are bugs and features that are still being developed. For any inquiries or questions, please email <a href="mailto:cleanuptoken@gmail.com" style={{ color: '#721c24', textDecoration: 'underline' }}>cleanuptoken@gmail.com</a>.
+      </div>
 
       {error && <p style={{ color: 'red' }}>Error: {error}</p>}
 
@@ -351,6 +430,10 @@ function App() {
           handleProposalSubmit={handleProposalSubmit}
           onClose={() => setIsModalOpen(false)}
         />
+      )}
+
+      {session && (
+        <Proposals proposals={proposals} handleVote={handleVote} />
       )}
     </div>
   );

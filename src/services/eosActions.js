@@ -1,5 +1,7 @@
+// services/eosActions.js
 import { InitTransaction } from '../hooks/useSession';
 
+// Submits a proposal to the blockchain
 export const submitProposal = async ({ session, proposer, collection, schema, template_id, trash_fee, cinder_reward }) => {
   if (!session) throw new Error("No active session found. Please log in.");
 
@@ -32,9 +34,36 @@ export const submitProposal = async ({ session, proposer, collection, schema, te
   ];
 
   try {
-    return await InitTransaction({ actions });
+    // Initialize transaction
+    return await InitTransaction({ session, actions });
   } catch (error) {
     console.error('Error during proposal submission:', error);
+    throw error;
+  }
+};
+
+// Votes on a proposal
+export const voteOnProposal = async ({ session, voter, propId, voteFor }) => {
+  if (!session) throw new Error("No active session found. Please log in.");
+
+  const actions = [
+    {
+      account: 'cleanupcentr',
+      name: 'voteprop',
+      authorization: [{ actor: voter, permission: 'active' }],
+      data: {
+        voter,
+        prop_id: propId,
+        vote_for: voteFor,
+      },
+    },
+  ];
+
+  try {
+    // Initialize transaction
+    return await InitTransaction({ session, actions });
+  } catch (error) {
+    console.error('Error during proposal voting:', error);
     throw error;
   }
 };

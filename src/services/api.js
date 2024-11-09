@@ -1,6 +1,6 @@
 // services/api.js
 import axios from 'axios';
-import { JsonRpc } from 'eosjs'; // EOSIO JSON RPC for blockchain interaction
+import { JsonRpc } from 'eosjs';
 
 const API_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:3003';
 const rpc = new JsonRpc(process.env.REACT_APP_RPC || 'https://wax.pink.gg'); // Updated to mainnet WAX URL
@@ -86,35 +86,47 @@ export const syncCollectionData = async (collectionName) => {
 /**
  * Fetches user balances for WAX, TRASH, and CINDER directly from the blockchain.
  */
-// Adjust the fetchUserBalances to return just the numeric value
 export const fetchUserBalances = async (accountName) => {
   try {
-    const waxResponse = await axios.post('https://wax.pink.gg/v1/chain/get_account', {
+    const waxResponse = await axios.post(`${rpc.endpoint}/v1/chain/get_account`, {
       account_name: accountName,
     });
-    const waxBalance = waxResponse.data.core_liquid_balance || '0.00000000'; // Only numeric value
+    const waxBalance = waxResponse.data.core_liquid_balance || '0.00000000 WAX';
 
-    const trashBalanceResponse = await axios.post('https://wax.pink.gg/v1/chain/get_currency_balance', {
+    const trashBalanceResponse = await axios.post(`${rpc.endpoint}/v1/chain/get_currency_balance`, {
       code: "cleanuptoken",
       account: accountName,
       symbol: "TRASH",
     });
-    const trashBalance = trashBalanceResponse.data[0] ? trashBalanceResponse.data[0].split(' ')[0] : '0.00000000'; // Get only the numeric part
+    const trashBalance = trashBalanceResponse.data[0] ? trashBalanceResponse.data[0].split(' ')[0] : '0.00000000';
 
-    const cinderBalanceResponse = await axios.post('https://wax.pink.gg/v1/chain/get_currency_balance', {
+    const cinderBalanceResponse = await axios.post(`${rpc.endpoint}/v1/chain/get_currency_balance`, {
       code: "cleanuptoken",
       account: accountName,
       symbol: "CINDER",
     });
-    const cinderBalance = cinderBalanceResponse.data[0] ? cinderBalanceResponse.data[0].split(' ')[0] : '0.00000000'; // Get only the numeric part
+    const cinderBalance = cinderBalanceResponse.data[0] ? cinderBalanceResponse.data[0].split(' ')[0] : '0.00000000';
 
     return {
-      wax: waxBalance, // e.g., '0.00000000'
-      trash: trashBalance, // e.g., '1794217475.956'
-      cinder: cinderBalance, // e.g., '0.00000000'
+      wax: waxBalance,
+      trash: trashBalance,
+      cinder: cinderBalance,
     };
   } catch (error) {
     console.error('Error fetching user balances:', error);
     throw new Error('Failed to fetch user balances');
+  }
+};
+
+/**
+ * Fetches proposals for display in the frontend.
+ */
+export const fetchProposals = async () => {
+  try {
+    const response = await axios.get(`${API_URL}/cleanup/proposals`);
+    return response.data; // Assuming response is an array of proposals
+  } catch (error) {
+    console.error('Error fetching proposals:', error);
+    throw error;
   }
 };
