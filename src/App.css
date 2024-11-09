@@ -13,42 +13,45 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: 15px;
   background-color: #1a1a1a;
-  margin-bottom: 20px;
-}
-
-.app-logo {
-  width: 400px; /* Adjust size as needed */
-  height: auto;
   margin-bottom: 10px;
 }
 
-.app-title {
-  color: #00bfff; /* Light blue color for title */
-  font-size: 48px;
-  font-weight: bold;
-  margin: 0;
+.app-logo {
+  width: 300px;
+  height: auto;
+  margin-bottom: 8px;
 }
 
-/* Centered Login Button */
+.app-title {
+  color: #00bfff;
+  font-size: 32px;
+  font-weight: bold;
+  margin: 0;
+  text-align: center;
+}
+
+/* Login Button */
 .login-section {
   text-align: center;
-  margin: 20px 0;
+  margin: 30px 0;
 }
 
 /* Heading Colors */
 h1, h2, h3 {
-  color: #00ff80; /* Change orange to green */
+  color: #00ff80;
   text-align: center;
+  font-size: 24px;
 }
 
 /* Input and Button Styling */
 input[type="text"], select, button {
   border-radius: 5px;
   border: none;
-  padding: 10px;
-  font-size: 14px;
+  padding: 5px;
+  font-size: 15px;
+  width: 28%;
 }
 
 input[type="text"] {
@@ -57,19 +60,15 @@ input[type="text"] {
   border: 1px solid #555;
 }
 
-input::placeholder {
-  color: #aaa;
-}
-
 button {
-  background-color: #00ff80; /* Green color for buttons */
+  background-color: #00ff80;
   color: #1a1a1a;
   cursor: pointer;
   transition: background-color 0.3s;
 }
 
 button:hover {
-  background-color: #00cc66; /* Darker green on hover */
+  background-color: #00cc66;
 }
 
 button:disabled {
@@ -79,15 +78,17 @@ button:disabled {
 
 /* Table Styling */
 table {
-  width: 100%;
+  width: 60%;
   border-collapse: collapse;
-  overflow-x: auto;
+  margin: 0 auto;
 }
 
 th, td {
-  padding: 10px;
+  padding: 8px;
   border: 1px solid #333;
   color: #e0e0e0;
+  text-align: center;
+  font-size: 14px;
 }
 
 th {
@@ -102,147 +103,92 @@ tbody tr:nth-child(odd) {
   background-color: #1f1f1f;
 }
 
-table img {
-  width: 50px;
-  border-radius: 5px;
-}
-
-/* Responsive Table Styling */
-@media (max-width: 768px) {
-  table, thead, tbody, th, td, tr {
+/* Responsive Table Styling for Mobile */
+@media (max-width: 750px) {
+  table, tbody, tr, th, td {
     display: block;
-    width: 100%;
+    width: 95%;
   }
 
-  /* Table Header */
   thead {
     display: none;
   }
 
-  /* Display each row as a block */
   tr {
-    margin-bottom: 15px;
-    border-bottom: 2px solid #333;
+    margin-bottom: 3px;
+    border-bottom: 1px solid #333;
   }
 
   td {
     display: flex;
     justify-content: space-between;
-    padding: 10px 5px;
-    text-align: left;
+    align-items: center;
+    padding: 10px;
+    font-size: 14px;
   }
 
-  /* Label each cell with the corresponding header */
   td::before {
     content: attr(data-label);
     font-weight: bold;
-    color: #00ff80; /* Green color for mobile labels */
+    color: #00ff80;
     margin-right: 10px;
   }
 }
 
-/* Container Styling */
-div.container {
-  padding: 20px;
-  background-color: #282828;
-  border-radius: 10px;
-  box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+/* Voting Button Styling */
+.vote-button {
+  padding: 10px 10px;
+  font-size: 14px;
+  border: none;
+  border-radius: 5px;
+  margin: 5px 0;
+  cursor: pointer;
+  width: 80%;
+}
+
+.vote-for {
+  background-color: #00ff80;
+  color: #1a1a1a;
+}
+
+.vote-against {
+  background-color: #dc3545;
+  color: #fff;
+}
+
+.vote-button:hover {
+  opacity: 0.8;
+}
+
+@media (max-width: 768px) {
+  .vote-button {
+    padding: 12px;
+    font-size: 16px;
+  }
 }
 
 /* Pagination Styling */
+.pagination {
+  display: flex;
+  justify-content: center;
+  margin-top: 15px;
+}
+
 .pagination button {
   background-color: #3b3b3b;
-  color: #00ff80; /* Green for pagination button text */
+  color: #00ff80;
   border: 1px solid #00ff80;
   padding: 5px 10px;
   border-radius: 5px;
   transition: background-color 0.3s;
+  margin: 0 5px;
 }
 
 .pagination button:hover {
-  background-color: #00cc66; /* Darker green on hover */
+  background-color: #00cc66;
 }
 
 .pagination span {
   color: #e0e0e0;
   margin: 0 10px;
-}
-
-/* Modal Styling */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.8);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.modal {
-  background-color: #1a1a1a;
-  color: #e0e0e0;
-  padding: 20px;
-  border-radius: 10px;
-  width: 90%;
-  max-width: 500px;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.7);
-  text-align: left;
-}
-
-.modal h2 {
-  color: #00ff80; /* Green for modal title */
-  margin-bottom: 15px;
-}
-
-.modal-field {
-  margin-bottom: 15px;
-}
-
-.modal-field label {
-  display: block;
-  margin-bottom: 5px;
-  color: #e0e0e0;
-}
-
-.modal-field input[type="text"] {
-  background-color: #333;
-  color: #e0e0e0;
-  padding: 10px;
-  width: 100%;
-  border-radius: 5px;
-  border: 1px solid #555;
-  font-size: 14px;
-}
-
-.modal button.submit {
-  background-color: #00ff80; /* Green for submit button in modal */
-  color: #1a1a1a;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-weight: bold;
-  margin-right: 10px;
-}
-
-.modal button.submit:hover {
-  background-color: #00cc66; /* Darker green on hover */
-}
-
-.modal button.close {
-  background-color: #dc3545;
-  color: #fff;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-weight: bold;
-}
-
-.modal button.close:hover {
-  background-color: #c82333;
 }

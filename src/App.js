@@ -8,12 +8,12 @@ import {
   fetchTemplateDetails, 
   syncCollectionData,
   fetchUserBalances,
-  fetchProposals // Import fetchProposals
+  fetchProposals
 } from './services/api';
-import { submitProposal, voteOnProposal } from './services/eosActions'; // Import voteOnProposal
+import { submitProposal, voteOnProposal } from './services/eosActions';
 import useSession from './hooks/useSession';
 import ProposalModal from './components/ProposalModal';
-import Proposals from './components/Proposals'; // Import the Proposals component
+import Proposals from './components/Proposals';
 
 function App() {
   const { session, handleLogin, handleLogout, error } = useSession();
@@ -313,7 +313,7 @@ function App() {
               style={{
                 padding: '10px',
                 width: '80%',
-                maxWidth: '400px',
+                maxWidth: '200px',
                 borderRadius: '5px',
                 border: '1px solid #555',
                 fontSize: '14px',
@@ -341,7 +341,7 @@ function App() {
             </select>
 
             {selectedTemplateName && (
-              <div style={{ color: '#00ff80', marginTop: '10px' }}>
+              <div style={{ color: '#00ff80', marginTop: '1px' }}>
                 <p>Selected Template: {selectedTemplateName}</p>
                 {selectedTemplateMedia.video ? (
                   <video
@@ -386,7 +386,6 @@ function App() {
             <thead>
               <tr>
                 <th>Collection Name</th>
-                <th>Image</th>
                 <th>Select</th>
               </tr>
             </thead>
@@ -394,11 +393,6 @@ function App() {
               {collections.map((collection) => (
                 <tr key={collection.collection_name}>
                   <td>{collection.collection_name}</td>
-                  <td>
-                    {collection.imageUrl && (
-                      <img src={collection.imageUrl} alt={collection.collection_name} style={{ width: '50px', borderRadius: '5px' }} />
-                    )}
-                  </td>
                   <td>
                     <button onClick={() => handleSelectCollection(collection.collection_name)}>Select</button>
                   </td>
@@ -422,7 +416,7 @@ function App() {
       {isModalOpen && (
         <ProposalModal
           templateId={selectedTemplate ? selectedTemplate.template_id : ''}
-          proposalType="NFT Burn" // Auto-populate proposal type as NFT Burn
+          proposalType="NFT Burn"
           trashFee={trashFee}
           setTrashFee={setTrashFee}
           cinderReward={cinderReward}
