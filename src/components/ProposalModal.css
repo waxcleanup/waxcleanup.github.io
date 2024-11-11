@@ -27,6 +27,26 @@
   margin-bottom: 15px;
 }
 
+.proposal-fee-note {
+  color: #ff6347; /* Use a standout color for the note, such as tomato red */
+  background-color: #2a2a2a; /* Slightly darker background to separate from the modal content */
+  padding: 10px;
+  border-radius: 5px;
+  margin-bottom: 15px;
+  font-weight: bold;
+  text-align: center;
+}
+
+.proposal-note {
+  color: #ffc107; /* Amber color for emphasis */
+  background-color: #2a2a2a; /* Dark background to match the modal */
+  padding: 10px;
+  border-radius: 5px;
+  margin-bottom: 10px;
+  font-weight: normal;
+  text-align: center;
+}
+
 .modal input[type="text"] {
   background-color: #333;
   color: #e0e0e0;

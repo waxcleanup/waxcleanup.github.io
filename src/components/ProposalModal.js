@@ -54,7 +54,22 @@ function ProposalModal({
       <div className="modal">
         <h3>Create a Proposal</h3>
         <p>Template ID: <strong>{templateId}</strong></p>
-        
+
+        {/* Proposal Fee Note */}
+        <p className="proposal-fee-note">
+          Note: A fee of 1,000 TRASH is required to create this proposal.
+        </p>
+
+        {/* Trash Burn Fee Note */}
+        <p className="proposal-note">
+          The TRASH fee for burning an NFT must be at least 10 TRASH.
+        </p>
+
+        {/* Cinder Reward Note */}
+        <p className="proposal-note">
+          The CINDER reward must not exceed the cap of 5,000.000000 CINDER.
+        </p>
+
         <div className="modal-field">
           <label>Proposal Type:</label>
           <input 
