@@ -1,10 +1,12 @@
 // services/api.js
+
 import axios from 'axios';
 import { JsonRpc } from 'eosjs';
 
 const API_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:3003';
-const rpc = new JsonRpc(process.env.REACT_APP_RPC || 'https://wax.pink.gg'); // Updated to mainnet WAX URL
-
+const rpc = new JsonRpc(process.env.REACT_APP_RPC || 'https://wax.pink.gg'); // Mainnet WAX URL
+// Helper function to introduce a delay
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 /**
  * Fetches collections with pagination and optional search term.
  */
@@ -35,7 +37,7 @@ export const fetchSchemas = async (collectionName) => {
 };
 
 /**
- * Fetches templates for a specific schema in a collection, including name, supply, and media (img and video).
+ * Fetches templates for a specific schema in a collection.
  */
 export const fetchTemplates = async (collectionName, schemaName) => {
   try {
@@ -44,8 +46,6 @@ export const fetchTemplates = async (collectionName, schemaName) => {
       template_id: template.template_id,
       name: template.template_name || 'Unnamed Template',
       circulating_supply: template.circulating_supply || 0,
-      img: template.img || '',
-      video: template.video || ''
     }));
   } catch (error) {
     console.error(`Error fetching templates for collection ${collectionName}, schema ${schemaName}:`, error);
@@ -60,9 +60,7 @@ export const fetchTemplateDetails = async (collectionName, templateId) => {
   try {
     const response = await axios.get(`${API_URL}/collections/${collectionName}/templates/${templateId}`);
     return {
-      ...response.data,
-      img: response.data.img || '',
-      video: response.data.video || ''
+      ...response.data
     };
   } catch (error) {
     console.error(`Error fetching template details for template ID ${templateId} in collection ${collectionName}:`, error);
@@ -119,14 +117,146 @@ export const fetchUserBalances = async (accountName) => {
 };
 
 /**
- * Fetches proposals for display in the frontend.
+ * Fetches all proposals from the backend.
  */
 export const fetchProposals = async () => {
   try {
     const response = await axios.get(`${API_URL}/cleanup/proposals`);
-    return response.data; // Assuming response is an array of proposals
+    return response.data;
   } catch (error) {
     console.error('Error fetching proposals:', error);
+    throw error;
+  }
+};
+
+/**
+ * Fetches only open (verified) proposals from the backend.
+ */
+export const fetchOpenProposals = async () => {
+  try {
+    const response = await axios.get(`${API_URL}/cleanup/proposals/open`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching open proposals:', error);
+    throw error;
+  }
+};
+
+/**
+ * Fetches approved collections from the backend.
+ */
+export const fetchApprovedCollections = async () => {
+  try {
+    const response = await axios.get(`${API_URL}/cleanup/approved-collections`);
+    return response.data.map(collection => ({
+      id: collection.id,
+      collection: collection.collection,
+      schema: collection.schema,
+      template_id: collection.template_id
+    }));
+  } catch (error) {
+    console.error('Error fetching approved collections:', error);
+    throw error;
+  }
+};
+
+/**
+ * Fetches user's NFTs directly from the blockchain.
+ */
+export const fetchUserNFTsFromBlockchain = async (accountName) => {
+  try {
+    const response = await axios.post(`${rpc.endpoint}/v1/chain/get_table_rows`, {
+      json: true,
+      code: 'atomicassets',
+      scope: accountName,
+      table: 'assets',
+      limit: 1000,
+    });
+    return response.data.rows;
+  } catch (error) {
+    console.error('Error fetching NFTs from blockchain:', error);
+    throw error;
+  }
+};
+
+/**
+ * Fetches and filters user's NFTs to show burnable NFTs based on the approved list and proposal rewards,
+ * while also counting each unique NFT type by template_id.
+ */
+export const fetchBurnableNFTs = async (accountName) => {
+  try {
+    // Fetch necessary data concurrently
+    const [userNFTs, approvedNFTs, openProposals] = await Promise.all([
+      fetchUserNFTsFromBlockchain(accountName),
+      fetchApprovedCollections(),
+      fetchOpenProposals()
+    ]);
+
+    console.log("Fetched userNFTs:", userNFTs);
+    console.log("Fetched approvedNFTs:", approvedNFTs);
+    console.log("Fetched openProposals:", openProposals);
+
+    // Filter user's NFTs based on approved templates
+    const filteredNFTs = userNFTs.filter(nft =>
+      approvedNFTs.some(approved =>
+        approved.collection === nft.collection_name &&
+        approved.schema === nft.schema_name &&
+        approved.template_id === nft.template_id
+      )
+    );
+
+    console.log("Filtered NFTs:", filteredNFTs);
+
+    // Group NFTs by template_id and count each type
+    const nftMap = filteredNFTs.reduce((acc, nft) => {
+      const templateId = nft.template_id;
+      
+      // Find the corresponding proposal to get the reward amount
+      const proposal = openProposals.find(prop =>
+        prop.collection === nft.collection_name &&
+        prop.schema === nft.schema_name &&
+        prop.template_id === nft.template_id
+      );
+      const reward = proposal ? proposal.reward : 0;
+
+      if (!acc[templateId]) {
+        // Initialize entry with count 1 if template_id is new
+        acc[templateId] = {
+          ...nft,
+          reward,
+          count: 1
+        };
+      } else {
+        // Increment count if template_id already exists
+        acc[templateId].count += 1;
+      }
+      return acc;
+    }, {});
+
+    console.log("Grouped and counted NFTs:", nftMap);
+
+    // Fetch unique template details and map to uniqueNFTs
+    const uniqueNFTs = await Promise.all(
+      Object.values(nftMap).map(async nft => {
+        const templateDetails = await fetchTemplateDetails(nft.collection_name, nft.template_id);
+        return {
+          ...nft,
+          template_name: templateDetails.template_name || 'Unnamed NFT',
+          img: templateDetails.img || null
+        };
+      })
+    );
+
+    console.log("Final unique NFTs with counts before delay:", uniqueNFTs);
+
+    // Confirm delay application right before returning data
+    await delay(500); // 100ms delay
+
+    console.log("Final unique NFTs with counts after delay:", uniqueNFTs);
+
+    return uniqueNFTs;
+  } catch (error) {
+    console.error('Error fetching burnable NFTs:', error);
     throw error;
   }
 };

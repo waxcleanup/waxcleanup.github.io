@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 import logo from './assets/cleanupcentr.png';
+import BurnRoom from './components/BurnRoom';
 import { 
   fetchCollections, 
   fetchSchemas, 
@@ -8,12 +9,14 @@ import {
   fetchTemplateDetails, 
   syncCollectionData,
   fetchUserBalances,
-  fetchProposals
+  fetchOpenProposals,
+  fetchApprovedCollections
 } from './services/api';
 import { submitProposal, voteOnProposal } from './services/eosActions';
 import useSession from './hooks/useSession';
 import ProposalModal from './components/ProposalModal';
 import Proposals from './components/Proposals';
+import ApprovedCollectionsPopup from './components/ApprovedCollectionsPopup';
 
 function App() {
   const { session, handleLogin, handleLogout, error } = useSession();
@@ -32,13 +35,16 @@ function App() {
   const [trashFee, setTrashFee] = useState('10.000 TRASH');
   const [cinderReward, setCinderReward] = useState('1.000 CINDER');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isPopupOpen, setIsPopupOpen] = useState(false);
+  const [approvedCollections, setApprovedCollections] = useState([]);
+  const [isBurnRoomOpen, setIsBurnRoomOpen] = useState(false);
 
   // State variables for user balances
   const [waxBalance, setWaxBalance] = useState('0.00000000'); 
   const [trashBalance, setTrashBalance] = useState('0.00000000'); 
   const [cinderBalance, setCinderBalance] = useState('0.00000000'); 
 
-  // State for proposals
+  // State for open proposals
   const [proposals, setProposals] = useState([]);
 
   // Load collections based on search term
@@ -85,19 +91,33 @@ function App() {
     fetchBalances();
   }, [session]);
 
-  // Fetch proposals when session is available
+  // Fetch only open (verified) proposals when session is available
   useEffect(() => {
-    const loadProposals = async () => {
+    const loadOpenProposals = async () => {
       if (!session) return;
       try {
-        const data = await fetchProposals();
+        const data = await fetchOpenProposals();
         setProposals(data);
       } catch (error) {
-        console.error('Error fetching proposals:', error);
+        console.error('Error fetching open proposals:', error);
       }
     };
-    loadProposals();
+    loadOpenProposals();
   }, [session]);
+
+  // Fetch approved collections when the popup is opened
+  useEffect(() => {
+    const loadApprovedCollections = async () => {
+      if (!isPopupOpen) return;
+      try {
+        const data = await fetchApprovedCollections();
+        setApprovedCollections(data);
+      } catch (error) {
+        console.error('Error fetching approved collections:', error);
+      }
+    };
+    loadApprovedCollections();
+  }, [isPopupOpen]);
 
   // Sync and load schemas when a collection is selected
   const handleSelectCollection = async (collectionName) => {
@@ -197,7 +217,7 @@ function App() {
       await submitProposal({
         session,
         proposer: session.actor,
-        proposal_type: 'NFT Burn', // Set proposal type as NFT Burn
+        proposal_type: 'NFT Burn',
         collection: selectedCollection,
         schema: selectedSchema,
         template_id: selectedTemplate.template_id,
@@ -243,6 +263,16 @@ function App() {
     }
   };
 
+  // Handle toggling the approved collections popup
+  const handleTogglePopup = () => {
+    setIsPopupOpen(!isPopupOpen);
+  };
+
+  // Toggle Burn Room visibility
+  const toggleBurnRoom = () => {
+    setIsBurnRoomOpen(!isBurnRoomOpen);
+  };
+
   return (
     <div className="App">
       <header className="app-header">
@@ -266,7 +296,6 @@ function App() {
         </div>
       )}
 
-      {/* New informational box */}
       <div style={{ 
         textAlign: 'center', 
         margin: '20px auto', 
@@ -297,6 +326,36 @@ function App() {
           <p>WAX: {waxBalance}</p>
           <p>TRASH: {trashBalance}</p>
           <p>CINDER: {cinderBalance}</p>
+        </div>
+      )}
+
+      {/* Button to open the Burn Room */}
+      {session && (
+        <div style={{ textAlign: 'center', margin: '30px auto' }}>
+          <button
+            onClick={toggleBurnRoom}
+            style={{
+              padding: '12px 25px',
+              backgroundColor: '#ff4500',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '5px',
+              cursor: 'pointer',
+              fontWeight: 'bold',
+              boxShadow: '0px 0px 10px rgba(255, 69, 0, 0.6)',
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+            }}
+          >
+            Open Burn Room
+          </button>
+        </div>
+      )}
+
+      {isBurnRoomOpen && session && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <BurnRoom accountName={session.actor} onClose={toggleBurnRoom} />
+          </div>
         </div>
       )}
 
@@ -376,6 +435,23 @@ function App() {
               Create Proposal
             </button>
           </div>
+
+          {/* Button to open approved collections popup */}
+          <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+            <button
+              onClick={handleTogglePopup}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: '#007bff',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '5px',
+                cursor: 'pointer',
+              }}
+            >
+              View Approved Templates
+            </button>
+          </div>
         </>
       )}
 
@@ -428,6 +504,13 @@ function App() {
 
       {session && (
         <Proposals proposals={proposals} handleVote={handleVote} />
+      )}
+
+      {isPopupOpen && (
+        <ApprovedCollectionsPopup
+          collections={approvedCollections.map((collection, index) => ({ ...collection, key: index }))} // Adding unique key to each collection
+          onClose={handleTogglePopup}
+        />
       )}
     </div>
   );
