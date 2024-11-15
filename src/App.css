@@ -76,6 +76,49 @@ button:disabled {
   cursor: not-allowed;
 }
 
+/* Burn Room Button Styling */
+.burn-room-button {
+  padding: 12px 25px;
+  background-color: #ff4500;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+  box-shadow: 0px 0px 10px rgba(255, 69, 0, 0.6);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  animation: flicker 1.5s infinite alternate;
+  position: relative;
+}
+
+.burn-room-button::before {
+  content: '';
+  position: absolute;
+  top: -10px;
+  left: -10px;
+  right: -10px;
+  bottom: -10px;
+  border-radius: 10px;
+  background: radial-gradient(circle, rgba(255,69,0,0.5) 0%, rgba(255,140,0,0) 70%);
+  opacity: 0.6;
+  animation: glow 2s infinite alternate;
+}
+
+/* Flicker Animation */
+@keyframes flicker {
+  0% { opacity: 1; transform: scale(1); box-shadow: 0 0 15px rgba(255, 69, 0, 0.8); }
+  25% { opacity: 0.9; transform: scale(1.02); box-shadow: 0 0 18px rgba(255, 140, 0, 0.9); }
+  50% { opacity: 0.8; transform: scale(1.01); box-shadow: 0 0 12px rgba(255, 69, 0, 0.7); }
+  75% { opacity: 0.95; transform: scale(1.03); box-shadow: 0 0 20px rgba(255, 69, 0, 1); }
+  100% { opacity: 1; transform: scale(1); box-shadow: 0 0 15px rgba(255, 69, 0, 0.8); }
+}
+
+/* Glow Animation */
+@keyframes glow {
+  0% { box-shadow: 0 0 20px rgba(255, 69, 0, 0.6); }
+  100% { box-shadow: 0 0 30px rgba(255, 140, 0, 0.8); }
+}
+
 /* Table Styling */
 table {
   width: 60%;

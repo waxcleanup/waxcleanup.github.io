@@ -1,17 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
-import sessionKit, { saveSession, clearSession } from '../config/sessionConfig'; 
+import sessionKit, { saveSession, clearSession } from '../config/sessionConfig';
 import { useNavigate } from 'react-router-dom';
 
 export const TAPOS = {
   blocksBehind: 3,
-  expireSeconds: 120,
+  expireSeconds: 300,  // Increased expiration time for testing
   broadcast: true
 };
 
 // Helper function to initialize and perform a transaction
 export const InitTransaction = async (dataTrx) => {
   try {
-    const session = await sessionKit.restore(); 
+    const session = await sessionKit.restore();
     if (!session) {
       throw new Error("No session found");
     }
@@ -24,25 +24,22 @@ export const InitTransaction = async (dataTrx) => {
     });
 
     // Ensure actor is included in each action authorization if not already set
-    const actions = dataTrx.actions.map((action) =>
-      action.authorization ? 
-        action : 
+    const actions = dataTrx.actions.map((action) => ({
+      ...action,
+      authorization: [
         {
-          ...action,
-          authorization: [
-            {
-              actor: session.permissionLevel.actor,
-              permission: session.permissionLevel.permission || 'active',
-            },
-          ],
-        }
-    );
+          actor: session.permissionLevel.actor,
+          permission: session.permissionLevel.permission || 'active',
+        },
+      ],
+    }));
 
     // Debug log for transaction data
     console.log("Sending transaction with:", { actions, TAPOS });
+    console.log("Transaction authorization:", actions[0].authorization);
 
     const transaction = await session.transact({ actions }, TAPOS);
-    
+
     if (transaction) {
       return {
         transactionId: String(transaction.resolved?.transaction.id),
@@ -51,7 +48,7 @@ export const InitTransaction = async (dataTrx) => {
     }
   } catch (error) {
     console.error('Detailed transaction error:', error);
-    throw error; // Throw the original error for better debugging
+    throw error;
   }
 };
 

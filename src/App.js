@@ -344,6 +344,7 @@ function App() {
               fontWeight: 'bold',
               boxShadow: '0px 0px 10px rgba(255, 69, 0, 0.6)',
               transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+              animation: 'flicker 1.5s infinite alternate',
             }}
           >
             Open Burn Room
@@ -354,7 +355,11 @@ function App() {
       {isBurnRoomOpen && session && (
         <div className="modal-overlay">
           <div className="modal-content">
-            <BurnRoom accountName={session.actor} onClose={toggleBurnRoom} />
+            <BurnRoom 
+              accountName={session.actor} 
+              session={session} 
+              onClose={toggleBurnRoom} 
+            />
           </div>
         </div>
       )}

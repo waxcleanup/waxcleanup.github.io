@@ -260,3 +260,103 @@ export const fetchBurnableNFTs = async (accountName) => {
     throw error;
   }
 };
+/**
+ * Fetches all incinerator data from the backend.
+ */
+export const fetchIncinerators = async () => {
+  try {
+    const response = await axios.get(`${API_URL}/cleanup/incinerators`);
+    return response.data; // Assuming the data is in response.data
+  } catch (error) {
+    console.error('Error fetching incinerators:', error);
+    throw error;
+  }
+};
+
+// Add this to your `api.js` file
+export const fetchUserNFTsFromContract = async (accountName) => {
+  try {
+    const response = await axios.post(`${rpc.endpoint}/v1/chain/get_table_rows`, {
+      json: true,
+      code: 'atomicassets',  // The smart contract name (could be different if you're using a custom contract)
+      scope: accountName,    // The account name that owns the NFTs
+      table: 'assets',       // The table where the assets are stored
+      limit: 1000,           // Limit to avoid overloading the response
+    });
+
+    const userNFTs = response.data.rows;
+
+    console.log('Fetched user NFTs from contract:', userNFTs);
+    
+    return userNFTs;
+  } catch (error) {
+    console.error('Error fetching user NFTs from contract:', error);
+    throw error;
+  }
+};
+/**
+ * Fetches user's incinerators directly from the blockchain (via atomicassets contract).
+ * Filters the assets by the collection and schema for incinerators, and includes template details (name, image, metadata).
+ */
+export const fetchIncineratorsFromBlockchain = async (accountName) => {
+  try {
+    // Query for assets owned by the user (accountName) in the atomicassets contract
+    const response = await axios.post(`${rpc.endpoint}/v1/chain/get_table_rows`, {
+      json: true,
+      code: 'atomicassets',      // Contract name
+      scope: accountName,        // The account name
+      table: 'assets',           // Table name where assets are stored
+      limit: 1000,               // Limit the number of records to fetch
+    });
+
+    const userAssets = response.data.rows;
+    console.log('Fetched user assets from atomicassets:', userAssets);
+
+    // Filter the assets to get only incinerators from the cleanupcentr collection
+    const incinerators = userAssets.filter(asset =>
+      asset.collection_name === 'cleanupcentr' &&
+      asset.schema_name === 'incinerators'
+    );
+
+    console.log('Filtered incinerators:', incinerators);
+
+    // Fetch template details for each incinerator
+    const incineratorDetails = await Promise.all(
+      incinerators.map(async (incinerator) => {
+        // Fetch template details using the template_id from the filtered incinerators
+        const templateDetails = await fetchIncineratorTemplateDetails(
+          incinerator.collection_name,
+          incinerator.template_id
+        );
+        
+        // Combine the asset details with the template details
+        return {
+          ...incinerator,
+          template_name: templateDetails.template_name || 'Unnamed Template',  // Add template name
+          img: templateDetails.img || null,  // Add image (IPFS URL)
+          metadata: templateDetails.metadata || {},  // Add any additional metadata from the template
+        };
+      })
+    );
+
+    console.log('Final incinerator details with templates:', incineratorDetails);
+    return incineratorDetails;
+
+  } catch (error) {
+    console.error('Error fetching incinerators from blockchain:', error);
+    throw error;
+  }
+};
+
+/**
+ * Fetches template details for a specific template_id and collection_name.
+ */
+export const fetchIncineratorTemplateDetails = async (collectionName, templateId) => {
+  try {
+    const response = await axios.get(`${API_URL}/collections/${collectionName}/templates/${templateId}`);
+    return response.data;  // Assuming the data includes template_name, img (IPFS URL), and metadata
+  } catch (error) {
+    console.error(`Error fetching template details for ${templateId} in collection ${collectionName}:`, error);
+    throw error;
+  }
+};
