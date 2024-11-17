@@ -1,6 +1,4 @@
-// services/api.js
-
-import axios from 'axios';
+import axios from 'axios';  
 import { JsonRpc } from 'eosjs';
 
 const API_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:3003';
@@ -357,6 +355,21 @@ export const fetchIncineratorTemplateDetails = async (collectionName, templateId
     return response.data;  // Assuming the data includes template_name, img (IPFS URL), and metadata
   } catch (error) {
     console.error(`Error fetching template details for ${templateId} in collection ${collectionName}:`, error);
+    throw error;
+  }
+};
+/**
+ * Stakes an incinerator by sending the assetId and accountName to the backend.
+ */
+export const stakeIncinerator = async (accountName, assetId) => {
+  try {
+    const response = await axios.post(`${API_URL}/cleanup/stake-incinerator`, {
+      accountName,
+      assetId,
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error staking incinerator:', error);
     throw error;
   }
 };

@@ -1,5 +1,4 @@
-/* BurnRoom.css */
-
+/* General Styling */
 .burn-room {
   padding: 20px;
   background-color: #1a1a1a;
@@ -9,17 +8,27 @@
   margin: 0 auto;
   text-align: center;
   position: relative;
+  border: 3px solid rgba(255, 69, 0, 0.8); /* Outer border */
+  box-shadow: 0 0 15px rgba(255, 69, 0, 0.8), 0 0 30px rgba(255, 69, 0, 0.5); /* Glowing effect */
+  transition: transform 0.3s ease-in-out;
+}
+
+.burn-room:hover {
+  transform: scale(1.02); /* Slight zoom-in on hover */
+  box-shadow: 0 0 25px rgba(255, 69, 0, 1), 0 0 40px rgba(255, 69, 0, 0.7); /* Intensify glow */
 }
 
 .burn-room-title {
-  font-size: 24px;
+  font-size: 28px;
   color: #ff4500;
   margin-bottom: 20px;
+  text-shadow: 0 0 10px rgba(255, 69, 0, 0.8);
 }
 
+/* NFT Grid */
 .nft-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); 
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 20px;
 }
 
@@ -89,39 +98,57 @@
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  overflow: hidden; /* Prevent overflow outside the modal */
 }
-
 .modal-content {
-  background-color: rgba(255, 69, 0, 0.9);
-  border-radius: 8px;
-  padding: 20px;
+  background-color: rgba(30, 30, 30, 0.95);
+  border-radius: 10px;
+  padding: 30px;
   width: 80%;
-  max-width: 500px;
-  box-shadow: 0 0 20px rgba(255, 69, 0, 0.8);
+  max-width: 600px;
+  max-height: 90%; /* Prevent the modal from exceeding the viewport height */
+  overflow-y: auto; /* Enable vertical scrolling when content exceeds height */
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
   color: #fff;
   text-align: center;
   position: relative;
+  border: 3px solid rgba(255, 69, 0, 0.8); /* Glowing modal border */
+  display: flex;
+  flex-direction: column;
 }
 
-.close-button {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background-color: transparent;
-  color: white;
-  font-size: 24px;
-  border: none;
-  cursor: pointer;
+.modal-content h3 {
+  color: #ff4500;
+  margin-bottom: 20px;
 }
 
-/* Empty Incinerator Card */
-.incinerator-card.empty-incinerator {
-  background-color: #444;
-  color: #888;
-  padding: 20px;
+/* Add spacing between unstaked and staked sections */
+.incinerator-grid {
+  margin-top: 10px;
+}
+
+.staked-incinerators {
+  margin-top: 30px; /* Extra padding for staked incinerators section */
+}
+
+/* Incinerator Grid */
+.incinerator-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* Ensure 3 items per row */
+  gap: 20px;
+  justify-items: center; /* Ensure all items are centered */
+}
+
+.incinerator-card {
+  background-color: #333;
+  padding: 15px;
   border-radius: 10px;
   text-align: center;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+  height: 300px; /* Fixed height for the card */
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between; /* Ensure button is at the bottom */
 }
 
 .incinerator-image {
@@ -130,6 +157,42 @@
   height: auto;
   border-radius: 5px;
   margin-bottom: 10px;
+}
+
+.incinerator-actions {
+  margin-top: 10px;
+  display: flex;
+  justify-content: center; /* Center the button */
+}
+
+.stake-button {
+  padding: 10px 20px;
+  background-color: #ff7f00; /* Bright color for visibility */
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  width: auto; /* Make the button more compact inside the card */
+}
+
+.stake-button:hover {
+  background-color: #ff5500;
+}
+
+.stake-button:active {
+  transform: scale(0.98); /* Slight scale down when pressed */
+}
+
+/* Empty Incinerator Card */
+.incinerator-card.empty-incinerator {
+  background-color: #444;
+  color: #888;
+  padding: 12px;
+  border-radius: 10px;
+  text-align: center;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
 }
 
 .incinerator-actions button {
@@ -149,22 +212,62 @@
 }
 
 /* Make the grid more responsive */
-.incinerator-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr); /* Ensure 3 items per row */
-  gap: 20px;
-  justify-items: center; /* Ensure all items are centered */
+@media (max-width: 768px) {
+  .incinerator-grid {
+    grid-template-columns: repeat(3, 1fr); /* Keep 3 items per row */
+  }
 }
 
-.incinerator-card {
+@media (max-width: 480px) {
+  .incinerator-grid {
+    grid-template-columns: repeat(3, 1fr); /* Keep 3 items per row */
+  }
+  .stake-button {
+    padding: 12px 15px; /* Slightly bigger padding on smaller screens for touch devices */
+  }
+}
+/* Selected NFT Slots */
+.nft-slots {
+  display: flex;
+  justify-content: center; /* Center the slots */
+  gap: 15px; /* Space between the slots */
+  margin-top: 20px;
+}
+
+.nft-slot {
   background-color: #333;
-  padding: 15px;
-  border-radius: 10px;
+  border-radius: 8px;
+  padding: 10px;
+  width: 100px; /* Set a smaller width for the card */
+  height: 140px; /* Set a fixed height for consistency */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
   text-align: center;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
-  height: 250px; /* Fixed height for the card */
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
 }
 
-.incinerator-actions {
-  margin-top: 10px;
+.nft-slot:hover {
+  transform: scale(1.05); /* Slight zoom-in on hover */
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.7);
+}
+
+.nft-slot img {
+  max-width: 80%; /* Adjust the image size */
+  max-height: 60px; /* Restrict the height of the image */
+  border-radius: 5px;
+  margin-bottom: 5px;
+}
+
+.nft-slot p {
+  font-size: 12px; /* Smaller text size */
+  margin: 0;
+  color: #e0e0e0;
+}
+
+.nft-slot .asset-id {
+  font-size: 10px; /* Even smaller text for the Asset ID */
+  color: #aaa;
 }

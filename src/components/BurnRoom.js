@@ -1,17 +1,22 @@
 import React, { useEffect, useState } from 'react';
-import { fetchBurnableNFTs, fetchProposals, fetchIncineratorsFromBlockchain } from '../services/api';
-import { InitTransaction } from '../hooks/useSession';
+import { fetchBurnableNFTs, fetchProposals, fetchIncineratorsFromBlockchain, stakeIncinerator } from '../services/api';
 import './BurnRoom.css';
 
-const BurnRoom = ({ accountName, session, onClose }) => {
+const BurnRoom = ({ accountName, onClose }) => {
   const [burnableNFTs, setBurnableNFTs] = useState([]);
-  const [incinerators, setIncinerators] = useState([]);
+  const [slots, setSlots] = useState([null, null, null]);
+  const [nftSlots, setNftSlots] = useState([null, null, null]); // Slots for selected NFTs to burn
   const [loading, setLoading] = useState(true);
-  const [isBurning, setIsBurning] = useState(false);
   const [proposals, setProposals] = useState([]);
-  const [showIncinerators, setShowIncinerators] = useState(false); // State to control visibility of incinerators
+  const [selectedNFT, setSelectedNFT] = useState(null);
+  const [showIncineratorModal, setShowIncineratorModal] = useState(false);
+  const [selectedSlotIndex, setSelectedSlotIndex] = useState(null);
+  const [confirmationModal, setConfirmationModal] = useState(false);
+  const [selectedIncinerator, setSelectedIncinerator] = useState(null);
   const [isFetchingIncinerators, setIsFetchingIncinerators] = useState(false);
-  const [hasStakedIncinerator, setHasStakedIncinerator] = useState(false); // To track if the user has a staked incinerator
+  const [showSlots, setShowSlots] = useState(false);
+  const [unstakedIncinerators, setUnstakedIncinerators] = useState([]);
+  const [stakedIncinerators, setStakedIncinerators] = useState([]);
 
   useEffect(() => {
     if (accountName) {
@@ -29,100 +34,172 @@ const BurnRoom = ({ accountName, session, onClose }) => {
     }
   }, [accountName]);
 
-  // Fetch incinerators from the blockchain
   const fetchIncinerators = async () => {
     setIsFetchingIncinerators(true);
     try {
       const userIncinerators = await fetchIncineratorsFromBlockchain(accountName);
-      if (userIncinerators.length > 0) {
-        setIncinerators(userIncinerators);
-        // Check if the user has any staked incinerator
-        const stakedIncinerator = userIncinerators.find((incinerator) => incinerator.staked);
-        setHasStakedIncinerator(!!stakedIncinerator);
-      } else {
-        console.log('No incinerators found for this user.');
-        setIncinerators([]);
-        setHasStakedIncinerator(false); // No incinerators found
-      }
+      const unstaked = userIncinerators.filter((incinerator) => !incinerator.is_staked);
+      const staked = userIncinerators.filter((incinerator) => incinerator.is_staked);
+      setUnstakedIncinerators(unstaked);
+      setStakedIncinerators(staked);
     } catch (error) {
-      console.error('Error fetching user incinerators:', error);
-      alert('Failed to fetch incinerators from the blockchain.');
+      console.error('Error fetching incinerators:', error);
+      alert('Failed to fetch incinerators.');
     } finally {
       setIsFetchingIncinerators(false);
     }
   };
 
-  const getProposalData = (templateId) => {
-    const proposal = proposals.find((proposal) => proposal.template_id === templateId);
-    return proposal ? { trash_fee: proposal.trash_fee, cinder_reward: proposal.cinder_reward } : {};
+  const handleNFTClick = (nft) => {
+    setSelectedNFT(nft);
   };
 
-  const payFeeAndTransferNFT = async (nft) => {
-    const { trash_fee } = getProposalData(nft.template_id);
-    if (!trash_fee) {
-      throw new Error('No approved proposal or trash fee found for this NFT.');
+  const assignNFTToSlot = (nft, slotIndex) => {
+    // Check if the NFT is already assigned to any slot
+    if (nftSlots.some((slot) => slot?.asset_id === nft.asset_id)) {
+      alert('This NFT is already assigned to a slot.');
+      return;
     }
 
+    const updatedSlots = [...nftSlots];
+    updatedSlots[slotIndex] = nft;
+    setNftSlots(updatedSlots);
+  };
+
+  const handleSlotClick = (slotIndex) => {
+    if (unstakedIncinerators.length === 0) {
+      alert('No unstaked incinerators to assign.');
+      return;
+    }
+    setSelectedSlotIndex(slotIndex);
+    setShowIncineratorModal(true);
+  };
+
+  const handleStakeClick = (incinerator) => {
+    setSelectedIncinerator(incinerator);
+    setConfirmationModal(true);
+  };
+
+  const confirmStake = async () => {
     try {
-      console.log('Attempting to pay fee and transfer NFT:', nft);
-
-      const result = await InitTransaction({
-        actions: [{
-          account: 'cleanupcentr',
-          name: 'payfee',
-          authorization: [{
-            actor: session.permissionLevel.actor,
-            permission: session.permissionLevel.permission || 'active'
-          }],
-          data: {
-            user: session.permissionLevel.actor,
-            asset_id: nft.asset_id,
-            trash_fee: trash_fee
-          }
-        }]
-      });
-
-      console.log('Pay fee and transfer result:', result);
-      alert('Fee paid and NFT transferred for burning!');
-      
-      setBurnableNFTs(prevNFTs => 
-        prevNFTs.filter(item => item.asset_id !== nft.asset_id)
-      );
-
+      if (selectedIncinerator) {
+        const response = await stakeIncinerator(accountName, selectedIncinerator.asset_id);
+        if (response.success) {
+          alert('Incinerator staked successfully!');
+          fetchIncinerators();
+        } else {
+          alert(`Failed to stake incinerator: ${response.error}`);
+        }
+      }
     } catch (error) {
-      console.error('Error in pay fee and transfer process:', error);
-      alert(`Failed to complete fee payment and transfer: ${error.message}`);
+      console.error('Error staking incinerator:', error);
+      alert('An error occurred while staking the incinerator.');
     } finally {
-      setIsBurning(false);
+      setConfirmationModal(false);
+      setSelectedIncinerator(null);
     }
   };
 
-  // Show placeholder incinerator cards if user has no incinerators
-  const renderIncinerators = () => {
-    const incineratorSlots = 3;
-    const placeholderCards = Array.from({ length: incineratorSlots - incinerators.length }).map((_, index) => (
-      <div key={index} className="incinerator-card empty-incinerator">
-        <p>No Incinerator Found</p>
-      </div>
-    ));
+  const renderNFTGrid = () => (
+    <div className="nft-grid">
+      {burnableNFTs.map((nft) => {
+        const { trash_fee, cinder_reward } = proposals.find(
+          (proposal) => proposal.template_id === nft.template_id
+        ) || { trash_fee: null, cinder_reward: null };
 
-    return (
-      <>
-        {incinerators.map((incinerator) => (
-          <div key={incinerator.asset_id} className="incinerator-card">
-            <img src={`https://ipfs.io/ipfs/${incinerator.img}`} alt={incinerator.template_name} className="incinerator-image" />
-            <div className="incinerator-info">
-              <p className="incinerator-name">{incinerator.template_name || 'Unnamed Incinerator'}</p>
-              <div className="incinerator-actions">
-                <button className="stake-button">Stake</button>
-              </div>
+        return (
+          <div
+            key={nft.asset_id}
+            className={`nft-card ${selectedNFT?.asset_id === nft.asset_id ? 'selected' : ''}`}
+            onClick={() => handleNFTClick(nft)}
+          >
+            <img
+              src={`https://ipfs.io/ipfs/${nft.img}`}
+              alt={nft.template_name || 'Unnamed NFT'}
+              className="nft-image"
+            />
+            <div className="nft-info">
+              <p className="nft-name">{nft.template_name || 'Unnamed NFT'}</p>
+              <p className="trash-fee">Fee: {trash_fee || 'N/A'}</p>
+              <p className="nft-reward">Reward: {cinder_reward || 'N/A'}</p>
+              <button
+                className="assign-button"
+                onClick={() => {
+                  const emptySlot = nftSlots.findIndex((slot) => slot === null);
+                  if (emptySlot !== -1) assignNFTToSlot(nft, emptySlot);
+                  else alert('All NFT slots are full.');
+                }}
+              >
+                Assign to Slot
+              </button>
             </div>
           </div>
-        ))}
-        {placeholderCards}
-      </>
-    );
-  };
+        );
+      })}
+    </div>
+  );
+
+  const renderIncineratorModal = () => (
+    <div className="modal-overlay">
+      <div className="modal-content">
+        <h3>Select an Incinerator</h3>
+
+        <div className="unstaked-section">
+          <h4>Unstaked Incinerators</h4>
+          <div className="incinerator-grid">
+            {unstakedIncinerators.length > 0 ? (
+              unstakedIncinerators.map((incinerator) => (
+                <div key={incinerator.asset_id} className="incinerator-card">
+                  <img
+                    src={`https://ipfs.io/ipfs/${incinerator.img}`}
+                    alt={incinerator.template_name || 'Unnamed Incinerator'}
+                    className="incinerator-image"
+                  />
+                  <p>{incinerator.template_name || 'Unnamed Incinerator'}</p>
+                  <p className="asset-id">Asset ID: {incinerator.asset_id}</p>
+                  <button
+                    className="stake-button"
+                    onClick={() => handleStakeClick(incinerator)}
+                  >
+                    Stake
+                  </button>
+                </div>
+              ))
+            ) : (
+              <p>No unstaked incinerators available.</p>
+            )}
+          </div>
+        </div>
+
+        <hr className="section-divider" />
+
+        <div className="staked-section">
+          <h4>Staked Incinerators</h4>
+          <div className="incinerator-grid">
+            {stakedIncinerators.length > 0 ? (
+              stakedIncinerators.map((incinerator) => (
+                <div key={incinerator.asset_id} className="incinerator-card">
+                  <img
+                    src={`https://ipfs.io/ipfs/${incinerator.img}`}
+                    alt={incinerator.template_name || 'Unnamed Incinerator'}
+                    className="incinerator-image"
+                  />
+                  <p>{incinerator.template_name || 'Unnamed Incinerator'}</p>
+                  <p className="asset-id">Asset ID: {incinerator.asset_id}</p>
+                </div>
+              ))
+            ) : (
+              <p>No staked incinerators available.</p>
+            )}
+          </div>
+        </div>
+
+        <button className="close-button" onClick={() => setShowIncineratorModal(false)}>
+          Close
+        </button>
+      </div>
+    </div>
+  );
 
   if (loading) {
     return <div className="burn-room">Loading burnable NFTs...</div>;
@@ -130,63 +207,90 @@ const BurnRoom = ({ accountName, session, onClose }) => {
 
   return (
     <div className="burn-room">
-      <button className="close-button" onClick={onClose}>&times;</button>
-      <h2 className="burn-room-title">Burn Room</h2>
-
-      {/* Incinerators Button */}
-      <button onClick={() => { fetchIncinerators(); setShowIncinerators(true); }} disabled={isFetchingIncinerators}>
-        {isFetchingIncinerators ? 'Loading Incinerators...' : 'Show Incinerators'}
+      <button className="close-button" onClick={onClose}>
+        &times;
       </button>
 
-      {showIncinerators && (
+      <h2 className="burn-room-title">Burn Room</h2>
+
+      <p>Approved NFTs: {burnableNFTs.length}</p>
+
+      <button onClick={() => { fetchIncinerators(); setShowSlots(true); }} disabled={isFetchingIncinerators}>
+        {isFetchingIncinerators ? 'Loading Incinerators...' : 'Show Available Incinerators'}
+      </button>
+
+      {showSlots && (
         <div className="incinerator-grid">
-          {renderIncinerators()}
+          {slots.map((slot, index) => (
+            <div
+              key={index}
+              className={`incinerator-card ${slot ? '' : 'empty-incinerator'}`}
+              onClick={() => handleSlotClick(index)}
+            >
+              {slot ? (
+                <>
+                  <img
+                    src={`https://ipfs.io/ipfs/${slot.img}`}
+                    alt={slot.template_name || 'Unnamed Incinerator'}
+                    className="incinerator-image"
+                  />
+                  <p>{slot.template_name || 'Unnamed Incinerator'}</p>
+                  <p className="asset-id">Asset ID: {slot.asset_id}</p>
+                </>
+              ) : (
+                <p>Click to assign an incinerator</p>
+              )}
+            </div>
+          ))}
         </div>
       )}
 
-      <div className="nft-grid">
-        {burnableNFTs.map((nft) => {
-          const { trash_fee, cinder_reward } = getProposalData(nft.template_id);
-          return (
-            <div key={nft.asset_id} className="nft-card">
-              {nft.img ? (
+      <h3>Selected NFTs to Burn</h3>
+      <div className="nft-slots">
+        {nftSlots.map((nft, index) => (
+          <div key={index} className="nft-slot">
+            {nft ? (
+              <>
                 <img
                   src={`https://ipfs.io/ipfs/${nft.img}`}
                   alt={nft.template_name || 'Unnamed NFT'}
                   className="nft-image"
                 />
-              ) : (
-                <div className="no-image">No image</div>
-              )}
-
-              <div className="nft-info">
-                <p className="nft-name">{nft.template_name || 'Unnamed NFT'}</p>
-                <p className="trash-fee">
-                  Fee: {trash_fee ? `${trash_fee} ` : 'Not available'}
-                </p>
-                <p className="nft-reward">
-                  Reward: {cinder_reward ? `${cinder_reward} ` : 'No reward info'}
-                </p>
-
-                {/* Show Burn button only if the user has a staked incinerator */}
-                {hasStakedIncinerator && (
-                  <button
-                    className="burn-button"
-                    onClick={() => payFeeAndTransferNFT(nft)}
-                    disabled={isBurning}
-                  >
-                    {isBurning ? 'Processing...' : 'Burn NFT'}
-                  </button>
-                )}
-              </div>
-            </div>
-          );
-        })}
+                <p>{nft.template_name || 'Unnamed NFT'}</p>
+                <p className="asset-id">Asset ID: {nft.asset_id}</p>
+              </>
+            ) : (
+              <p>Empty Slot</p>
+            )}
+          </div>
+        ))}
       </div>
 
-      {!hasStakedIncinerator && (
-        <div className="no-incinerator-message">
-          <p>You must stake an incinerator to burn NFTs.</p>
+      {renderNFTGrid()}
+
+      {showIncineratorModal && renderIncineratorModal()}
+      {confirmationModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3>Confirm Stake</h3>
+            {selectedIncinerator && (
+              <div className="incinerator-card">
+                <img
+                  src={`https://ipfs.io/ipfs/${selectedIncinerator.img}`}
+                  alt={selectedIncinerator.template_name || 'Unnamed Incinerator'}
+                  className="incinerator-image"
+                />
+                <p>{selectedIncinerator.template_name || 'Unnamed Incinerator'}</p>
+                <p className="asset-id">Asset ID: {selectedIncinerator.asset_id}</p>
+              </div>
+            )}
+            <button className="confirm-button" onClick={confirmStake}>
+              Confirm
+            </button>
+            <button className="cancel-button" onClick={() => setConfirmationModal(false)}>
+              Cancel
+            </button>
+          </div>
         </div>
       )}
     </div>
