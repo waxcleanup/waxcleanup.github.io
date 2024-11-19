@@ -359,17 +359,30 @@ export const fetchIncineratorTemplateDetails = async (collectionName, templateId
   }
 };
 /**
- * Stakes an incinerator by sending the assetId and accountName to the backend.
+ * Stakes an incinerator by sending the assetId and user to the backend.
  */
-export const stakeIncinerator = async (accountName, assetId) => {
+export const stakeIncinerator = async (user, assetId) => {
   try {
-    const response = await axios.post(`${API_URL}/cleanup/stake-incinerator`, {
-      accountName,
-      assetId,
-    });
-    return response.data;
+    const response = await axios.post(
+      `${API_URL}/cleanup/stake-incinerator`,
+      { user, assetId }, // Use "user" to match backend expectations
+      { timeout: 10000 } // Set timeout for 10 seconds
+    );
+
+    // Return the backend response
+    return {
+      success: true,
+      data: response.data,
+    };
   } catch (error) {
     console.error('Error staking incinerator:', error);
-    throw error;
+
+    // Extract detailed error or fallback to a generic message
+    const errorMessage =
+      error.response?.data?.error || 'Failed to stake incinerator. Please try again.';
+    return {
+      success: false,
+      error: errorMessage,
+    };
   }
 };
