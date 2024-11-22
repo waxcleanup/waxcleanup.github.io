@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { fetchBurnableNFTs, fetchProposals } from '../services/api';
-import { fetchStakedAndUnstakedIncinerators, refreshIncinerators } from '../services/incinerators';
+import { fetchUnstakedIncinerators, fetchStakedIncinerators } from '../services/incinerators';
 import './BurnRoom.css';
 import NFTGrid from './NFTGrid';
 import NFTSlots from './NFTSlots';
@@ -17,9 +17,6 @@ const BurnRoom = ({ accountName, onClose }) => {
   const [unstakedIncinerators, setUnstakedIncinerators] = useState([]);
   const [showIncineratorModal, setShowIncineratorModal] = useState(false);
   const [selectedSlotIndex, setSelectedSlotIndex] = useState(null);
-  const [confirmationModal, setConfirmationModal] = useState(false);
-  const [selectedIncinerator, setSelectedIncinerator] = useState(null);
-  const [showSlots, setShowSlots] = useState(false);
 
   useEffect(() => {
     if (accountName) {
@@ -27,32 +24,19 @@ const BurnRoom = ({ accountName, onClose }) => {
       Promise.all([
         fetchBurnableNFTs(accountName),
         fetchProposals(),
-        fetchStakedAndUnstakedIncinerators(accountName),
+        fetchUnstakedIncinerators(accountName),
+        fetchStakedIncinerators(accountName),
       ])
-        .then(([nfts, fetchedProposals, incinerators]) => {
+        .then(([nfts, fetchedProposals, unstaked, staked]) => {
           setBurnableNFTs(nfts);
           setProposals(fetchedProposals.filter((proposal) => proposal.status === 'approved'));
-          setStakedIncinerators(incinerators.staked);
-          setUnstakedIncinerators(incinerators.unstaked);
+          setUnstakedIncinerators(unstaked);
+          setStakedIncinerators(staked);
         })
         .catch((error) => console.error('Error fetching data:', error))
         .finally(() => setLoading(false));
     }
   }, [accountName]);
-
-  const handleNFTClick = (nft) => {
-    setSelectedNFT(nft);
-  };
-
-  const handleAssignNFTToSlot = (nft, slotIndex) => {
-    if (nftSlots.some((slot) => slot?.asset_id === nft.asset_id)) {
-      alert('This NFT is already assigned to a slot.');
-      return;
-    }
-    const updatedSlots = [...nftSlots];
-    updatedSlots[slotIndex] = nft;
-    setNftSlots(updatedSlots);
-  };
 
   const handleSlotClick = (slotIndex) => {
     setSelectedSlotIndex(slotIndex);
@@ -70,20 +54,9 @@ const BurnRoom = ({ accountName, onClose }) => {
     }
   };
 
-  const handleIncineratorSelect = (incinerator) => {
-    if (slots.some((slot) => slot && slot.asset_id === incinerator.asset_id)) {
-      alert('This incinerator is already assigned to a slot.');
-      return;
-    }
-
+  const handleStakedIncineratorSelect = (incinerator) => {
     const updatedSlots = [...slots];
-    updatedSlots[selectedSlotIndex] = {
-      ...incinerator,
-      fuel: incinerator.fuel || 0,
-      energy: incinerator.energy || 0,
-      durability: incinerator.durability || 0,
-    };
-
+    updatedSlots[selectedSlotIndex] = incinerator;
     setSlots(updatedSlots);
 
     setStakedIncinerators((prev) =>
@@ -93,38 +66,30 @@ const BurnRoom = ({ accountName, onClose }) => {
     setShowIncineratorModal(false);
   };
 
-  const handleBurnNFT = async (nft, incinerator) => {
+  const loadFuel = (incineratorId, amount) => {
+    console.log(`Loading ${amount} fuel into incinerator ${incineratorId}`);
+    // Add backend or blockchain logic to load fuel
+  };
+
+  const loadEnergy = (incineratorId) => {
+    console.log(`Loading energy into incinerator ${incineratorId}`);
+    // Add backend or blockchain logic to load energy
+  };
+
+  const repairDurability = (incineratorId) => {
+    console.log(`Repairing durability for ${incineratorId}`);
+    // Add backend or blockchain logic to repair durability
+  };
+
+  const handleBurnNFT = async () => {
     try {
-      setLoading(true);
-
-      // Example burn NFT logic (replace with actual burning logic)
-      console.log(`Burning NFT ${nft.asset_id} with Incinerator ${incinerator.asset_id}`);
-
-      refreshIncinerators(accountName).then(({ staked, unstaked }) => {
-        setStakedIncinerators(staked);
-        setUnstakedIncinerators(unstaked);
-      });
+      const incinerator = slots.find((slot) => slot); // Find the first assigned incinerator
+      console.log(`Burning NFT ${selectedNFT.asset_id} with Incinerator ${incinerator.asset_id}`);
+      // Add burn logic here (e.g., blockchain transaction)
     } catch (error) {
       console.error('Error during burn transaction:', error);
-    } finally {
-      setLoading(false);
-      setSelectedNFT(null);
     }
   };
-
-  const toggleShowSlots = () => {
-    setShowSlots(!showSlots);
-    if (!showSlots) {
-      refreshIncinerators(accountName).then(({ staked, unstaked }) => {
-        setStakedIncinerators(staked);
-        setUnstakedIncinerators(unstaked);
-      });
-    }
-  };
-
-  const availableStakedIncinerators = stakedIncinerators.filter(
-    (incinerator) => !slots.some((slot) => slot && slot.asset_id === incinerator.asset_id)
-  );
 
   return (
     <div className="burn-room">
@@ -133,145 +98,138 @@ const BurnRoom = ({ accountName, onClose }) => {
       </button>
       <h2>Burn Room</h2>
 
+      {/* NFT Grid */}
       <NFTGrid
         burnableNFTs={burnableNFTs}
         proposals={proposals}
         selectedNFT={selectedNFT}
-        onNFTClick={handleNFTClick}
-        onAssignNFT={handleAssignNFTToSlot}
+        onNFTClick={(nft) => setSelectedNFT(nft)}
+        onAssignNFT={(nft, index) => {
+          const updatedSlots = [...nftSlots];
+          updatedSlots[index] = nft;
+          setNftSlots(updatedSlots);
+        }}
         nftSlots={nftSlots}
       />
 
-      <h3>Selected NFTs to Burn</h3>
-      <NFTSlots
-        slots={slots}
-        nftSlots={nftSlots}
-        onSlotClick={handleSlotClick}
-        onBurn={handleBurnNFT}
-      />
+      {/* Selected NFTs to Burn */}
+      <div className="selected-nfts-container">
+        <h3>Selected NFTs to Burn</h3>
+        <NFTSlots
+          slots={slots}
+          nftSlots={nftSlots}
+          onSlotClick={(index) => handleSlotClick(index)}
+        />
+        <div className="burn-button-container">
+          <button
+            className="burn-button"
+            onClick={handleBurnNFT}
+            disabled={!selectedNFT || !slots.some((slot) => slot)}
+          >
+            Burn NFT
+          </button>
+        </div>
+      </div>
 
-      <h3>Available Incinerators</h3>
-      <button onClick={toggleShowSlots}>
-        {showSlots ? 'Hide Incinerators' : 'Show Incinerators'}
-      </button>
-
-      {showSlots && (
-        <div className="incinerator-grid">
-          {slots.map((slot, index) => (
-            <div
-              key={index}
-              className={`incinerator-card ${slot ? '' : 'empty-incinerator'}`}
-              onDoubleClick={() => handleRemoveIncinerator(index)}
-            >
-              {slot ? (
-                <>
+      {/* Incinerator Slots */}
+      <h3>Incinerator Slots</h3>
+      <div className="incinerator-grid">
+        {slots.map((slot, index) => (
+          <div
+            key={index}
+            className={`incinerator-card ${slot ? '' : 'empty-incinerator'}`}
+            onClick={() => handleSlotClick(index)}
+          >
+            {slot ? (
+              <>
+                <img
+                  src={`https://ipfs.io/ipfs/${slot.img}`}
+                  alt={slot.template_name || 'Unnamed Incinerator'}
+                  className="incinerator-image"
+                />
+                <p>{slot.template_name || 'Unnamed Incinerator'}</p>
+                <p className="asset-id">Asset ID: {slot.asset_id}</p>
+                <div className="progress-bar-container">
+                  <div
+                    className="progress-bar-fill fuel-bar"
+                    style={{ width: `${(slot.fuel / 100000) * 100}%` }}
+                  >
+                    <span className="progress-bar-text">Fuel: {slot.fuel}/100000</span>
+                  </div>
+                </div>
+                <div className="progress-bar-container">
+                  <div
+                    className="progress-bar-fill energy-bar"
+                    style={{ width: `${(slot.energy / 10) * 100}%` }}
+                  >
+                    <span className="progress-bar-text">Energy: {slot.energy}/10</span>
+                  </div>
+                </div>
+                <div className="progress-bar-container">
+                  <div
+                    className="progress-bar-fill durability-bar"
+                    style={{ width: `${(slot.durability / 500) * 100}%` }}
+                  >
+                    <span className="progress-bar-text">Durability: {slot.durability}/500</span>
+                  </div>
+                </div>
+                <div className="button-container">
                   <button
-                    className="burn-button"
+                    className="fuel-button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      loadFuel(slot.asset_id, 10000);
+                    }}
+                  >
+                    Load Fuel
+                  </button>
+                  <button
+                    className="energy-button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      loadEnergy(slot.asset_id);
+                    }}
+                  >
+                    Load Energy
+                  </button>
+                  <button
+                    className="repair-durability-button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      repairDurability(slot.asset_id);
+                    }}
+                  >
+                    Repair Durability
+                  </button>
+                  <button
+                    className="remove-incinerator-button"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleRemoveIncinerator(index);
                     }}
                   >
-                    Remove Incinerator
+                    Remove
                   </button>
-                  <img
-                    src={`https://ipfs.io/ipfs/${slot.img}`}
-                    alt={slot.template_name || 'Unnamed Incinerator'}
-                    className="incinerator-image"
-                  />
-                  <p>{slot.template_name || 'Unnamed Incinerator'}</p>
-                  <p className="asset-id">Asset ID: {slot.asset_id}</p>
-                  <div className="progress-bar-container">
-                    <div
-                      className="progress-bar-fill fuel-bar"
-                      style={{ width: `${(slot.fuel / 100000) * 100}%` }}
-                    >
-                      <span className="progress-bar-text">Fuel: {slot.fuel}/100000</span>
-                    </div>
-                  </div>
-                  <button
-                    className="load-fuel-button fuel-button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      console.log(`Load fuel for incinerator ${slot.asset_id}`);
-                    }}
-                  >
-                    Add Fuel
-                  </button>
-                  <div className="progress-bar-container">
-                    <div
-                      className="progress-bar-fill energy-bar"
-                      style={{ width: `${(slot.energy / 10) * 100}%` }}
-                    >
-                      <span className="progress-bar-text">Energy: {slot.energy}/10</span>
-                    </div>
-                  </div>
-                  <button
-                    className="load-energy-button energy-button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      console.log(`Load energy for incinerator ${slot.asset_id}`);
-                    }}
-                  >
-                    Add Energy
-                  </button>
-                  <div className="progress-bar-container">
-                    <div
-                      className="progress-bar-fill durability-bar"
-                      style={{ width: `${(slot.durability / 500) * 100}%` }}
-                    >
-                      <span className="progress-bar-text">
-                        Durability: {slot.durability}/500
-                      </span>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <p onClick={() => handleSlotClick(index)}>Click to assign an incinerator</p>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+                </div>
+              </>
+            ) : (
+              <p>Click to assign an incinerator</p>
+            )}
+          </div>
+        ))}
+      </div>
 
+      {/* Incinerator Modal */}
       {showIncineratorModal && (
         <IncineratorModal
-          stakedIncinerators={availableStakedIncinerators}
-          onIncineratorSelect={handleIncineratorSelect}
+          stakedIncinerators={stakedIncinerators}
+          unstakedIncinerators={unstakedIncinerators}
+          onIncineratorSelect={handleStakedIncineratorSelect}
           onClose={() => setShowIncineratorModal(false)}
+          loadFuel={loadFuel}
+          loadEnergy={loadEnergy}
+          repairDurability={repairDurability}
         />
-      )}
-
-      {confirmationModal && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <h3>Confirm Stake</h3>
-            {selectedIncinerator && (
-              <div className="incinerator-card">
-                <img
-                  src={`https://ipfs.io/ipfs/${selectedIncinerator.img}`}
-                  alt={selectedIncinerator.template_name || 'Unnamed Incinerator'}
-                  className="incinerator-image"
-                />
-                <p>{selectedIncinerator.template_name || 'Unnamed Incinerator'}</p>
-                <p className="asset-id">Asset ID: {selectedIncinerator.asset_id}</p>
-              </div>
-            )}
-            <p className="staking-description">
-              Staking locks your incinerator for use in burning NFTs. Once staked, you will need
-              to unstake it if you want to transfer or reuse it elsewhere.
-            </p>
-            <button className="confirm-button">
-              {loading ? 'Staking...' : 'Confirm'}
-            </button>
-            <button
-              className="cancel-button"
-              onClick={() => setConfirmationModal(false)}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
       )}
     </div>
   );

@@ -12,16 +12,16 @@ const NFTSlots = ({
         <div key={index} className="nft-slot">
           {nft ? (
             <>
-              {/* NFT Details */}
+              {/* Display NFT Details */}
               <img
                 src={`https://ipfs.io/ipfs/${nft.img}`}
                 alt={nft.template_name || 'Unnamed NFT'}
                 className="nft-image"
               />
-              <p>{nft.template_name || 'Unnamed NFT'}</p>
+              <p className="nft-name">{nft.template_name || 'Unnamed NFT'}</p>
               <p className="asset-id">Asset ID: {nft.asset_id}</p>
               
-              {/* Burn Button or Warning */}
+              {/* Conditional Burn Button */}
               {slots[index] ? (
                 <BurnButton 
                   nft={nft} 
@@ -33,7 +33,7 @@ const NFTSlots = ({
               )}
             </>
           ) : (
-            <p>Empty Slot</p>
+            <p className="empty-slot-text">Empty Slot</p>
           )}
         </div>
       ))}
