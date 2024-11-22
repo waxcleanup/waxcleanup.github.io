@@ -2,6 +2,7 @@ import React from 'react';
 
 const IncineratorModal = ({
   stakedIncinerators = [],
+  unstakedIncinerators = [],
   onIncineratorSelect,
   onClose,
   loadFuel,
@@ -102,6 +103,37 @@ const IncineratorModal = ({
               ))
             ) : (
               <p>No staked incinerators available.</p>
+            )}
+          </div>
+        </div>
+
+        {/* Unstaked Incinerators Section */}
+        <div className="unstaked-section">
+          <h4>Unstaked Incinerators</h4>
+          <div className="incinerator-grid">
+            {unstakedIncinerators.length > 0 ? (
+              unstakedIncinerators.map((incinerator) => (
+                <div
+                  key={incinerator.id}
+                  className="incinerator-card"
+                  onClick={() => onIncineratorSelect(incinerator)}
+                >
+                  <img
+                    src={
+                      incinerator.img
+                        ? `https://ipfs.io/ipfs/${incinerator.img}`
+                        : 'default-placeholder.png'
+                    }
+                    alt={incinerator.template_name || 'Unnamed Incinerator'}
+                    className="incinerator-image"
+                  />
+                  <p className="incinerator-name">
+                    {incinerator.template_name || 'Unnamed Incinerator'}
+                  </p>
+                </div>
+              ))
+            ) : (
+              <p>No unstaked incinerators available.</p>
             )}
           </div>
         </div>

@@ -374,3 +374,41 @@
   background-color: rgba(0, 0, 0, 0.8); /* Optional background for visibility */
   border-radius: 8px; /* Optional rounded corners */
 }
+.table-container {
+  overflow-x: auto;
+  margin: 1rem 0;
+}
+
+.incinerator-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.incinerator-table th,
+.incinerator-table td {
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+}
+
+.incinerator-table th {
+  background-color: #f5f5f5;
+  font-weight: bold;
+}
+
+.incinerator-table tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.stake-button {
+  padding: 0.5rem 1rem;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.stake-button:hover {
+  background-color: #0056b3;
+}
