@@ -328,7 +328,7 @@
 
 .load-fuel-button,
 .load-energy-button {
-  width: 200px;
+  width: 135px;
   padding: 1px;
   text-align: center;
   font-size: 1em;
@@ -361,3 +361,16 @@
 }
 
 /* Add any other CSS rules here */
+.staking-description {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  color: #fff;
+  font-size: 1.2rem; /* Adjust as needed */
+  text-shadow: 0 0 5px #fff, 0 0 10px #ff7f50, 0 0 20px #ff7f50, 0 0 30px #ffa07a, 0 0 40px #ffa07a;
+  padding: 10px;
+  flex-wrap: wrap; /* Allows text to wrap if necessary */
+  background-color: rgba(0, 0, 0, 0.8); /* Optional background for visibility */
+  border-radius: 8px; /* Optional rounded corners */
+}

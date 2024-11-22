@@ -1,43 +1,80 @@
 import axios from 'axios';
 
-const BASE_URL = 'https://maestrobeatz.servegame.com:3003';
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL; // Backend API base URL
+const BASE_URL = process.env.REACT_APP_RPC; // WAX blockchain endpoint
+const CONTRACT_NAME = process.env.REACT_APP_CONTRACT_NAME;
 
 /**
- * Fetch staked incinerators for a given user.
+ * Fetch incinerators from the blockchain using the cleanupcentr contract.
  *
- * @param {string} accountName - The account name of the user.
- * @returns {Promise<Array>} - An array of staked incinerators.
+ * @param {string} accountName - The user's WAX account name.
+ * @returns {Promise<Array>} - Array of incinerators.
  */
-export const fetchStakedIncinerators = async (accountName) => {
+export const fetchIncineratorsFromBlockchain = async (accountName) => {
   try {
-    const response = await axios.get(`${BASE_URL}/incinerators/staked/${accountName}`);
-    if (response.data.success) {
-      return response.data.data; // Return the staked incinerators data
-    } else {
-      throw new Error('Failed to fetch staked incinerators');
-    }
+    const response = await axios.post(`${BASE_URL}/v1/chain/get_table_rows`, {
+      json: true,
+      code: CONTRACT_NAME,
+      scope: accountName,
+      table: "incinerators",
+      limit: 1000,
+    });
+
+    const incinerators = response.data.rows || [];
+    console.log("Fetched incinerators from blockchain:", incinerators);
+    return incinerators;
   } catch (error) {
-    console.error('Error fetching staked incinerators:', error);
+    console.error("Error fetching incinerators from blockchain:", error);
     throw error;
   }
 };
 
 /**
- * Fetch all incinerators for a given user (staked and unstaked).
+ * Fetch staked incinerators from the backend API.
+ *
+ * @param {string} accountName - The account name of the user.
+ * @returns {Promise<Array>} - Array of staked incinerators.
+ */
+export const fetchStakedIncineratorsFromBackend = async (accountName) => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/incinerators/staked/${accountName}`);
+    const stakedIncinerators = response.data.data || [];
+    console.log("Fetched staked incinerators from backend:", stakedIncinerators);
+    return stakedIncinerators;
+  } catch (error) {
+    console.error("Error fetching staked incinerators from backend:", error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch both staked and unstaked incinerators for a given user.
  *
  * @param {string} accountName - The account name of the user.
  * @returns {Promise<Object>} - An object containing staked and unstaked incinerators.
  */
-export const fetchAllIncinerators = async (accountName) => {
+export const fetchStakedAndUnstakedIncinerators = async (accountName) => {
   try {
-    const response = await axios.get(`${BASE_URL}/incinerators/${accountName}`);
-    if (response.data.success) {
-      return response.data.data; // Return all incinerators
-    } else {
-      throw new Error('Failed to fetch incinerators');
-    }
+    // Fetch staked incinerators from backend
+    const staked = await fetchStakedIncineratorsFromBackend(accountName);
+
+    // Fetch all incinerators from blockchain
+    const allIncinerators = await fetchIncineratorsFromBlockchain(accountName);
+
+    // Unstaked incinerators are those not marked as locked
+    const unstaked = allIncinerators.filter(
+      (incinerator) =>
+        incinerator.owner === accountName &&
+        Number(incinerator.locked) === 0
+    );
+
+    console.log("All Incinerators Fetched:", allIncinerators);
+    console.log("Staked Incinerators:", staked);
+    console.log("Unstaked Incinerators:", unstaked);
+
+    return { staked, unstaked };
   } catch (error) {
-    console.error('Error fetching all incinerators:', error);
+    console.error("Error fetching staked and unstaked incinerators:", error);
     throw error;
   }
 };

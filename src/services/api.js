@@ -293,58 +293,38 @@ export const fetchUserNFTsFromContract = async (accountName) => {
   }
 };
 /**
- * Fetches user's incinerators directly from the blockchain (via atomicassets contract).
- * Filters the assets by the collection and schema for incinerators, and includes template details (name, image, metadata).
+ * Fetches user's incinerators and categorizes them as staked or unstaked.
  */
 export const fetchIncineratorsFromBlockchain = async (accountName) => {
   try {
-    // Query for assets owned by the user (accountName) in the atomicassets contract
     const response = await axios.post(`${rpc.endpoint}/v1/chain/get_table_rows`, {
       json: true,
-      code: 'atomicassets',      // Contract name
-      scope: accountName,        // The account name
-      table: 'assets',           // Table name where assets are stored
-      limit: 1000,               // Limit the number of records to fetch
+      code: "atomicassets",  // Contract name for assets
+      scope: accountName,    // Account name (ownership scope)
+      table: "assets",       // Table name
+      limit: 1000,           // Max rows to fetch
     });
 
-    const userAssets = response.data.rows;
-    console.log('Fetched user assets from atomicassets:', userAssets);
+    const userAssets = response.data.rows || [];
+    console.log("Fetched user assets from blockchain:", userAssets);
 
-    // Filter the assets to get only incinerators from the cleanupcentr collection
-    const incinerators = userAssets.filter(asset =>
-      asset.collection_name === 'cleanupcentr' &&
-      asset.schema_name === 'incinerators'
+    // Filter incinerators by collection and schema
+    const incinerators = userAssets.filter(
+      (asset) =>
+        asset.collection_name === "cleanupcentr" && // Filter by collection
+        asset.schema_name === "incinerators"        // Filter by schema
     );
 
-    console.log('Filtered incinerators:', incinerators);
+    console.log("Filtered incinerators:", incinerators);
 
-    // Fetch template details for each incinerator
-    const incineratorDetails = await Promise.all(
-      incinerators.map(async (incinerator) => {
-        // Fetch template details using the template_id from the filtered incinerators
-        const templateDetails = await fetchIncineratorTemplateDetails(
-          incinerator.collection_name,
-          incinerator.template_id
-        );
-        
-        // Combine the asset details with the template details
-        return {
-          ...incinerator,
-          template_name: templateDetails.template_name || 'Unnamed Template',  // Add template name
-          img: templateDetails.img || null,  // Add image (IPFS URL)
-          metadata: templateDetails.metadata || {},  // Add any additional metadata from the template
-        };
-      })
-    );
-
-    console.log('Final incinerator details with templates:', incineratorDetails);
-    return incineratorDetails;
-
+    // Return the filtered incinerators
+    return incinerators;
   } catch (error) {
-    console.error('Error fetching incinerators from blockchain:', error);
+    console.error("Error fetching incinerators from blockchain:", error);
     throw error;
   }
 };
+
 
 /**
  * Fetches template details for a specific template_id and collection_name.
