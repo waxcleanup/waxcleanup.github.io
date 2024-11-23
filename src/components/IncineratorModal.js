@@ -1,7 +1,31 @@
 import React from 'react';
-import './BurnRoom.css'; // Ensures styling consistency with BurnRoom
+import PropTypes from 'prop-types';
+import IncineratorDetails from './IncineratorDetails';
+
+const StakeButton = ({ incinerator, onStake }) => {
+  const handleStakeClick = () => {
+    if (!incinerator) {
+      alert('No incinerator selected for staking.');
+      return;
+    }
+    onStake(incinerator);
+  };
+
+  return (
+    <button
+      className="stake-button"
+      onClick={(e) => {
+        e.stopPropagation(); // Prevent triggering other events
+        handleStakeClick();
+      }}
+    >
+      Stake
+    </button>
+  );
+};
 
 const IncineratorModal = ({
+  accountName,
   stakedIncinerators = [],
   unstakedIncinerators = [],
   onIncineratorSelect,
@@ -25,94 +49,23 @@ const IncineratorModal = ({
           <div className="incinerator-grid">
             {stakedIncinerators.length > 0 ? (
               stakedIncinerators.map((incinerator) => (
-                <div key={incinerator.asset_id} className="incinerator-card">
-                  <img
-                    src={`https://ipfs.io/ipfs/${incinerator.img}`}
-                    alt={incinerator.name || 'Unnamed Incinerator'}
-                    className="incinerator-image"
+                <div
+                  key={incinerator.asset_id}
+                  className="incinerator-card"
+                  onClick={() => onIncineratorSelect(incinerator)}
+                >
+                  <IncineratorDetails
+                    incinerator={incinerator}
+                    onFuelLoad={loadFuel}
+                    onEnergyLoad={loadEnergy}
+                    onRepair={repairDurability}
+                    showButtons={false}
                   />
-                  <p className="incinerator-name">
-                    {incinerator.name || 'Unnamed Incinerator'}
-                  </p>
-                  <p>Asset ID: {incinerator.asset_id}</p>
-
-                  {/* Progress Bars */}
-                  <div className="progress-bar-container">
-                    <div
-                      className="progress-bar-fill fuel-bar"
-                      style={{ width: `${(incinerator.fuel / 100000) * 100}%` }}
-                    >
-                      <span className="progress-bar-text">
-                        Fuel: {incinerator.fuel || 0}/100000
-                      </span>
-                    </div>
-                  </div>
-                  <div className="progress-bar-container">
-                    <div
-                      className="progress-bar-fill energy-bar"
-                      style={{ width: `${(incinerator.energy / 10) * 100}%` }}
-                    >
-                      <span className="progress-bar-text">
-                        Energy: {incinerator.energy || 0}/10
-                      </span>
-                    </div>
-                  </div>
-                  <div className="progress-bar-container">
-                    <div
-                      className="progress-bar-fill durability-bar"
-                      style={{
-                        width: `${(incinerator.durability / 500) * 100}%`,
-                      }}
-                    >
-                      <span className="progress-bar-text">
-                        Durability: {incinerator.durability || 0}/500
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Buttons */}
-                  <div className="button-container">
-                    <button
-                      className="fuel-button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        loadFuel(incinerator.asset_id, 10000);
-                      }}
-                    >
-                      Load Fuel
-                    </button>
-                    <button
-                      className="energy-button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        loadEnergy(incinerator.asset_id);
-                      }}
-                    >
-                      Load Energy
-                    </button>
-                    <button
-                      className="repair-durability-button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        repairDurability(incinerator.asset_id);
-                      }}
-                    >
-                      Repair Durability
-                    </button>
-                    <button
-                      className="select-button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onIncineratorSelect(incinerator);
-                      }}
-                    >
-                      Select
-                    </button>
-                  </div>
+                  <p className="incinerator-asset-id">Asset ID: {incinerator.asset_id}</p>
                 </div>
               ))
             ) : (
-              <p>No staked incinerators available.</p>
+              <p>No staked incinerators available. Stake an incinerator to start burning NFTs.</p>
             )}
           </div>
         </div>
@@ -120,6 +73,9 @@ const IncineratorModal = ({
         {/* Unstaked Incinerators Section */}
         <div className="unstaked-section">
           <h4>Unstaked Incinerators</h4>
+          <p className="staking-note">
+            Staking locks your incinerator for use in burning NFTs. Once staked, you will need to unstake it if you want to transfer or reuse it elsewhere.
+          </p>
           {unstakedIncinerators.length > 0 ? (
             <div className="table-container">
               <table className="incinerator-table">
@@ -136,12 +92,10 @@ const IncineratorModal = ({
                       <td>{incinerator.asset_id}</td>
                       <td>{incinerator.name || 'Unnamed Incinerator'}</td>
                       <td>
-                        <button
-                          className="stake-button"
-                          onClick={() => onUnstakedStake(incinerator)}
-                        >
-                          Stake
-                        </button>
+                        <StakeButton
+                          incinerator={incinerator}
+                          onStake={onUnstakedStake}
+                        />
                       </td>
                     </tr>
                   ))}
@@ -149,12 +103,34 @@ const IncineratorModal = ({
               </table>
             </div>
           ) : (
-            <p>No unstaked incinerators available.</p>
+            <p>No unstaked incinerators available. Acquire or unstake an incinerator to proceed.</p>
           )}
         </div>
       </div>
     </div>
   );
+};
+
+IncineratorModal.propTypes = {
+  accountName: PropTypes.string.isRequired,
+  stakedIncinerators: PropTypes.arrayOf(
+    PropTypes.shape({
+      asset_id: PropTypes.string.isRequired,
+      name: PropTypes.string,
+    })
+  ).isRequired,
+  unstakedIncinerators: PropTypes.arrayOf(
+    PropTypes.shape({
+      asset_id: PropTypes.string.isRequired,
+      name: PropTypes.string,
+    })
+  ).isRequired,
+  onIncineratorSelect: PropTypes.func.isRequired,
+  onUnstakedStake: PropTypes.func.isRequired,
+  onClose: PropTypes.func.isRequired,
+  loadFuel: PropTypes.func,
+  loadEnergy: PropTypes.func,
+  repairDurability: PropTypes.func,
 };
 
 export default IncineratorModal;

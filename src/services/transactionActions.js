@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { InitTransaction } from '../hooks/useSession';
 
 /**
@@ -12,10 +13,25 @@ export const stakeIncinerator = async (accountName, incinerator) => {
     throw new Error('No incinerator selected for staking.');
   }
 
-  const { asset_id, template_id } = incinerator;
+  const { asset_id } = incinerator;
 
-  if (!template_id) {
-    throw new Error('Selected incinerator is missing template_id. Cannot proceed with staking.');
+  if (!asset_id) {
+    throw new Error('Selected incinerator is missing asset_id. Cannot proceed with staking.');
+  }
+
+  let template_id;
+  try {
+    // Fetch template_id dynamically using asset_id
+    const response = await axios.get(`https://wax.api.atomicassets.io/atomicassets/v1/assets/${asset_id}`);
+    if (response.data && response.data.data) {
+      template_id = response.data.data.template.template_id;
+      console.log('Fetched template_id:', template_id);
+    } else {
+      throw new Error('Failed to fetch template_id from AtomicAssets API.');
+    }
+  } catch (error) {
+    console.error('Error fetching template_id:', error.message || error);
+    throw new Error('Could not fetch template_id for the selected incinerator.');
   }
 
   const memo = `Stake NFT:${asset_id}`;
@@ -24,7 +40,12 @@ export const stakeIncinerator = async (accountName, incinerator) => {
       {
         account: 'atomicassets',
         name: 'transfer',
-        authorization: [],
+        authorization: [
+          {
+            actor: accountName,
+            permission: 'active',
+          },
+        ],
         data: {
           from: accountName,
           to: 'cleanupcentr',
@@ -36,15 +57,32 @@ export const stakeIncinerator = async (accountName, incinerator) => {
   };
 
   try {
-    console.log('Initiating stake transaction with memo:', memo);
-    const result = await InitTransaction(dataTrx);
-    if (!result || !result.transactionId) {
-      throw new Error('Staking transaction failed.');
+    console.log('Initiating stake transaction:', dataTrx);
+
+    if (process.env.REACT_APP_DEBUG_TRANSACTIONS === 'true') {
+      console.log('[DEBUG] Simulating stake transaction for development:', dataTrx);
+      return { transactionId: 'fake-transaction-id' };
     }
+
+    const result = await InitTransaction(dataTrx);
+    console.log('Stake transaction result:', result);
+
+    if (!result || !result.transactionId) {
+      throw new Error(
+        `Staking transaction failed for asset_id: ${asset_id}. Missing transaction ID.`
+      );
+    }
+
     return result.transactionId;
   } catch (error) {
-    console.error('Error during staking transaction:', error);
-    throw error;
+    console.error(
+      `Error during staking transaction for asset_id: ${asset_id}`,
+      error.message || error
+    );
+    throw new Error(
+      error.message ||
+        `Failed to stake incinerator (asset_id: ${asset_id}). Please try again.`
+    );
   }
 };
 
@@ -61,32 +99,58 @@ export const burnNFT = async (accountName, nft, incinerator) => {
     throw new Error('Both an NFT and an incinerator must be selected for burning.');
   }
 
+  if (!nft.asset_id) {
+    console.error('Invalid NFT object:', nft);
+    throw new Error('Selected NFT is invalid. Missing asset_id.');
+  }
+
   const dataTrx = {
     actions: [
       {
         account: 'atomicassets',
         name: 'transfer',
-        authorization: [],
+        authorization: [
+          {
+            actor: accountName,
+            permission: 'active',
+          },
+        ],
         data: {
           from: accountName,
           to: 'cleanupcentr',
           asset_ids: [String(nft.asset_id)],
-          memo: `Incinerate NFT:${incinerator.id}`,
+          memo: `Incinerate NFT:${incinerator.asset_id}`,
         },
       },
     ],
   };
 
   try {
-    console.log('Initiating burn transaction with NFT:', nft.asset_id);
-    const result = await InitTransaction(dataTrx);
-    if (!result || !result.transactionId) {
-      throw new Error('Burn transaction failed.');
+    console.log('Initiating burn transaction for NFT:', nft.asset_id);
+
+    if (process.env.REACT_APP_DEBUG_TRANSACTIONS === 'true') {
+      console.log('[DEBUG] Simulating burn transaction for development:', dataTrx);
+      return { transactionId: 'fake-transaction-id' };
     }
+
+    const result = await InitTransaction(dataTrx);
+    console.log('Burn transaction result:', result);
+
+    if (!result || !result.transactionId) {
+      throw new Error(
+        `Burn transaction failed for NFT: ${nft.asset_id}. Missing transaction ID.`
+      );
+    }
+
     return result.transactionId;
   } catch (error) {
-    console.error('Error during burn transaction:', error);
-    throw error;
+    console.error(
+      `Error during burn transaction for NFT: ${nft.asset_id}`,
+      error.message || error
+    );
+    throw new Error(
+      error.message ||
+        `Failed to burn NFT (asset_id: ${nft.asset_id}). Please try again.`
+    );
   }
 };
-

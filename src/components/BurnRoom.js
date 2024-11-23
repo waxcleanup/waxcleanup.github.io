@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from 'react';
+import PropTypes from 'prop-types';
 import { fetchBurnableNFTs, fetchProposals } from '../services/api';
 import { fetchUnstakedIncinerators, fetchStakedIncinerators } from '../services/incinerators';
+import { stakeIncinerator, burnNFT } from '../services/transactionActions';
 import './BurnRoom.css';
 import NFTGrid from './NFTGrid';
 import NFTSlots from './NFTSlots';
 import IncineratorModal from './IncineratorModal';
+import IncineratorDetails from './IncineratorDetails';
 
 const BurnRoom = ({ accountName, onClose }) => {
   const [burnableNFTs, setBurnableNFTs] = useState([]);
@@ -18,25 +21,39 @@ const BurnRoom = ({ accountName, onClose }) => {
   const [showIncineratorModal, setShowIncineratorModal] = useState(false);
   const [selectedSlotIndex, setSelectedSlotIndex] = useState(null);
 
+  // Fetch all required data on mount or when accountName changes
   useEffect(() => {
     if (accountName) {
-      setLoading(true);
-      Promise.all([
+      fetchData();
+    }
+  }, [accountName]);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [nfts, fetchedProposals, unstaked, staked] = await Promise.all([
         fetchBurnableNFTs(accountName),
         fetchProposals(),
         fetchUnstakedIncinerators(accountName),
         fetchStakedIncinerators(accountName),
-      ])
-        .then(([nfts, fetchedProposals, unstaked, staked]) => {
-          setBurnableNFTs(nfts);
-          setProposals(fetchedProposals.filter((proposal) => proposal.status === 'approved'));
-          setUnstakedIncinerators(unstaked);
-          setStakedIncinerators(staked);
-        })
-        .catch((error) => console.error('Error fetching data:', error))
-        .finally(() => setLoading(false));
+      ]);
+      setBurnableNFTs(nfts);
+      setProposals(fetchedProposals.filter((proposal) => proposal.status === 'approved'));
+      setUnstakedIncinerators(unstaked);
+      setStakedIncinerators(staked);
+
+      console.log('Fetched data:', {
+        nfts,
+        proposals: fetchedProposals,
+        unstakedIncinerators: unstaked,
+        stakedIncinerators: staked,
+      });
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
     }
-  }, [accountName]);
+  };
 
   const handleSlotClick = (slotIndex) => {
     setSelectedSlotIndex(slotIndex);
@@ -66,30 +83,49 @@ const BurnRoom = ({ accountName, onClose }) => {
     setShowIncineratorModal(false);
   };
 
-  const loadFuel = (incineratorId, amount) => {
-    console.log(`Loading ${amount} fuel into incinerator ${incineratorId}`);
-    // Add backend or blockchain logic to load fuel
-  };
-
-  const loadEnergy = (incineratorId) => {
-    console.log(`Loading energy into incinerator ${incineratorId}`);
-    // Add backend or blockchain logic to load energy
-  };
-
-  const repairDurability = (incineratorId) => {
-    console.log(`Repairing durability for ${incineratorId}`);
-    // Add backend or blockchain logic to repair durability
-  };
-
-  const handleBurnNFT = async () => {
+  const handleStakeUnstakedIncinerator = async (incinerator) => {
     try {
-      const incinerator = slots.find((slot) => slot); // Find the first assigned incinerator
-      console.log(`Burning NFT ${selectedNFT.asset_id} with Incinerator ${incinerator.asset_id}`);
-      // Add burn logic here (e.g., blockchain transaction)
+      if (!accountName) {
+        console.error('Account name is missing. User must log in.');
+        alert('Please log in to stake an incinerator.');
+        return;
+      }
+      console.log('Staking incinerator:', incinerator);
+      const transactionId = await stakeIncinerator(accountName, incinerator);
+      console.log('Staked successfully. Transaction ID:', transactionId);
+      await fetchData();
+    } catch (error) {
+      console.error('Error staking incinerator:', error);
+    }
+  };
+
+  const handleBurnNFT = async (slotIndex) => {
+    try {
+      const incinerator = slots[slotIndex];
+      const nft = nftSlots[slotIndex];
+
+      if (!nft || !incinerator) {
+        alert('Please assign both an NFT and an incinerator to the slot.');
+        return;
+      }
+
+      console.log('Burning NFT:', { nft, incinerator });
+      const transactionId = await burnNFT(accountName, nft, incinerator);
+      console.log('NFT burned successfully. Transaction ID:', transactionId);
+
+      await fetchData();
+
+      const updatedNFTSlots = [...nftSlots];
+      updatedNFTSlots[slotIndex] = null;
+      setNftSlots(updatedNFTSlots);
     } catch (error) {
       console.error('Error during burn transaction:', error);
     }
   };
+
+  if (loading) {
+    return <div className="loading-spinner">Loading Burn Room... Please wait.</div>;
+  }
 
   return (
     <div className="burn-room">
@@ -119,16 +155,8 @@ const BurnRoom = ({ accountName, onClose }) => {
           slots={slots}
           nftSlots={nftSlots}
           onSlotClick={(index) => handleSlotClick(index)}
+          onBurn={(nft, incinerator) => handleBurnNFT(slots.indexOf(incinerator))}
         />
-        <div className="burn-button-container">
-          <button
-            className="burn-button"
-            onClick={handleBurnNFT}
-            disabled={!selectedNFT || !slots.some((slot) => slot)}
-          >
-            Burn NFT
-          </button>
-        </div>
       </div>
 
       {/* Incinerator Slots */}
@@ -140,81 +168,14 @@ const BurnRoom = ({ accountName, onClose }) => {
             className={`incinerator-card ${slot ? '' : 'empty-incinerator'}`}
             onClick={() => handleSlotClick(index)}
           >
-            {slot ? (
-              <>
-                <img
-                  src={`https://ipfs.io/ipfs/${slot.img}`}
-                  alt={slot.template_name || 'Unnamed Incinerator'}
-                  className="incinerator-image"
-                />
-                <p>{slot.template_name || 'Unnamed Incinerator'}</p>
-                <p className="asset-id">Asset ID: {slot.asset_id}</p>
-                <div className="progress-bar-container">
-                  <div
-                    className="progress-bar-fill fuel-bar"
-                    style={{ width: `${(slot.fuel / 100000) * 100}%` }}
-                  >
-                    <span className="progress-bar-text">Fuel: {slot.fuel}/100000</span>
-                  </div>
-                </div>
-                <div className="progress-bar-container">
-                  <div
-                    className="progress-bar-fill energy-bar"
-                    style={{ width: `${(slot.energy / 10) * 100}%` }}
-                  >
-                    <span className="progress-bar-text">Energy: {slot.energy}/10</span>
-                  </div>
-                </div>
-                <div className="progress-bar-container">
-                  <div
-                    className="progress-bar-fill durability-bar"
-                    style={{ width: `${(slot.durability / 500) * 100}%` }}
-                  >
-                    <span className="progress-bar-text">Durability: {slot.durability}/500</span>
-                  </div>
-                </div>
-                <div className="button-container">
-                  <button
-                    className="fuel-button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      loadFuel(slot.asset_id, 10000);
-                    }}
-                  >
-                    Load Fuel
-                  </button>
-                  <button
-                    className="energy-button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      loadEnergy(slot.asset_id);
-                    }}
-                  >
-                    Load Energy
-                  </button>
-                  <button
-                    className="repair-durability-button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      repairDurability(slot.asset_id);
-                    }}
-                  >
-                    Repair Durability
-                  </button>
-                  <button
-                    className="remove-incinerator-button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleRemoveIncinerator(index);
-                    }}
-                  >
-                    Remove
-                  </button>
-                </div>
-              </>
-            ) : (
-              <p>Click to assign an incinerator</p>
-            )}
+            <IncineratorDetails
+              incinerator={slot}
+              onFuelLoad={() => console.log('Load fuel triggered')}
+              onEnergyLoad={() => console.log('Load energy triggered')}
+              onRepair={() => console.log('Repair durability triggered')}
+              onRemove={() => handleRemoveIncinerator(index)}
+              showButtons
+            />
           </div>
         ))}
       </div>
@@ -222,17 +183,21 @@ const BurnRoom = ({ accountName, onClose }) => {
       {/* Incinerator Modal */}
       {showIncineratorModal && (
         <IncineratorModal
-          stakedIncinerators={stakedIncinerators}
-          unstakedIncinerators={unstakedIncinerators}
-          onIncineratorSelect={handleStakedIncineratorSelect}
-          onClose={() => setShowIncineratorModal(false)}
-          loadFuel={loadFuel}
-          loadEnergy={loadEnergy}
-          repairDurability={repairDurability}
-        />
+	  accountName={typeof accountName === 'object' ? accountName.value : accountName} // Ensure string type
+	  stakedIncinerators={stakedIncinerators}
+	  unstakedIncinerators={unstakedIncinerators}
+	  onIncineratorSelect={handleStakedIncineratorSelect}
+	  onUnstakedStake={handleStakeUnstakedIncinerator}
+	  onClose={() => setShowIncineratorModal(false)}
+	/>
       )}
     </div>
   );
+};
+
+BurnRoom.propTypes = {
+  accountName: PropTypes.string.isRequired,
+  onClose: PropTypes.func.isRequired,
 };
 
 export default BurnRoom;

@@ -20,7 +20,7 @@ const NFTSlots = ({
               />
               <p className="nft-name">{nft.template_name || 'Unnamed NFT'}</p>
               <p className="asset-id">Asset ID: {nft.asset_id}</p>
-              
+
               {/* Conditional Burn Button */}
               {slots[index] ? (
                 <BurnButton 
