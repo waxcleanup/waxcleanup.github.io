@@ -61,7 +61,7 @@ const IncineratorModal = ({
                     onRepair={repairDurability}
                     showButtons={false}
                   />
-                  <p className="incinerator-asset-id">Asset ID: {incinerator.asset_id}</p>
+                  {/* Removed the redundant Asset ID display */}
                 </div>
               ))
             ) : (

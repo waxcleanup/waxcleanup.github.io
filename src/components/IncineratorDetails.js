@@ -12,43 +12,52 @@ const IncineratorDetails = ({
     return <p>Click to assign an incinerator</p>;
   }
 
+  const {
+    name = 'Unnamed Incinerator',
+    id = 'N/A',
+    fuel = 0,
+    energy = 0,
+    durability = 0,
+    img = 'default-placeholder.png',
+  } = incinerator;
+
   return (
-    <>
+    <div className="incinerator-details">
       <img
-        src={
-          incinerator.img
-            ? `https://ipfs.io/ipfs/${incinerator.img}`
-            : 'default-placeholder.png'
-        }
-        alt={incinerator.template_name || 'Unnamed Incinerator'}
+        src={`https://ipfs.io/ipfs/${img}`}
+        alt={name}
         className="incinerator-image"
       />
-      <p className="incinerator-name">{incinerator.template_name || 'Unnamed Incinerator'}</p>
-      <p className="asset-id">Asset ID: {incinerator.asset_id}</p>
+      <p className="incinerator-name">
+        <strong>Name:</strong> {name}
+      </p>
+      <p className="asset-id">
+        <strong>Asset ID:</strong> {id}
+      </p>
 
       {/* Progress Bars */}
       <div className="progress-bar-container">
         <div
           className="progress-bar-fill fuel-bar"
-          style={{ width: `${(incinerator.fuel / 100000) * 100}%` }}
+          style={{ width: `${(fuel / 100000) * 100}%` }}
         >
-          <span className="progress-bar-text">Fuel: {incinerator.fuel}/100000</span>
+          <span className="progress-bar-text">Fuel: {fuel}/100000</span>
         </div>
       </div>
       <div className="progress-bar-container">
         <div
           className="progress-bar-fill energy-bar"
-          style={{ width: `${(incinerator.energy / 10) * 100}%` }}
+          style={{ width: `${(energy / 10) * 100}%` }}
         >
-          <span className="progress-bar-text">Energy: {incinerator.energy}/10</span>
+          <span className="progress-bar-text">Energy: {energy}/10</span>
         </div>
       </div>
       <div className="progress-bar-container">
         <div
           className="progress-bar-fill durability-bar"
-          style={{ width: `${(incinerator.durability / 500) * 100}%` }}
+          style={{ width: `${(durability / 500) * 100}%` }}
         >
-          <span className="progress-bar-text">Durability: {incinerator.durability}/500</span>
+          <span className="progress-bar-text">Durability: {durability}/500</span>
         </div>
       </div>
 
@@ -59,7 +68,7 @@ const IncineratorDetails = ({
             className="fuel-button"
             onClick={(e) => {
               e.stopPropagation();
-              onFuelLoad(incinerator.asset_id, 10000);
+              onFuelLoad(id, 10000);
             }}
           >
             Load Fuel
@@ -68,7 +77,7 @@ const IncineratorDetails = ({
             className="energy-button"
             onClick={(e) => {
               e.stopPropagation();
-              onEnergyLoad(incinerator.asset_id);
+              onEnergyLoad(id);
             }}
           >
             Load Energy
@@ -77,7 +86,7 @@ const IncineratorDetails = ({
             className="repair-durability-button"
             onClick={(e) => {
               e.stopPropagation();
-              onRepair(incinerator.asset_id);
+              onRepair(id);
             }}
           >
             Repair Durability
@@ -95,7 +104,7 @@ const IncineratorDetails = ({
           )}
         </div>
       )}
-    </>
+    </div>
   );
 };
 
