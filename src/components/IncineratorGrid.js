@@ -1,16 +1,25 @@
 import React from 'react';
-import IncineratorCard from './IncineratorCard';
+import IncineratorDetails from './IncineratorDetails';
 
 const IncineratorGrid = ({ slots, onRemove, onSlotClick }) => (
   <div className="incinerator-grid">
     {slots.map((slot, index) => (
-      <IncineratorCard
+      <div
         key={index}
-        slot={slot}
-        index={index}
-        onRemove={onRemove}
-        onSlotClick={onSlotClick}
-      />
+        className={`incinerator-card ${slot ? '' : 'empty-incinerator'}`}
+        onClick={() => onSlotClick(index)}
+      >
+        {slot ? (
+          <IncineratorDetails
+            incinerator={slot}
+            onRemove={() => onRemove(index)}
+            fetchIncineratorData={() => {}} // Replace with actual data-fetching logic
+            showButtons
+          />
+        ) : (
+          <p>Empty Slot</p>
+        )}
+      </div>
     ))}
   </div>
 );

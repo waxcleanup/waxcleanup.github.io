@@ -2,28 +2,6 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import IncineratorDetails from './IncineratorDetails';
 
-const StakeButton = ({ incinerator, onStake }) => {
-  const handleStakeClick = () => {
-    if (!incinerator) {
-      alert('No incinerator selected for staking.');
-      return;
-    }
-    onStake(incinerator);
-  };
-
-  return (
-    <button
-      className="stake-button"
-      onClick={(e) => {
-        e.stopPropagation(); // Prevent triggering other events
-        handleStakeClick();
-      }}
-    >
-      Stake
-    </button>
-  );
-};
-
 const IncineratorModal = ({
   accountName,
   stakedIncinerators = [],
@@ -34,7 +12,17 @@ const IncineratorModal = ({
   loadFuel,
   loadEnergy,
   repairDurability,
+  assignedSlots = [],
 }) => {
+  // Filter staked incinerators to exclude those already assigned to slots
+  const availableStakedIncinerators = stakedIncinerators.filter(
+    (incinerator) => !assignedSlots.some((slot) => slot && slot.asset_id === incinerator.asset_id)
+  );
+
+  // Debugging logs for filtering logic
+  console.log('Assigned Slots:', assignedSlots);
+  console.log('Available Staked Incinerators:', availableStakedIncinerators);
+
   return (
     <div className="modal-overlay">
       <div className="modal-content">
@@ -47,8 +35,8 @@ const IncineratorModal = ({
         <div className="staked-section">
           <h4>Staked Incinerators</h4>
           <div className="incinerator-grid">
-            {stakedIncinerators.length > 0 ? (
-              stakedIncinerators.map((incinerator) => (
+            {availableStakedIncinerators.length > 0 ? (
+              availableStakedIncinerators.map((incinerator) => (
                 <div
                   key={incinerator.asset_id}
                   className="incinerator-card"
@@ -61,11 +49,10 @@ const IncineratorModal = ({
                     onRepair={repairDurability}
                     showButtons={false}
                   />
-                  {/* Removed the redundant Asset ID display */}
                 </div>
               ))
             ) : (
-              <p>No staked incinerators available. Stake an incinerator to start burning NFTs.</p>
+              <p>No available staked incinerators. Stake or unstake an incinerator to proceed.</p>
             )}
           </div>
         </div>
@@ -92,10 +79,15 @@ const IncineratorModal = ({
                       <td>{incinerator.asset_id}</td>
                       <td>{incinerator.name || 'Unnamed Incinerator'}</td>
                       <td>
-                        <StakeButton
-                          incinerator={incinerator}
-                          onStake={onUnstakedStake}
-                        />
+                        <button
+                          className="stake-button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onUnstakedStake(incinerator);
+                          }}
+                        >
+                          Stake
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -131,6 +123,7 @@ IncineratorModal.propTypes = {
   loadFuel: PropTypes.func,
   loadEnergy: PropTypes.func,
   repairDurability: PropTypes.func,
+  assignedSlots: PropTypes.array,
 };
 
 export default IncineratorModal;

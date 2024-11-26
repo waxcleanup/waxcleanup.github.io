@@ -1,68 +1,79 @@
-import React from 'react';
-import { WaxJS } from '@waxio/waxjs/dist';
+import React, { useState } from 'react';
+import PropTypes from 'prop-types';
+import { InitTransaction } from '../hooks/useSession';
 
 const LoadActions = ({ incineratorId, fuel, energy, fetchIncineratorData }) => {
-  const wax = new WaxJS({ rpcEndpoint: process.env.REACT_APP_RPC });
+  const [fuelAmount, setFuelAmount] = useState('');
+  const [loading, setLoading] = useState(false); // For transaction loading state
 
   const handleLoadFuel = async () => {
-    const user = wax.userAccount;
-    const amount = 10; // Example amount, can be made dynamic
+    if (!Number.isInteger(Number(fuelAmount)) || Number(fuelAmount) <= 0) {
+      alert('Please enter a valid fuel amount greater than 0.');
+      return;
+    }
 
+    setLoading(true); // Start loading
     try {
-      const result = await wax.api.transact({
+      console.log(`Loading fuel: ${fuelAmount} units for incinerator ${incineratorId}`);
+
+      const dataTrx = {
         actions: [
           {
             account: process.env.REACT_APP_CONTRACT_NAME,
             name: 'loadfuel',
-            authorization: [{ actor: user, permission: 'active' }],
+            authorization: [{ actor: process.env.REACT_APP_ACCOUNT_NAME, permission: 'active' }],
             data: {
-              user,
+              user: process.env.REACT_APP_ACCOUNT_NAME,
               incinerator_id: incineratorId,
-              amount,
+              amount: parseInt(fuelAmount, 10),
             },
           },
         ],
-      }, {
-        blocksBehind: 3,
-        expireSeconds: 30,
-      });
+      };
 
-      console.log('Fuel loaded successfully:', result);
-      alert(`Successfully loaded ${amount} fuel!`);
-      fetchIncineratorData(); // Refresh data after the action
+      const result = await InitTransaction(dataTrx);
+      console.log(`Fuel loaded successfully:`, result);
+      alert(`Successfully loaded ${fuelAmount} fuel!`);
+
+      await fetchIncineratorData(); // Refresh incinerator data
+      setFuelAmount(''); // Clear the input field
     } catch (error) {
       console.error('Error loading fuel:', error);
       alert('Failed to load fuel. Please try again.');
+    } finally {
+      setLoading(false); // End loading
     }
   };
 
   const handleLoadEnergy = async () => {
-    const user = wax.userAccount;
-
+    setLoading(true); // Start loading
     try {
-      const result = await wax.api.transact({
+      console.log(`Loading energy for incinerator ${incineratorId}`);
+
+      const dataTrx = {
         actions: [
           {
             account: process.env.REACT_APP_CONTRACT_NAME,
             name: 'loadenergy',
-            authorization: [{ actor: user, permission: 'active' }],
+            authorization: [{ actor: process.env.REACT_APP_ACCOUNT_NAME, permission: 'active' }],
             data: {
-              user,
+              user: process.env.REACT_APP_ACCOUNT_NAME,
               incinerator_id: incineratorId,
             },
           },
         ],
-      }, {
-        blocksBehind: 3,
-        expireSeconds: 30,
-      });
+      };
 
-      console.log('Energy loaded successfully:', result);
+      const result = await InitTransaction(dataTrx);
+      console.log(`Energy loaded successfully:`, result);
       alert('Energy fully loaded!');
-      fetchIncineratorData(); // Refresh data after the action
+
+      await fetchIncineratorData(); // Refresh incinerator data
     } catch (error) {
       console.error('Error loading energy:', error);
       alert('Failed to load energy. Please try again.');
+    } finally {
+      setLoading(false); // End loading
     }
   };
 
@@ -71,10 +82,30 @@ const LoadActions = ({ incineratorId, fuel, energy, fetchIncineratorData }) => {
       <h4>Incinerator #{incineratorId}</h4>
       <p>Fuel: {fuel}</p>
       <p>Energy: {energy}</p>
-      <button onClick={handleLoadFuel}>Load Fuel</button>
-      <button onClick={handleLoadEnergy}>Load Energy</button>
+      <div>
+        <input
+          type="number"
+          placeholder="Enter fuel amount"
+          value={fuelAmount}
+          onChange={(e) => setFuelAmount(e.target.value)}
+          disabled={loading} // Disable input while loading
+        />
+        <button onClick={handleLoadFuel} disabled={loading}>
+          {loading ? 'Loading...' : 'Load Fuel'}
+        </button>
+      </div>
+      <button onClick={handleLoadEnergy} disabled={loading}>
+        {loading ? 'Loading...' : 'Load Energy'}
+      </button>
     </div>
   );
+};
+
+LoadActions.propTypes = {
+  incineratorId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+  fuel: PropTypes.number.isRequired,
+  energy: PropTypes.number.isRequired,
+  fetchIncineratorData: PropTypes.func.isRequired,
 };
 
 export default LoadActions;

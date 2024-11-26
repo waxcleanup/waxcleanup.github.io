@@ -25,12 +25,12 @@ export const stakeIncinerator = async (accountName, incinerator) => {
     const response = await axios.get(`https://wax.api.atomicassets.io/atomicassets/v1/assets/${asset_id}`);
     if (response.data && response.data.data) {
       template_id = response.data.data.template.template_id;
-      console.log('Fetched template_id:', template_id);
+      console.log('[DEBUG] Fetched template_id:', template_id);
     } else {
       throw new Error('Failed to fetch template_id from AtomicAssets API.');
     }
   } catch (error) {
-    console.error('Error fetching template_id:', error.message || error);
+    console.error('[ERROR] Error fetching template_id:', error.message || error);
     throw new Error('Could not fetch template_id for the selected incinerator.');
   }
 
@@ -57,15 +57,10 @@ export const stakeIncinerator = async (accountName, incinerator) => {
   };
 
   try {
-    console.log('Initiating stake transaction:', dataTrx);
-
-    if (process.env.REACT_APP_DEBUG_TRANSACTIONS === 'true') {
-      console.log('[DEBUG] Simulating stake transaction for development:', dataTrx);
-      return { transactionId: 'fake-transaction-id' };
-    }
+    console.log('[DEBUG] Initiating stake transaction:', dataTrx);
 
     const result = await InitTransaction(dataTrx);
-    console.log('Stake transaction result:', result);
+    console.log('[DEBUG] Stake transaction result:', result);
 
     if (!result || !result.transactionId) {
       throw new Error(
@@ -76,12 +71,11 @@ export const stakeIncinerator = async (accountName, incinerator) => {
     return result.transactionId;
   } catch (error) {
     console.error(
-      `Error during staking transaction for asset_id: ${asset_id}`,
+      `[ERROR] Error during staking transaction for asset_id: ${asset_id}`,
       error.message || error
     );
     throw new Error(
-      error.message ||
-        `Failed to stake incinerator (asset_id: ${asset_id}). Please try again.`
+      error.message || `Failed to stake incinerator (asset_id: ${asset_id}). Please try again.`
     );
   }
 };
@@ -100,7 +94,7 @@ export const burnNFT = async (accountName, nft, incinerator) => {
   }
 
   if (!nft.asset_id) {
-    console.error('Invalid NFT object:', nft);
+    console.error('[ERROR] Invalid NFT object:', nft);
     throw new Error('Selected NFT is invalid. Missing asset_id.');
   }
 
@@ -119,22 +113,17 @@ export const burnNFT = async (accountName, nft, incinerator) => {
           from: accountName,
           to: 'cleanupcentr',
           asset_ids: [String(nft.asset_id)],
-          memo: `Incinerate NFT:${incinerator.asset_id}`,
+          memo: `Incinerate NFT:${nft.asset_id}:${incinerator.asset_id || incinerator.id}`,
         },
       },
     ],
   };
 
   try {
-    console.log('Initiating burn transaction for NFT:', nft.asset_id);
-
-    if (process.env.REACT_APP_DEBUG_TRANSACTIONS === 'true') {
-      console.log('[DEBUG] Simulating burn transaction for development:', dataTrx);
-      return { transactionId: 'fake-transaction-id' };
-    }
+    console.log('[DEBUG] Initiating burn transaction for NFT:', nft.asset_id);
 
     const result = await InitTransaction(dataTrx);
-    console.log('Burn transaction result:', result);
+    console.log('[DEBUG] Burn transaction result:', result);
 
     if (!result || !result.transactionId) {
       throw new Error(
@@ -145,12 +134,119 @@ export const burnNFT = async (accountName, nft, incinerator) => {
     return result.transactionId;
   } catch (error) {
     console.error(
-      `Error during burn transaction for NFT: ${nft.asset_id}`,
+      `[ERROR] Error during burn transaction for NFT: ${nft.asset_id}`,
       error.message || error
     );
     throw new Error(
-      error.message ||
-        `Failed to burn NFT (asset_id: ${nft.asset_id}). Please try again.`
+      error.message || `Failed to burn NFT (asset_id: ${nft.asset_id}). Please try again.`
+    );
+  }
+};
+
+/**
+ * Load fuel into an incinerator.
+ * @param {string} accountName - The user's WAX account name.
+ * @param {string} incineratorId - The ID of the incinerator.
+ * @param {number} amount - The amount of fuel to load.
+ * @returns {string} - The transaction ID.
+ * @throws Will throw an error if the load fuel process fails.
+ */
+export const loadFuel = async (accountName, incineratorId, amount) => {
+  if (!Number.isInteger(amount) || amount <= 0) {
+    throw new Error('Fuel amount must be a positive integer.');
+  }
+
+  const dataTrx = {
+    actions: [
+      {
+        account: process.env.REACT_APP_CONTRACT_NAME,
+        name: 'loadfuel',
+        authorization: [
+          {
+            actor: accountName,
+            permission: 'active',
+          },
+        ],
+        data: {
+          user: accountName,
+          incinerator_id: incineratorId,
+          amount,
+        },
+      },
+    ],
+  };
+
+  try {
+    console.log('[DEBUG] Initiating load fuel transaction:', dataTrx);
+
+    const result = await InitTransaction(dataTrx);
+    console.log('[DEBUG] Load fuel transaction result:', result);
+
+    if (!result || !result.transactionId) {
+      throw new Error(
+        `Load fuel transaction failed for incinerator_id: ${incineratorId}. Missing transaction ID.`
+      );
+    }
+
+    return result.transactionId;
+  } catch (error) {
+    console.error(
+      `[ERROR] Error during load fuel transaction for incinerator_id: ${incineratorId}`,
+      error.message || error
+    );
+    throw new Error(
+      error.message || `Failed to load fuel into incinerator ${incineratorId}. Please try again.`
+    );
+  }
+};
+
+/**
+ * Load energy into an incinerator.
+ * @param {string} accountName - The user's WAX account name.
+ * @param {string} incineratorId - The ID of the incinerator.
+ * @returns {string} - The transaction ID.
+ * @throws Will throw an error if the load energy process fails.
+ */
+export const loadEnergy = async (accountName, incineratorId) => {
+  const dataTrx = {
+    actions: [
+      {
+        account: process.env.REACT_APP_CONTRACT_NAME,
+        name: 'loadenergy',
+        authorization: [
+          {
+            actor: accountName,
+            permission: 'active',
+          },
+        ],
+        data: {
+          user: accountName,
+          incinerator_id: incineratorId,
+        },
+      },
+    ],
+  };
+
+  try {
+    console.log('[DEBUG] Initiating load energy transaction:', dataTrx);
+
+    const result = await InitTransaction(dataTrx);
+    console.log('[DEBUG] Load energy transaction result:', result);
+
+    if (!result || !result.transactionId) {
+      throw new Error(
+        `Load energy transaction failed for incinerator_id: ${incineratorId}. Missing transaction ID.`
+      );
+    }
+
+    return result.transactionId;
+  } catch (error) {
+    console.error(
+      `[ERROR] Error during load energy transaction for incinerator_id: ${incineratorId}`,
+      error.message || error
+    );
+    throw new Error(
+      error.message || `Failed to load energy into incinerator ${incineratorId}. Please try again.`
     );
   }
 };

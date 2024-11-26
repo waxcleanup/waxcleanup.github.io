@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import { fetchBurnableNFTs, fetchProposals } from '../services/api';
 import { fetchUnstakedIncinerators, fetchStakedIncinerators } from '../services/incinerators';
@@ -11,7 +11,7 @@ import IncineratorDetails from './IncineratorDetails';
 
 const BurnRoom = ({ accountName, onClose }) => {
   const [burnableNFTs, setBurnableNFTs] = useState([]);
-  const [slots, setSlots] = useState([null, null, null]); // Incinerator slots
+  const [slots, setSlots] = useState([null, null, null]); // Incinerator slots start empty
   const [nftSlots, setNftSlots] = useState([null, null, null]); // NFT selection slots
   const [loading, setLoading] = useState(true);
   const [proposals, setProposals] = useState([]);
@@ -21,14 +21,7 @@ const BurnRoom = ({ accountName, onClose }) => {
   const [showIncineratorModal, setShowIncineratorModal] = useState(false);
   const [selectedSlotIndex, setSelectedSlotIndex] = useState(null);
 
-  // Fetch all required data on mount or when accountName changes
-  useEffect(() => {
-    if (accountName) {
-      fetchData();
-    }
-  }, [accountName]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const [nfts, fetchedProposals, unstaked, staked] = await Promise.all([
@@ -42,22 +35,27 @@ const BurnRoom = ({ accountName, onClose }) => {
       setUnstakedIncinerators(unstaked);
       setStakedIncinerators(staked);
 
-      console.log('Fetched data:', {
-        nfts,
-        proposals: fetchedProposals,
-        unstakedIncinerators: unstaked,
-        stakedIncinerators: staked,
-      });
+      // Do not prefill slots with incinerators
+      console.log('Data fetched successfully');
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [accountName]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleSlotClick = (slotIndex) => {
     setSelectedSlotIndex(slotIndex);
     setShowIncineratorModal(true);
+  };
+
+  const handleModalClose = () => {
+    setSelectedSlotIndex(null);
+    setShowIncineratorModal(false);
   };
 
   const handleRemoveIncinerator = (slotIndex) => {
@@ -81,6 +79,7 @@ const BurnRoom = ({ accountName, onClose }) => {
     );
 
     setShowIncineratorModal(false);
+    setSelectedSlotIndex(null);
   };
 
   const handleStakeUnstakedIncinerator = async (incinerator) => {
@@ -123,16 +122,15 @@ const BurnRoom = ({ accountName, onClose }) => {
     }
   };
 
-  if (loading) {
-    return <div className="loading-spinner">Loading Burn Room... Please wait.</div>;
-  }
-
   return (
     <div className="burn-room">
       <button className="close-button" onClick={onClose}>
         &times;
       </button>
       <h2>Burn Room</h2>
+
+      {/* Loading State */}
+      {loading && <p>Loading...</p>}
 
       {/* NFT Grid */}
       <NFTGrid
@@ -152,10 +150,9 @@ const BurnRoom = ({ accountName, onClose }) => {
       <div className="selected-nfts-container">
         <h3>Selected NFTs to Burn</h3>
         <NFTSlots
-          slots={slots}
           nftSlots={nftSlots}
-          onSlotClick={(index) => handleSlotClick(index)}
-          onBurn={(nft, incinerator) => handleBurnNFT(slots.indexOf(incinerator))}
+          slots={slots}
+          onBurn={handleBurnNFT}
         />
       </div>
 
@@ -168,14 +165,17 @@ const BurnRoom = ({ accountName, onClose }) => {
             className={`incinerator-card ${slot ? '' : 'empty-incinerator'}`}
             onClick={() => handleSlotClick(index)}
           >
-            <IncineratorDetails
-              incinerator={slot}
-              onFuelLoad={() => console.log('Load fuel triggered')}
-              onEnergyLoad={() => console.log('Load energy triggered')}
-              onRepair={() => console.log('Repair durability triggered')}
-              onRemove={() => handleRemoveIncinerator(index)}
-              showButtons
-            />
+            {slot ? (
+              <IncineratorDetails
+                incinerator={slot}
+                fetchIncineratorData={fetchData}
+                onRepair={() => console.log('Repair durability triggered')}
+                onRemove={() => handleRemoveIncinerator(index)}
+                showButtons
+              />
+            ) : (
+              <p>Empty Slot</p>
+            )}
           </div>
         ))}
       </div>
@@ -183,13 +183,14 @@ const BurnRoom = ({ accountName, onClose }) => {
       {/* Incinerator Modal */}
       {showIncineratorModal && (
         <IncineratorModal
-	  accountName={typeof accountName === 'object' ? accountName.value : accountName} // Ensure string type
-	  stakedIncinerators={stakedIncinerators}
-	  unstakedIncinerators={unstakedIncinerators}
-	  onIncineratorSelect={handleStakedIncineratorSelect}
-	  onUnstakedStake={handleStakeUnstakedIncinerator}
-	  onClose={() => setShowIncineratorModal(false)}
-	/>
+          accountName={accountName}
+          stakedIncinerators={stakedIncinerators}
+          unstakedIncinerators={unstakedIncinerators}
+          assignedSlots={slots} // Pass assigned slots here
+          onIncineratorSelect={handleStakedIncineratorSelect}
+          onUnstakedStake={handleStakeUnstakedIncinerator}
+          onClose={handleModalClose}
+        />
       )}
     </div>
   );

@@ -3,51 +3,55 @@ import sessionKit, { saveSession, clearSession } from '../config/sessionConfig';
 import { useNavigate } from 'react-router-dom';
 
 export const TAPOS = {
-  blocksBehind: 3,
-  expireSeconds: 300,  // Increased expiration time for testing
-  broadcast: true
+  blocksBehind: 6, // Adjusted for higher network latency
+  expireSeconds: 300, // Increased expiration time for testing
+  broadcast: true,
 };
 
 // Helper function to initialize and perform a transaction
 export const InitTransaction = async (dataTrx) => {
   try {
+    // Restore session
     const session = await sessionKit.restore();
     if (!session) {
-      throw new Error("No session found");
+      console.error("Session restoration failed. Prompting for login.");
+      throw new Error("No session found. Please log in again.");
     }
 
-    // Debug log for session state before the transaction
-    console.log("Session state before transaction:", {
-      actor: session.permissionLevel.actor,
-      permission: session.permissionLevel.permission,
-      actions: dataTrx.actions
-    });
+    const { actor, permission } = session.permissionLevel;
 
-    // Ensure actor is included in each action authorization if not already set
+    // Confirm actor and permission match expected values
+    console.log("Using actor:", actor, "with permission:", permission);
+
+    // Attach authorization to each action
     const actions = dataTrx.actions.map((action) => ({
       ...action,
       authorization: [
         {
-          actor: session.permissionLevel.actor,
-          permission: session.permissionLevel.permission || 'active',
+          actor: actor,
+          permission: permission || 'active',
         },
       ],
     }));
 
-    // Debug log for transaction data
-    console.log("Sending transaction with:", { actions, TAPOS });
-    console.log("Transaction authorization:", actions[0].authorization);
+    console.log("Transaction payload:", { actions, TAPOS });
 
+    // Perform the transaction
     const transaction = await session.transact({ actions }, TAPOS);
 
     if (transaction) {
+      console.log("Transaction successful:", transaction);
       return {
         transactionId: String(transaction.resolved?.transaction.id),
-        actions: actions
+        actions: actions,
       };
     }
   } catch (error) {
-    console.error('Detailed transaction error:', error);
+    console.error("Transaction failed:", error);
+    if (error.message.includes("No session found")) {
+      console.warn("Session expired. Prompting for re-login.");
+      clearSession(); // Clear session to force re-login
+    }
     throw error;
   }
 };
@@ -114,14 +118,14 @@ const useSession = () => {
     handleRestoreSession();
   }, [handleRestoreSession]);
 
-  return { 
-    session, 
-    handleLogin, 
-    handleLogout, 
-    error, 
-    isModalOpen, 
-    selectedWalletPlugin, 
-    setSelectedWalletPlugin 
+  return {
+    session,
+    handleLogin,
+    handleLogout,
+    error,
+    isModalOpen,
+    selectedWalletPlugin,
+    setSelectedWalletPlugin,
   };
 };
 
