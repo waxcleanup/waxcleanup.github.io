@@ -348,3 +348,20 @@
   }
 }
 
+.burn-message {
+  background-color: #f9f871;
+  color: #333;
+  padding: 10px;
+  margin: 15px 0;
+  border-radius: 5px;
+  text-align: center;
+  font-size: 16px;
+  font-weight: bold;
+  animation: fadeOut 1s ease-in-out 9s forwards;
+}
+
+@keyframes fadeOut {
+  to {
+    opacity: 0;
+  }
+}
