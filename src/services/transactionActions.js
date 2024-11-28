@@ -159,8 +159,8 @@ export const loadFuel = async (accountName, incineratorId, amount) => {
   const dataTrx = {
     actions: [
       {
-        account: process.env.REACT_APP_CONTRACT_NAME,
-        name: 'loadfuel',
+        account: 'cleanuptoken', // Token contract for TRASH
+        name: 'transfer',
         authorization: [
           {
             actor: accountName,
@@ -168,9 +168,10 @@ export const loadFuel = async (accountName, incineratorId, amount) => {
           },
         ],
         data: {
-          user: accountName,
-          incinerator_id: incineratorId,
-          amount,
+          from: accountName,
+          to: 'cleanupcentr',
+          quantity: `${Number(amount).toFixed(3)} TRASH`, // Fuel amount in TRASH tokens
+          memo: `loadfuel:${incineratorId}`, // Using memo to specify action and target incinerator ID
         },
       },
     ],
@@ -211,8 +212,8 @@ export const loadEnergy = async (accountName, incineratorId) => {
   const dataTrx = {
     actions: [
       {
-        account: process.env.REACT_APP_CONTRACT_NAME,
-        name: 'loadenergy',
+        account: 'cleanuptoken', // Token contract for CINDER
+        name: 'transfer',
         authorization: [
           {
             actor: accountName,
@@ -220,8 +221,10 @@ export const loadEnergy = async (accountName, incineratorId) => {
           },
         ],
         data: {
-          user: accountName,
-          incinerator_id: incineratorId,
+          from: accountName,
+          to: 'cleanupcentr',
+          quantity: `2.000000 CINDER`, // Assuming energy load costs 2 CINDER tokens with precision of 6
+          memo: `loadenergy:${incineratorId}`, // Using memo to specify action and target incinerator ID
         },
       },
     ],

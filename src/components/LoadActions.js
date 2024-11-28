@@ -4,7 +4,8 @@ import { InitTransaction } from '../hooks/useSession';
 
 const LoadActions = ({ incineratorId, fuel, energy, fetchIncineratorData }) => {
   const [fuelAmount, setFuelAmount] = useState('');
-  const [loading, setLoading] = useState(false); // For transaction loading state
+  const [loadingFuel, setLoadingFuel] = useState(false); // For fuel transaction loading state
+  const [loadingEnergy, setLoadingEnergy] = useState(false); // For energy transaction loading state
 
   const handleLoadFuel = async () => {
     if (!Number.isInteger(Number(fuelAmount)) || Number(fuelAmount) <= 0) {
@@ -12,20 +13,21 @@ const LoadActions = ({ incineratorId, fuel, energy, fetchIncineratorData }) => {
       return;
     }
 
-    setLoading(true); // Start loading
+    setLoadingFuel(true); // Start loading for fuel
     try {
       console.log(`Loading fuel: ${fuelAmount} units for incinerator ${incineratorId}`);
 
       const dataTrx = {
         actions: [
           {
-            account: process.env.REACT_APP_CONTRACT_NAME,
-            name: 'loadfuel',
+            account: 'cleanuptoken', // Token contract for TRASH
+            name: 'transfer',
             authorization: [{ actor: process.env.REACT_APP_ACCOUNT_NAME, permission: 'active' }],
             data: {
-              user: process.env.REACT_APP_ACCOUNT_NAME,
-              incinerator_id: incineratorId,
-              amount: parseInt(fuelAmount, 10),
+              from: process.env.REACT_APP_ACCOUNT_NAME,
+              to: process.env.REACT_APP_CONTRACT_NAME,
+              quantity: `${Number(fuelAmount).toFixed(3)} TRASH`, // Assuming TRASH has 3 decimal places
+              memo: `loadfuel:${incineratorId}`,
             },
           },
         ],
@@ -41,24 +43,26 @@ const LoadActions = ({ incineratorId, fuel, energy, fetchIncineratorData }) => {
       console.error('Error loading fuel:', error);
       alert('Failed to load fuel. Please try again.');
     } finally {
-      setLoading(false); // End loading
+      setLoadingFuel(false); // End loading for fuel
     }
   };
 
   const handleLoadEnergy = async () => {
-    setLoading(true); // Start loading
+    setLoadingEnergy(true); // Start loading for energy
     try {
       console.log(`Loading energy for incinerator ${incineratorId}`);
 
       const dataTrx = {
         actions: [
           {
-            account: process.env.REACT_APP_CONTRACT_NAME,
-            name: 'loadenergy',
+            account: 'cleanuptoken', // Token contract for TRASH
+            name: 'transfer',
             authorization: [{ actor: process.env.REACT_APP_ACCOUNT_NAME, permission: 'active' }],
             data: {
-              user: process.env.REACT_APP_ACCOUNT_NAME,
-              incinerator_id: incineratorId,
+              from: process.env.REACT_APP_ACCOUNT_NAME,
+              to: process.env.REACT_APP_CONTRACT_NAME,
+              quantity: `1.000 TRASH`, // Assuming TRASH has 3 decimal places; use an appropriate fixed amount
+              memo: `loadenergy:${incineratorId}`,
             },
           },
         ],
@@ -73,7 +77,7 @@ const LoadActions = ({ incineratorId, fuel, energy, fetchIncineratorData }) => {
       console.error('Error loading energy:', error);
       alert('Failed to load energy. Please try again.');
     } finally {
-      setLoading(false); // End loading
+      setLoadingEnergy(false); // End loading for energy
     }
   };
 
@@ -88,14 +92,14 @@ const LoadActions = ({ incineratorId, fuel, energy, fetchIncineratorData }) => {
           placeholder="Enter fuel amount"
           value={fuelAmount}
           onChange={(e) => setFuelAmount(e.target.value)}
-          disabled={loading} // Disable input while loading
+          disabled={loadingFuel || loadingEnergy} // Disable input while loading
         />
-        <button onClick={handleLoadFuel} disabled={loading}>
-          {loading ? 'Loading...' : 'Load Fuel'}
+        <button onClick={handleLoadFuel} disabled={loadingFuel || loadingEnergy}>
+          {loadingFuel ? 'Loading...' : 'Load Fuel'}
         </button>
       </div>
-      <button onClick={handleLoadEnergy} disabled={loading}>
-        {loading ? 'Loading...' : 'Load Energy'}
+      <button onClick={handleLoadEnergy} disabled={loadingFuel || loadingEnergy}>
+        {loadingEnergy ? 'Loading...' : 'Load Energy'}
       </button>
     </div>
   );
