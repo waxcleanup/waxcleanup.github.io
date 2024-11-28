@@ -14,7 +14,6 @@
 }
 
 .burn-room:hover {
-  transform: scale(1.02);
   box-shadow: 0 0 25px rgba(255, 69, 0, 1), 0 0 40px rgba(255, 69, 0, 0.7);
 }
 
