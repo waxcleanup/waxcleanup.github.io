@@ -34,6 +34,7 @@ const BurnRoom = ({ accountName, onClose }) => {
         fetchUnstakedIncinerators(accountName),
         fetchStakedIncinerators(accountName),
       ]);
+      console.log('Fetched NFTs:', nfts);  // Debug log to verify multiple NFTs are returned
       setBurnableNFTs(nfts);
       setProposals(fetchedProposals.filter((proposal) => proposal.status === 'approved'));
       setUnstakedIncinerators(unstaked);

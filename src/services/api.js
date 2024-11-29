@@ -159,42 +159,23 @@ export const fetchApprovedCollections = async () => {
 };
 
 /**
- * Fetches user's NFTs directly from the blockchain.
- */
-export const fetchUserNFTsFromBlockchain = async (accountName) => {
-  try {
-    const response = await axios.post(`${rpc.endpoint}/v1/chain/get_table_rows`, {
-      json: true,
-      code: 'atomicassets',
-      scope: accountName,
-      table: 'assets',
-      limit: 1000,
-    });
-    return response.data.rows;
-  } catch (error) {
-    console.error('Error fetching NFTs from blockchain:', error);
-    throw error;
-  }
-};
-
-/**
  * Fetches and filters user's NFTs to show burnable NFTs based on the approved list and proposal rewards,
  * while also counting each unique NFT type by template_id.
  */
 export const fetchBurnableNFTs = async (accountName) => {
   try {
-    // Fetch necessary data concurrently
+    // Fetch user NFTs, approved templates, and open proposals concurrently
     const [userNFTs, approvedNFTs, openProposals] = await Promise.all([
       fetchUserNFTsFromBlockchain(accountName),
-      fetchApprovedCollections(),
-      fetchOpenProposals()
+      fetchApprovedCollections(),  // Fetch approved templates
+      fetchOpenProposals()         // Fetch open proposals (with reward info)
     ]);
 
     console.log("Fetched userNFTs:", userNFTs);
     console.log("Fetched approvedNFTs:", approvedNFTs);
     console.log("Fetched openProposals:", openProposals);
 
-    // Filter user's NFTs based on approved templates
+    // Filter user's NFTs based on approved collections and templates
     const filteredNFTs = userNFTs.filter(nft =>
       approvedNFTs.some(approved =>
         approved.collection === nft.collection_name &&
@@ -205,71 +186,61 @@ export const fetchBurnableNFTs = async (accountName) => {
 
     console.log("Filtered NFTs:", filteredNFTs);
 
-    // Group NFTs by template_id and count each type
+    // Group NFTs by template_id and count each unique type
     const nftMap = filteredNFTs.reduce((acc, nft) => {
-      const templateId = nft.template_id;
-      
+      const { template_id, collection_name, schema_name } = nft;
+
       // Find the corresponding proposal to get the reward amount
       const proposal = openProposals.find(prop =>
-        prop.collection === nft.collection_name &&
-        prop.schema === nft.schema_name &&
-        prop.template_id === nft.template_id
+        prop.collection === collection_name &&
+        prop.schema === schema_name &&
+        prop.template_id === template_id
       );
-      const reward = proposal ? proposal.reward : 0;
+      const reward = proposal ? proposal.reward : 0;  // Use 0 if no reward found
 
-      if (!acc[templateId]) {
-        // Initialize entry with count 1 if template_id is new
-        acc[templateId] = {
-          ...nft,
-          reward,
-          count: 1
+      if (!acc[template_id]) {
+        // Initialize a new entry if template_id is not already in map
+        acc[template_id] = {
+          ...nft,       // Copy NFT details (to keep template_name and img from the NFT)
+          reward,       // Attach reward from proposal
+          count: 1       // Start counting occurrences of this template
         };
       } else {
-        // Increment count if template_id already exists
-        acc[templateId].count += 1;
+        // Increment count if template_id already exists in map
+        acc[template_id].count += 1;
       }
       return acc;
     }, {});
 
-    console.log("Grouped and counted NFTs:", nftMap);
+    console.log("Grouped and counted NFTs by template_id:", nftMap);
 
-    // Fetch unique template details and map to uniqueNFTs
+    // Fetch additional details (e.g., template name and image) for each unique NFT type
     const uniqueNFTs = await Promise.all(
       Object.values(nftMap).map(async nft => {
+        // Fetch template details like name and image
         const templateDetails = await fetchTemplateDetails(nft.collection_name, nft.template_id);
         return {
           ...nft,
-          template_name: templateDetails.template_name || 'Unnamed NFT',
-          img: templateDetails.img || null
+          template_name: templateDetails.template_name || 'Unnamed NFT', // Default if template name is missing
+          img: templateDetails.img || null  // Default if image is missing
         };
       })
     );
 
     console.log("Final unique NFTs with counts before delay:", uniqueNFTs);
 
-    // Confirm delay application right before returning data
-    await delay(500); // 100ms delay
+    // Add delay for UI rendering, if needed
+    await delay(500); // 500ms delay to simulate processing time or for UI responsiveness
 
     console.log("Final unique NFTs with counts after delay:", uniqueNFTs);
 
-    return uniqueNFTs;
+    return uniqueNFTs;  // Return the final array of unique NFTs with details
   } catch (error) {
     console.error('Error fetching burnable NFTs:', error);
-    throw error;
+    throw error; // Rethrow error for handling at the caller level
   }
 };
-/**
- * Fetches all incinerator data from the backend.
- */
-export const fetchIncinerators = async () => {
-  try {
-    const response = await axios.get(`${API_URL}/cleanup/incinerators`);
-    return response.data; // Assuming the data is in response.data
-  } catch (error) {
-    console.error('Error fetching incinerators:', error);
-    throw error;
-  }
-};
+
 
 // Add this to your `api.js` file
 export const fetchUserNFTsFromContract = async (accountName) => {
@@ -364,5 +335,28 @@ export const stakeIncinerator = async (user, assetId) => {
       success: false,
       error: errorMessage,
     };
+  }
+};
+/**
+ * Fetches user's NFTs from the blockchain based on the provided account name.
+ */
+export const fetchUserNFTsFromBlockchain = async (accountName) => {
+  try {
+    const response = await axios.post(`${rpc.endpoint}/v1/chain/get_table_rows`, {
+      json: true,
+      code: 'atomicassets',  // Contract name for assets
+      scope: accountName,    // Account name (ownership scope)
+      table: 'assets',       // Table name
+      limit: 1000,           // Max rows to fetch
+    });
+
+    const userNFTs = response.data.rows;
+
+    console.log('Fetched user NFTs from contract:', userNFTs);
+    
+    return userNFTs;
+  } catch (error) {
+    console.error('Error fetching user NFTs from contract:', error);
+    throw error;
   }
 };

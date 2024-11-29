@@ -1,15 +1,13 @@
+// src/components/NFTGrid.js
 import React from 'react';
 
 const NFTGrid = ({ burnableNFTs, proposals, selectedNFT, onNFTClick, onAssignNFT, nftSlots }) => {
-  // Match NFT with proposals to get additional information
   const getProposalDetails = (templateId) => {
     return proposals.find((proposal) => proposal.template_id === templateId) || {};
   };
 
-  // Check if the NFT is already assigned to a slot
   const isNFTAssigned = (assetId) => nftSlots.some((slot) => slot?.asset_id === assetId);
 
-  // Handle Assign to Slot logic
   const handleAssign = (nft) => {
     if (isNFTAssigned(nft.asset_id)) {
       alert('This NFT is already assigned to a slot.');
@@ -46,6 +44,7 @@ const NFTGrid = ({ burnableNFTs, proposals, selectedNFT, onNFTClick, onAssignNFT
               <p className="nft-name">{nft.template_name || 'Unnamed NFT'}</p>
               <p className="trash-fee">Fee: {trash_fee || 'N/A'}</p>
               <p className="nft-reward">Reward: {cinder_reward || 'N/A'}</p>
+              <p className="nft-asset-id">Asset ID: {nft.asset_id}</p> {/* Show Asset ID */}
               
               {/* Assign Button */}
               <button
