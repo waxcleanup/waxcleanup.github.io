@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import PropTypes from 'prop-types';
 import IncineratorDetails from './IncineratorDetails';
 
@@ -13,21 +13,23 @@ const IncineratorModal = ({
   loadEnergy,
   repairDurability,
   assignedSlots = [],
+  fetchData, // Ensure incinerator data refresh
 }) => {
   // Filter staked incinerators to exclude those already assigned to slots
   const availableStakedIncinerators = stakedIncinerators.filter(
     (incinerator) => !assignedSlots.some((slot) => slot && slot.asset_id === incinerator.asset_id)
   );
 
-  // Debugging logs for filtering logic
-  console.log('Assigned Slots:', assignedSlots);
-  console.log('Available Staked Incinerators:', availableStakedIncinerators);
+  useEffect(() => {
+    console.log('Staked Incinerators Updated:', stakedIncinerators);
+    console.log('Unstaked Incinerators Updated:', unstakedIncinerators);
+  }, [stakedIncinerators, unstakedIncinerators]);
 
   return (
     <div className="modal-overlay">
       <div className="modal-content">
         <h3>Select an Incinerator</h3>
-        <button className="close-button" onClick={onClose}>
+        <button className="close-button" onClick={() => { onClose(); fetchData(); }}>
           &times;
         </button>
 
@@ -47,6 +49,7 @@ const IncineratorModal = ({
                     onFuelLoad={loadFuel}
                     onEnergyLoad={loadEnergy}
                     onRepair={repairDurability}
+                    fetchIncineratorData={fetchData} // Refresh after actions
                     showButtons={false}
                   />
                 </div>
@@ -61,7 +64,7 @@ const IncineratorModal = ({
         <div className="unstaked-section">
           <h4>Unstaked Incinerators</h4>
           <p className="staking-note">
-            Staking locks your incinerator for use in burning NFTs. Once staked, you will need to unstake it if you want to transfer or reuse it elsewhere.
+            Staking locks your incinerator for use in burning NFTs.
           </p>
           {unstakedIncinerators.length > 0 ? (
             <div className="table-container">
@@ -84,6 +87,7 @@ const IncineratorModal = ({
                           onClick={(e) => {
                             e.stopPropagation();
                             onUnstakedStake(incinerator);
+                            fetchData(); // Refresh after staking
                           }}
                         >
                           Stake
@@ -95,7 +99,7 @@ const IncineratorModal = ({
               </table>
             </div>
           ) : (
-            <p>No unstaked incinerators available. Acquire or unstake an incinerator to proceed.</p>
+            <p>No unstaked incinerators available.</p>
           )}
         </div>
       </div>
@@ -124,6 +128,7 @@ IncineratorModal.propTypes = {
   loadEnergy: PropTypes.func,
   repairDurability: PropTypes.func,
   assignedSlots: PropTypes.array,
+  fetchData: PropTypes.func.isRequired, // Ensure this is passed from BurnRoom
 };
 
 export default IncineratorModal;

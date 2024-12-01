@@ -1,10 +1,10 @@
 // src/components/BurnRoom.js
 import React, { useCallback, useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
-import { fetchBurnableNFTs, fetchProposals } from '../services/api';
+import { fetchBurnableNFTs } from '../services/fetchBurnableNFTs';
 import { fetchUnstakedIncinerators, fetchStakedIncinerators } from '../services/incinerators';
 import { stakeIncinerator, burnNFT } from '../services/transactionActions';
-import { getBurnRecordsByAssetId } from '../services/burnRecordsApi'; // Updated to use asset ID API
+import { getBurnRecordsByAssetId } from '../services/burnRecordsApi';
 import './BurnRoom.css';
 import NFTGrid from './NFTGrid';
 import NFTSlots from './NFTSlots';
@@ -13,33 +13,29 @@ import IncineratorDetails from './IncineratorDetails';
 
 const BurnRoom = ({ accountName, onClose }) => {
   const [burnableNFTs, setBurnableNFTs] = useState([]);
-  const [slots, setSlots] = useState([null, null, null]); // Incinerator slots start empty
+  const [slots, setSlots] = useState([null, null, null]); // Incinerator slots
   const [nftSlots, setNftSlots] = useState([null, null, null]); // NFT selection slots
   const [loading, setLoading] = useState(true);
-  const [proposals, setProposals] = useState([]);
   const [selectedNFT, setSelectedNFT] = useState(null);
   const [stakedIncinerators, setStakedIncinerators] = useState([]);
   const [unstakedIncinerators, setUnstakedIncinerators] = useState([]);
   const [showIncineratorModal, setShowIncineratorModal] = useState(false);
   const [selectedSlotIndex, setSelectedSlotIndex] = useState(null);
   const [burnMessage, setBurnMessage] = useState('');
-  const [messageVisible, setMessageVisible] = useState(false); // Track message visibility
+  const [messageVisible, setMessageVisible] = useState(false);
 
+  // Fetch data for burnable NFTs and incinerators
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [nfts, fetchedProposals, unstaked, staked] = await Promise.all([
+      const [nfts, unstaked, staked] = await Promise.all([
         fetchBurnableNFTs(accountName),
-        fetchProposals(),
         fetchUnstakedIncinerators(accountName),
         fetchStakedIncinerators(accountName),
       ]);
-      console.log('Fetched NFTs:', nfts);  // Debug log to verify multiple NFTs are returned
       setBurnableNFTs(nfts);
-      setProposals(fetchedProposals.filter((proposal) => proposal.status === 'approved'));
       setUnstakedIncinerators(unstaked);
       setStakedIncinerators(staked);
-      console.log('Data fetched successfully');
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -87,21 +83,15 @@ const BurnRoom = ({ accountName, onClose }) => {
 
   const handleStakeUnstakedIncinerator = async (incinerator) => {
     try {
-      if (!accountName) {
-        console.error('Account name is missing. User must log in.');
-        alert('Please log in to stake an incinerator.');
-        return;
-      }
-      console.log('Staking incinerator:', incinerator);
       const transactionId = await stakeIncinerator(accountName, incinerator);
       console.log('Staked successfully. Transaction ID:', transactionId);
-      await fetchData();
+      await fetchData(); // Refresh data after staking
     } catch (error) {
       console.error('Error staking incinerator:', error);
     }
   };
 
-  const pollBurnStatus = (assetId, timeout = 6000, interval = 2000) => {
+  const pollBurnStatus = (assetId, timeout = 10000, interval = 500) => {
     const startTime = Date.now();
 
     const poll = async () => {
@@ -113,11 +103,10 @@ const BurnRoom = ({ accountName, onClose }) => {
           if (burnRecord.status === 'burned') {
             showMessage(`Burn successful! Reward: ${burnRecord.cinder_reward}`);
             clearInterval(pollInterval);
-            return;
+            await fetchData(); // Refresh data after a successful burn
           } else if (burnRecord.status === 'failed') {
             showMessage('Burn failed. Please try again.');
             clearInterval(pollInterval);
-            return;
           }
         }
 
@@ -139,7 +128,6 @@ const BurnRoom = ({ accountName, onClose }) => {
     setBurnMessage(message);
     setMessageVisible(true);
 
-    // Clear message after 10 seconds
     setTimeout(() => {
       setMessageVisible(false);
       setBurnMessage('');
@@ -160,9 +148,7 @@ const BurnRoom = ({ accountName, onClose }) => {
       showMessage('Burn process initiated...');
       await burnNFT(accountName, nft, incinerator);
 
-      pollBurnStatus(nft.asset_id); // Poll based on asset ID
-
-      await fetchData();
+      pollBurnStatus(nft.asset_id);
 
       const updatedNFTSlots = [...nftSlots];
       updatedNFTSlots[slotIndex] = null;
@@ -184,7 +170,6 @@ const BurnRoom = ({ accountName, onClose }) => {
 
       <NFTGrid
         burnableNFTs={burnableNFTs}
-        proposals={proposals}
         selectedNFT={selectedNFT}
         onNFTClick={(nft) => setSelectedNFT(nft)}
         onAssignNFT={(nft, index) => {
@@ -195,19 +180,11 @@ const BurnRoom = ({ accountName, onClose }) => {
         nftSlots={nftSlots}
       />
 
-      {messageVisible && (
-        <div className="burn-message">
-          {burnMessage}
-        </div>
-      )}
+      {messageVisible && <div className="burn-message">{burnMessage}</div>}
 
       <div className="selected-nfts-container">
         <h3>Selected NFTs to Burn</h3>
-        <NFTSlots
-          nftSlots={nftSlots}
-          slots={slots}
-          onBurn={handleBurnNFT}
-        />
+        <NFTSlots nftSlots={nftSlots} slots={slots} onBurn={handleBurnNFT} />
       </div>
 
       <h3>Incinerator Slots</h3>
