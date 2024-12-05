@@ -72,6 +72,17 @@ const IncineratorDetails = ({
     }
   };
 
+  // Functions to open the modal for fuel or energy loading
+  const handleFuelClick = () => {
+    setTransactionType('fuel');
+    setShowModal(true);
+  };
+
+  const handleEnergyClick = () => {
+    setTransactionType('energy');
+    setShowModal(true);
+  };
+
   return (
     <div className="incinerator-details">
       <img
@@ -141,21 +152,13 @@ const IncineratorDetails = ({
         <div className="button-container">
           <button
             className="fuel-button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setTransactionType('fuel');
-              setShowModal(true);
-            }}
+            onClick={handleFuelClick}
           >
             Load Fuel
           </button>
           <button
             className="energy-button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setTransactionType('energy');
-              setShowModal(true);
-            }}
+            onClick={handleEnergyClick}
           >
             Load Energy
           </button>

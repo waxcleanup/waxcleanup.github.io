@@ -253,3 +253,65 @@ export const loadEnergy = async (accountName, incineratorId) => {
     );
   }
 };
+/**
+ * Unstake an incinerator by invoking the contract action.
+ * @param {string} accountName - The user's WAX account name.
+ * @param {Object} incinerator - The incinerator object to unstake.
+ * @returns {string} - The transaction ID.
+ * @throws Will throw an error if the unstaking process fails.
+ */
+export const unstakeIncinerator = async (accountName, incinerator) => {
+  const asset_id = incinerator.asset_id || incinerator.id; // Fallback to `id` if `asset_id` is missing
+
+  if (!asset_id) {
+    throw new Error('Invalid incinerator object. Missing asset_id or id.');
+  }
+
+  const dataTrx = {
+    actions: [
+      {
+        account: process.env.REACT_APP_CONTRACT_NAME, // Cleanup contract
+        name: 'unstakeincin', // Unstake action
+        authorization: [
+          {
+            actor: accountName,
+            permission: 'active',
+          },
+        ],
+        data: {
+          user: accountName,
+          incinerator_id: asset_id, // Use extracted asset_id
+        },
+      },
+    ],
+  };
+
+  try {
+    console.log('[DEBUG] Initiating unstake transaction:', dataTrx);
+
+    const result = await InitTransaction(dataTrx);
+    console.log('[DEBUG] Unstake transaction result:', result);
+
+    // Extract the transaction ID and handle unexpected formats
+    const transactionId = result.transactionId 
+      ? result.transactionId.toString() // Convert to string if not already
+      : null;
+
+    if (!transactionId) {
+      throw new Error(
+        `Unstake transaction failed for asset_id: ${asset_id}. Missing transaction ID.`
+      );
+    }
+
+    console.log('[DEBUG] Processed transaction ID:', transactionId);
+    return transactionId; // Return the transaction ID for verification
+  } catch (error) {
+    console.error(
+      `[ERROR] Error during unstake transaction for asset_id: ${asset_id}`,
+      error.message || error
+    );
+    throw new Error(
+      error.message || `Failed to unstake incinerator (asset_id: ${asset_id}). Please try again.`
+    );
+  }
+};

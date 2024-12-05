@@ -3,8 +3,8 @@ import sessionKit, { saveSession, clearSession } from '../config/sessionConfig';
 import { useNavigate } from 'react-router-dom';
 
 export const TAPOS = {
-  blocksBehind: 6, // Adjusted for higher network latency
-  expireSeconds: 300, // Increased expiration time for testing
+  blocksBehind: 3, // Adjusted for lower latency
+  expireSeconds: 30, // Reduced expiration time for faster testing
   broadcast: true,
 };
 
@@ -14,14 +14,14 @@ export const InitTransaction = async (dataTrx) => {
     // Restore session
     const session = await sessionKit.restore();
     if (!session) {
-      console.error("Session restoration failed. Prompting for login.");
-      throw new Error("No session found. Please log in again.");
+      console.error('[ERROR] Session restoration failed. Prompting for login.');
+      throw new Error('No session found. Please log in again.');
     }
 
     const { actor, permission } = session.permissionLevel;
 
     // Confirm actor and permission match expected values
-    console.log("Using actor:", actor, "with permission:", permission);
+    console.log('[INFO] Using actor:', actor, 'with permission:', permission);
 
     // Attach authorization to each action
     const actions = dataTrx.actions.map((action) => ({
@@ -34,24 +34,42 @@ export const InitTransaction = async (dataTrx) => {
       ],
     }));
 
-    console.log("Transaction payload:", { actions, TAPOS });
+    console.log('[DEBUG] Transaction payload:', { actions, TAPOS });
 
     // Perform the transaction
     const transaction = await session.transact({ actions }, TAPOS);
 
-    if (transaction) {
-      console.log("Transaction successful:", transaction);
+    console.log('[DEBUG] Raw transaction response:', transaction);
+
+    // Parse transaction ID from different response formats
+    if (transaction?.resolved?.transaction?.id) {
       return {
-        transactionId: String(transaction.resolved?.transaction.id),
+        transactionId: transaction.resolved.transaction.id,
         actions: actions,
       };
     }
-  } catch (error) {
-    console.error("Transaction failed:", error);
-    if (error.message.includes("No session found")) {
-      console.warn("Session expired. Prompting for re-login.");
-      clearSession(); // Clear session to force re-login
+
+    if (transaction?.transaction_id) {
+      return {
+        transactionId: transaction.transaction_id,
+        actions: actions,
+      };
     }
+
+    throw new Error('Transaction failed. No transaction ID returned.');
+  } catch (error) {
+    console.error('[ERROR] Transaction failed with full details:', error.response || error);
+
+    // Handle specific errors like session expiration
+    if (error.message.includes('No session found')) {
+      console.warn('[WARN] Session expired or invalid. Prompting for re-login.');
+      clearSession(); // Clear session to force re-login
+    } else if (error.message.includes('assertion failure')) {
+      console.error('[ERROR] Blockchain assertion failure:', error);
+    } else {
+      console.error('[ERROR] Unexpected error during transaction:', error);
+    }
+
     throw error;
   }
 };
@@ -67,38 +85,47 @@ const useSession = () => {
   const saveSessionToLocal = useCallback(async (sessionToSave) => {
     try {
       saveSession(sessionToSave);
-      console.log('Session saved to localStorage:', sessionToSave);
+      console.log('[INFO] Session saved to localStorage:', sessionToSave);
     } catch (err) {
-      console.error('Error saving session to localStorage:', err);
+      console.error('[ERROR] Error saving session to localStorage:', err);
     }
   }, []);
 
   const handleRestoreSession = useCallback(async () => {
     try {
       const restoredSession = await sessionKit.restore();
-      if (restoredSession) {
-        setSession(restoredSession);
-        console.log('Session restored:', restoredSession);
+      if (!restoredSession) {
+        throw new Error('[ERROR] Session restoration failed.');
       }
+
+      if (!restoredSession.permissionLevel || !restoredSession.transact) {
+        throw new Error('[ERROR] Invalid session object. Please log in again.');
+      }
+
+      setSession(restoredSession);
+      console.log('[INFO] Session restored:', restoredSession);
     } catch (err) {
-      console.error('Error restoring session:', err);
+      console.error('[ERROR] Failed to restore session:', err);
       setError('Failed to restore session');
     }
   }, []);
 
-  const handleLogin = useCallback(async (walletPluginId) => {
-    try {
-      const result = await sessionKit.login({ walletPluginId });
-      if (result && result.session) {
-        setSession(result.session);
-        setSelectedWalletPlugin(walletPluginId);
-        await saveSessionToLocal(result.session);
+  const handleLogin = useCallback(
+    async (walletPluginId) => {
+      try {
+        const result = await sessionKit.login({ walletPluginId });
+        if (result && result.session) {
+          setSession(result.session);
+          setSelectedWalletPlugin(walletPluginId);
+          await saveSessionToLocal(result.session);
+        }
+      } catch (err) {
+        setError(err.message || '[ERROR] Login failed.');
+        console.error('[ERROR] Login error:', err);
       }
-    } catch (err) {
-      setError(err.message || 'Login failed');
-      console.error('Login error:', err);
-    }
-  }, [saveSessionToLocal]);
+    },
+    [saveSessionToLocal]
+  );
 
   const handleLogout = useCallback(async () => {
     try {
@@ -106,11 +133,11 @@ const useSession = () => {
         await sessionKit.logout(session);
         setSession(null);
         clearSession();
-        console.log('User logged out successfully.');
+        console.log('[INFO] User logged out successfully.');
         navigate('/');
       }
     } catch (err) {
-      console.error('Error during logout:', err);
+      console.error('[ERROR] Error during logout:', err);
     }
   }, [session, navigate]);
 

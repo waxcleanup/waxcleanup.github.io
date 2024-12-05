@@ -1,5 +1,6 @@
 // components/Proposals.js
 import React from 'react';
+import './Proposals.css';
 
 const Proposals = ({ proposals, handleVote }) => {
 
@@ -25,6 +26,9 @@ const Proposals = ({ proposals, handleVote }) => {
     return Number(count).toFixed(2); // Round to 2 decimal places
   };
 
+  // Log proposals to verify data structure
+  console.log('Proposals:', proposals);
+
   return (
     <div className="proposals-section">
       <h2>Proposals</h2>
@@ -49,18 +53,17 @@ const Proposals = ({ proposals, handleVote }) => {
             {proposals.map((proposal) => {
               const remainingTime = calculateRemainingTime(proposal.created_at);
               const votingClosed = remainingTime === 'Voting closed';
-
               return (
                 <tr key={proposal.prop_id} className="proposal-row">
                   <td>{proposal.prop_id}</td>
                   <td>{proposal.proposal_type}</td>
-                  <td>{proposal.collection_name}</td>
-                  <td>{proposal.schema_name}</td>
+                  <td>{proposal.collection}</td>
+                  <td>{proposal.schema}</td>
                   <td>{proposal.template_id}</td>
                   <td>{proposal.trash_fee}</td>
                   <td>{proposal.cinder_reward}</td>
-                  <td>{formatVoteCount(proposal.votes_for)}</td> {/* Display formatted total votes for */}
-                  <td>{formatVoteCount(proposal.votes_against)}</td> {/* Display formatted total votes against */}
+                  <td>{formatVoteCount(proposal.votes_for)}</td>
+                  <td>{formatVoteCount(proposal.votes_against)}</td>
                   <td>{remainingTime}</td>
                   <td>
                     {votingClosed ? (

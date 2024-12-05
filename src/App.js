@@ -205,34 +205,42 @@ function App() {
 
   // Create proposal and open modal
   const handleCreateProposal = () => {
-    if (!selectedTemplate) return;
+    if (!selectedTemplate || !trashFee || !cinderReward) return;
     setIsModalOpen(true);
   };
 
   // Submit proposal handler
-  const handleProposalSubmit = async () => {
-    if (!selectedTemplate || !session) return;
-    try {
-      setLoading(true);
-      await submitProposal({
-        session,
-        proposer: session.actor,
-        proposal_type: 'NFT Burn',
-        collection: selectedCollection,
-        schema: selectedSchema,
-        template_id: selectedTemplate.template_id,
-        trash_fee: trashFee,
-        cinder_reward: cinderReward,
-      });
-      alert('Proposal submitted successfully!');
-      setIsModalOpen(false);
-    } catch (error) {
-      console.error('Error submitting proposal:', error);
-      alert('Failed to submit proposal.');
-    } finally {
-      setLoading(false);
-    }
-  };
+const handleProposalSubmit = async () => {
+  if (!selectedTemplate || !session || !trashFee || !cinderReward) return;
+
+  // Correct formatting for TRASH and CINDER
+  const formattedTrashFee = parseFloat(trashFee).toFixed(3); // TRASH requires 3 decimals
+  const formattedCinderReward = parseFloat(cinderReward).toFixed(6); // CINDER requires 6 decimals
+
+  console.log('Formatted Trash Fee:', `${formattedTrashFee} TRASH`);
+  console.log('Formatted Cinder Reward:', `${formattedCinderReward} CINDER`);
+
+  try {
+    setLoading(true);
+    await submitProposal({
+      session,
+      proposer: session.actor,
+      proposal_type: 'NFT Burn',
+      collection: selectedCollection,
+      schema: selectedSchema,
+      template_id: selectedTemplate.template_id,
+      trash_fee: `${formattedTrashFee} TRASH`, // Ensure proper format
+      cinder_reward: `${formattedCinderReward} CINDER`, // Ensure proper format
+    });
+    alert('Proposal submitted successfully!');
+    setIsModalOpen(false);
+  } catch (error) {
+    console.error('Error submitting proposal:', error);
+    alert('Failed to submit proposal.');
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Handle vote action for proposals
   const handleVote = async (propId, voteFor) => {
