@@ -28,21 +28,33 @@ const IncineratorDetails = ({
     owner = '',
   } = incinerator;
 
-  // Function to calculate brightness and determine text color
-  const getTextColor = (backgroundColor) => {
-    const hexToRgb = (hex) => {
-      const bigint = parseInt(hex.replace('#', ''), 16);
-      return [(bigint >> 16) & 255, (bigint >> 8) & 255, bigint & 255];
-    };
-    const [r, g, b] = hexToRgb(backgroundColor);
-    const brightness = (r * 299 + g * 587 + b * 114) / 1000; // Perceived brightness formula
-    return brightness > 128 ? 'black' : 'white'; // Use black text for light backgrounds, white for dark
-  };
+  const pollIncineratorData = async (interval = 1000, duration = 5000) => {
+    const startTime = Date.now();
 
-  const getDurabilityColor = () => {
-    if (durability > 250) return '#C0C0C0'; // Silver for full durability
-    if (durability > 100) return '#FFA500'; // Orange for mid-low durability
-    return '#FF0000'; // Red for critical durability
+    const poll = async () => {
+      try {
+        console.log('[INFO] Polling incinerator data...');
+        await fetchIncineratorData(); // Fetch updated incinerator data
+      } catch (error) {
+        console.error('[ERROR] Polling incinerator data failed:', error);
+      }
+    };
+
+    const intervalId = setInterval(() => {
+      const elapsedTime = Date.now() - startTime;
+      if (elapsedTime >= duration) {
+        clearInterval(intervalId); // Stop polling after the duration
+        console.log('[INFO] Stopped polling incinerator data.');
+      } else {
+        poll(); // Fetch data at each interval
+      }
+    }, interval);
+
+    // Fallback to a final fetch after polling ends
+    setTimeout(async () => {
+      console.log('[INFO] Final fetch to ensure data is updated.');
+      await fetchIncineratorData();
+    }, duration);
   };
 
   const handleTransaction = async () => {
@@ -54,15 +66,15 @@ const IncineratorDetails = ({
           setLoading(false);
           return;
         }
-        const transactionId = await loadFuel(owner, id, amount);
-        console.log('Fuel loaded successfully. Transaction ID:', transactionId);
+        await loadFuel(owner, id, amount);
         alert(`Successfully loaded ${amount} fuel!`);
       } else if (transactionType === 'energy') {
-        const transactionId = await loadEnergy(owner, id);
-        console.log('Energy loaded successfully. Transaction ID:', transactionId);
+        await loadEnergy(owner, id);
         alert('Energy fully loaded!');
       }
-      await fetchIncineratorData(); // Refresh incinerator data after successful transaction
+
+      // Start polling to refresh incinerator data for 5 seconds
+      pollIncineratorData(1000, 5000);
     } catch (error) {
       console.error('Transaction failed:', error);
       alert(error.message || 'Transaction failed. Please try again.');
@@ -72,13 +84,14 @@ const IncineratorDetails = ({
     }
   };
 
-  // Functions to open the modal for fuel or energy loading
-  const handleFuelClick = () => {
+  const handleFuelClick = (e) => {
+    e.stopPropagation(); // Prevent parent click handler
     setTransactionType('fuel');
     setShowModal(true);
   };
 
-  const handleEnergyClick = () => {
+  const handleEnergyClick = (e) => {
+    e.stopPropagation(); // Prevent parent click handler
     setTransactionType('energy');
     setShowModal(true);
   };
@@ -106,12 +119,7 @@ const IncineratorDetails = ({
             backgroundColor: '#ADD8E6', // Light blue for fuel
           }}
         >
-          <span
-            className="progress-bar-text"
-            style={{ color: getTextColor('#ADD8E6') }} // Adjust text color dynamically
-          >
-            Fuel: {fuel}/100000
-          </span>
+          <span className="progress-bar-text">Fuel: {fuel}/100000</span>
         </div>
       </div>
       <div className="progress-bar-container">
@@ -122,12 +130,7 @@ const IncineratorDetails = ({
             backgroundColor: '#FFA500', // Orange for energy
           }}
         >
-          <span
-            className="progress-bar-text"
-            style={{ color: getTextColor('#FFA500') }} // Adjust text color dynamically
-          >
-            Energy: {energy}/10
-          </span>
+          <span className="progress-bar-text">Energy: {energy}/10</span>
         </div>
       </div>
       <div className="progress-bar-container">
@@ -135,31 +138,20 @@ const IncineratorDetails = ({
           className="progress-bar-fill durability-bar"
           style={{
             width: `${Math.min((durability / 500) * 100, 100)}%`,
-            backgroundColor: getDurabilityColor(),
+            backgroundColor: durability > 250 ? '#C0C0C0' : durability > 100 ? '#FFA500' : '#FF0000',
           }}
         >
-          <span
-            className="progress-bar-text"
-            style={{ color: getTextColor(getDurabilityColor()) }} // Adjust text color dynamically
-          >
-            Durability: {durability}/500
-          </span>
+          <span className="progress-bar-text">Durability: {durability}/500</span>
         </div>
       </div>
 
       {/* Action Buttons */}
       {showButtons && (
         <div className="button-container">
-          <button
-            className="fuel-button"
-            onClick={handleFuelClick}
-          >
+          <button className="fuel-button" onClick={handleFuelClick}>
             Load Fuel
           </button>
-          <button
-            className="energy-button"
-            onClick={handleEnergyClick}
-          >
+          <button className="energy-button" onClick={handleEnergyClick}>
             Load Energy
           </button>
           <button

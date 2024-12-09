@@ -437,3 +437,9 @@ x; /* Adjusted font size */
   cursor: not-allowed; /* Indicate non-interactivity */
   opacity: 0.65; /* Reduce opacity */
 }
+.no-nfts-message {
+  text-align: center;
+  font-size: 1.2em;
+  color: #f44336; /* Example color for the message */
+  margin-top: 20px;
+}

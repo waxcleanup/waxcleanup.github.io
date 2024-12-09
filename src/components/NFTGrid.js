@@ -20,40 +20,47 @@ const NFTGrid = ({ burnableNFTs, selectedNFT, onNFTClick, onAssignNFT, nftSlots 
 
   return (
     <div className="nft-grid">
-      {burnableNFTs.map((nft) => (
-        <div
-          key={nft.asset_id}
-          className={`nft-card ${selectedNFT?.asset_id === nft.asset_id ? 'selected' : ''}`}
-          onClick={() => onNFTClick(nft)}
-        >
-          {/* Display NFT Image */}
-          <img
-            src={nft.img ? `https://ipfs.io/ipfs/${nft.img}` : 'default-placeholder.png'}
-            alt={nft.template_name || 'Unnamed NFT'}
-            className="nft-image"
-          />
+      {burnableNFTs.length === 0 ? (
+        // Message when no NFTs are available
+        <p className="no-nfts-message">
+          You don't have any approved NFTs available for burning. Please acquire an approved NFTs to proceed.
+        </p>
+      ) : (
+        burnableNFTs.map((nft) => (
+          <div
+            key={nft.asset_id}
+            className={`nft-card ${selectedNFT?.asset_id === nft.asset_id ? 'selected' : ''}`}
+            onClick={() => onNFTClick(nft)}
+          >
+            {/* Display NFT Image */}
+            <img
+              src={nft.img ? `https://ipfs.io/ipfs/${nft.img}` : 'default-placeholder.png'}
+              alt={nft.template_name || 'Unnamed NFT'}
+              className="nft-image"
+            />
 
-          {/* NFT Information */}
-          <div className="nft-info">
-            <p className="nft-name">{nft.template_name || 'Unnamed NFT'}</p>
-            <p className="nft-reward">Reward: {nft.cinder_reward || 'N/A'}</p>
-            <p className="trash-fee">Fee: {nft.trash_fee || 'N/A'}</p>
-            <p className="nft-asset-id">Asset ID: {nft.asset_id}</p>
+            {/* NFT Information */}
+            <div className="nft-info">
+              <p className="nft-name">{nft.template_name || 'Unnamed NFT'}</p>
+              <p className="nft-reward">Reward: {nft.cinder_reward || 'N/A'}</p>
+              <p className="trash-fee">Fee: {nft.trash_fee || 'N/A'}</p>
+              <p className="nft-asset-id">Asset ID: {nft.asset_id}</p>
 
-            {/* Enhanced Assign Button */}
-            <button
-              className={`assign-button ${isNFTAssigned(nft.asset_id) ? 'disabled' : ''}`}
-              onClick={(e) => {
-                e.stopPropagation(); // Prevent the click event from selecting the card
-                handleAssign(nft);
-              }}
-              disabled={isNFTAssigned(nft.asset_id)} // Disable button if already assigned
-            >
-              {isNFTAssigned(nft.asset_id) ? 'Already Assigned' : 'Assign to Slot'}
-            </button>
+              {/* Enhanced Assign Button */}
+              <button
+                className={`assign-button ${isNFTAssigned(nft.asset_id) ? 'disabled' : ''}`}
+                onClick={(e) => {
+                  e.stopPropagation(); // Prevent the click event from selecting the card
+                  handleAssign(nft);
+                }}
+                disabled={isNFTAssigned(nft.asset_id)} // Disable button if already assigned
+              >
+                {isNFTAssigned(nft.asset_id) ? 'Already Assigned' : 'Assign to Slot'}
+              </button>
+            </div>
           </div>
-        </div>
-      ))}
+        ))
+      )}
     </div>
   );
 };

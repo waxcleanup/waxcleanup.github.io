@@ -7,9 +7,26 @@ const NFTSlots = ({ nftSlots = [null, null, null], slots, onBurn }) => {
     return ipfsHash ? `https://ipfs.io/ipfs/${ipfsHash}` : 'default-placeholder.png';
   };
 
-  // Function to check if incinerator has enough fuel or energy
-  const hasEnoughFuelOrEnergy = (incinerator) => {
-    return incinerator && (incinerator.fuel > 0 || incinerator.energy > 0); // Adjust according to your logic
+  // Function to check if incinerator has enough fuel and energy for the selected NFT
+  const hasEnoughFuelAndEnergy = (incinerator, nft) => {
+    if (!incinerator || !nft) return false;
+
+    const requiredFuel = parseFloat(nft.trash_fee || 0); // Ensure 'trash_fee' is a valid number
+    const requiredEnergy = parseFloat(nft.energy_cost || 0); // Ensure 'energy_cost' is a valid number
+    const availableFuel = parseFloat(incinerator.fuel || 0);
+    const availableEnergy = parseFloat(incinerator.energy || 0);
+
+    console.log('[DEBUG] Checking resources for burn:', {
+      nft,
+      incinerator,
+      requiredFuel,
+      availableFuel,
+      requiredEnergy,
+      availableEnergy,
+    });
+
+    // Ensure both fuel and energy are sufficient
+    return availableFuel >= requiredFuel && availableEnergy >= requiredEnergy && availableEnergy > 0;
   };
 
   return (
@@ -27,7 +44,7 @@ const NFTSlots = ({ nftSlots = [null, null, null], slots, onBurn }) => {
               <p className="asset-id">Asset ID: {nft.asset_id}</p>
 
               {slots[index] ? (
-                hasEnoughFuelOrEnergy(slots[index]) ? (
+                hasEnoughFuelAndEnergy(slots[index], nft) ? (
                   <button
                     className="burn-button"
                     onClick={() => onBurn(index)} // Pass the slot index instead of NFT and incinerator

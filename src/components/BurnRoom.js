@@ -26,31 +26,40 @@ const BurnRoom = ({ accountName, onClose }) => {
   const [messageVisible, setMessageVisible] = useState(false);
 
   // Fetch all required data
-  const fetchData = useCallback(async () => {
-    setLoading(true); // Show loading state
-    try {
-      const [nfts, unstaked, staked] = await Promise.all([
-        fetchBurnableNFTs(accountName),
-        fetchUnstakedIncinerators(accountName),
-        fetchStakedIncinerators(accountName),
-      ]);
+const fetchData = useCallback(async () => {
+  setLoading(true);
+  try {
+    const [nfts, unstaked, staked] = await Promise.all([
+      fetchBurnableNFTs(accountName),
+      fetchUnstakedIncinerators(accountName),
+      fetchStakedIncinerators(accountName),
+    ]);
 
-      // Normalize staked incinerators to ensure `asset_id` exists
-      const normalizedStaked = staked.map((inc) => ({
-        ...inc,
-        asset_id: inc.asset_id || inc.id, // Fallback to `id` if `asset_id` is missing
-      }));
+    // Normalize staked incinerators to ensure `asset_id` exists
+    const normalizedStaked = staked.map((inc) => ({
+      ...inc,
+      asset_id: inc.asset_id || inc.id, // Fallback to `id` if `asset_id` is missing
+    }));
 
-      setBurnableNFTs(nfts);
-      setUnstakedIncinerators(unstaked);
-      setStakedIncinerators(normalizedStaked);
-      console.log('[INFO] Data fetched successfully.');
-    } catch (error) {
-      console.error('[ERROR] Failed to fetch data:', error);
-    } finally {
-      setLoading(false); // Hide loading state
-    }
-  }, [accountName]);
+    setBurnableNFTs(nfts);
+    setUnstakedIncinerators(unstaked);
+    setStakedIncinerators(normalizedStaked);
+
+    // Update slots with refreshed incinerator data
+    setSlots((prevSlots) =>
+      prevSlots.map((slot) => {
+        if (!slot) return null; // Keep empty slots as is
+        return normalizedStaked.find((inc) => inc.asset_id === slot.asset_id) || null;
+      })
+    );
+
+    console.log('[INFO] Data fetched successfully.');
+  } catch (error) {
+    console.error('[ERROR] Failed to fetch data:', error);
+  } finally {
+    setLoading(false);
+  }
+}, [accountName]);
 
   useEffect(() => {
     fetchData(); // Fetch data on component mount
@@ -91,7 +100,7 @@ const BurnRoom = ({ accountName, onClose }) => {
   };
 
   // Polling for Transaction Completion (for both staking and unstaking)
-  const pollForTransaction = async (transactionId, timeout = 10000, interval = 500) => {
+  const pollForTransaction = async (transactionId, timeout = 15000, interval = 1000) => {
     const startTime = Date.now();
     
     const poll = async () => {
@@ -188,30 +197,60 @@ const BurnRoom = ({ accountName, onClose }) => {
 
     const pollInterval = setInterval(poll, interval);
   };
+const pollIncineratorData = async (interval = 2500, duration = 15000) => {
+  const startTime = Date.now();
 
-  const handleBurnNFT = async (slotIndex) => {
+  const poll = async () => {
     try {
-      const incinerator = slots[slotIndex];
-      const nft = nftSlots[slotIndex];
-
-      if (!nft || !incinerator) {
-        alert('Please assign both an NFT and an incinerator to the slot.');
-        return;
-      }
-
-      console.log('[INFO] Burning NFT:', { nft, incinerator });
-      showMessage('Burn process initiated...');
-      await burnNFT(accountName, nft, incinerator);
-
-      // Poll burn status after initiating the burn
-      pollBurnStatus(nft.asset_id);
-
-      await fetchData(); // Ensure UI updates after burning
+      console.log('[INFO] Polling incinerator data...');
+      await fetchData(); // Fetch incinerator data
     } catch (error) {
-      console.error('[ERROR] Burn transaction failed:', error);
-      showMessage('Failed to burn NFT. Please try again.');
+      console.error('[ERROR] Polling incinerator data failed:', error);
     }
   };
+
+  const intervalId = setInterval(() => {
+    const elapsedTime = Date.now() - startTime;
+    if (elapsedTime >= duration) {
+      clearInterval(intervalId); // Stop polling after the duration
+      console.log('[INFO] Stopped polling incinerator data.');
+    } else {
+      poll(); // Fetch data at each interval
+    }
+  }, interval);
+};
+
+const handleBurnNFT = async (slotIndex) => {
+  try {
+    const incinerator = slots[slotIndex];
+    const nft = nftSlots[slotIndex];
+
+    if (!nft || !incinerator) {
+      alert('Please assign both an NFT and an incinerator to the slot.');
+      return;
+    }
+
+    console.log('[INFO] Burning NFT:', { nft, incinerator });
+    showMessage('Burn process initiated...');
+    await burnNFT(accountName, nft, incinerator);
+
+    // Poll burn status after initiating the burn
+    pollBurnStatus(nft.asset_id);
+
+    // Clear the NFT from the slot after initiating the burn
+    setNftSlots((prevSlots) => {
+      const updatedSlots = [...prevSlots];
+      updatedSlots[slotIndex] = null; // Clear the burned NFT slot
+      return updatedSlots;
+    });
+
+    // Poll incinerator data for 5 seconds to allow updates to finish
+    pollIncineratorData(1000, 5000);
+  } catch (error) {
+    console.error('[ERROR] Burn transaction failed:', error);
+    showMessage('Failed to burn NFT. Please try again.');
+  }
+};
 
   return (
     <div className="burn-room">
@@ -242,21 +281,26 @@ const BurnRoom = ({ accountName, onClose }) => {
       </div>
 
       <h3>Incinerator Slots</h3>
-      <div className="incinerator-grid">
-        {slots.map((slot, index) => (
-          <div
-            key={index}
-            className={`incinerator-card ${slot ? '' : 'empty-incinerator'}`}
-            onClick={() => handleSlotClick(index)}
-          >
-            {slot ? (
-              <IncineratorDetails incinerator={slot} onRemove={() => handleRemoveIncinerator(index)} />
-            ) : (
-              <p>Slot {index + 1} - Empty</p>
-            )}
-          </div>
-        ))}
-      </div>
+
+<div className="incinerator-grid">
+  {slots.map((slot, index) => (
+    <div
+      key={index}
+      className={`incinerator-card ${slot ? '' : 'empty-incinerator'}`}
+      onClick={() => handleSlotClick(index)} // Opens the modal
+    >
+      {slot ? (
+        <IncineratorDetails
+          incinerator={slot}
+          onRemove={() => handleRemoveIncinerator(index)}
+          fetchIncineratorData={fetchData} // Pass the fetchData function here
+        />
+      ) : (
+        <p>Slot {index + 1} - Empty</p>
+      )}
+    </div>
+  ))}
+</div>
 
       {showIncineratorModal && (
         <IncineratorModal

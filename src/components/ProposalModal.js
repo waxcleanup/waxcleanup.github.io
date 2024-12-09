@@ -4,7 +4,7 @@ import './ProposalModal.css';
 function ProposalModal({
   templateId,
   proposalType = 'NFT Burn',
-  initialTrashFee = '',
+  initialTrashFee = '1000', // Default Trash Fee
   initialCinderReward = '',
   setTrashFee,
   setCinderReward,
@@ -13,13 +13,13 @@ function ProposalModal({
 }) {
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Initialize local state or fallback to empty strings
-  const [localTrashFee, setLocalTrashFee] = useState(initialTrashFee || '');
+  // Initialize local state or fallback to default values
+  const [localTrashFee, setLocalTrashFee] = useState(initialTrashFee || '1000');
   const [localCinderReward, setLocalCinderReward] = useState(initialCinderReward || '');
 
   // Synchronize props if they change
   useEffect(() => {
-    setLocalTrashFee(initialTrashFee || '');
+    setLocalTrashFee(initialTrashFee || '1000');
     setLocalCinderReward(initialCinderReward || '');
   }, [initialTrashFee, initialCinderReward]);
 
@@ -32,6 +32,19 @@ function ProposalModal({
   // Update Trash Fee with validation
   const handleTrashFeeChange = (e) => {
     const value = e.target.value;
+
+    // Prevent values below 1000 or above 100000
+    if (value && parseFloat(value) < 1000) {
+      setErrorMessage('Trash Fee cannot be less than 1,000 TRASH.');
+      return;
+    }
+
+    if (value && parseFloat(value) > 100000) {
+      setErrorMessage('Trash Fee cannot exceed 100,000 TRASH.');
+      return;
+    }
+
+    // Validate format and update state
     if (isValidAsset(value, 3) || value === '') {
       setLocalTrashFee(value);
       setTrashFee(value); // Update parent state
@@ -44,6 +57,13 @@ function ProposalModal({
   // Update Cinder Reward with validation
   const handleCinderRewardChange = (e) => {
     const value = e.target.value;
+
+    // Prevent values above 50.000000
+    if (value && parseFloat(value) > 50) {
+      setErrorMessage('Cinder Reward must not exceed 50.000000 CINDER.');
+      return;
+    }
+
     if (isValidAsset(value, 6) || value === '') {
       setLocalCinderReward(value);
       setCinderReward(value); // Update parent state
@@ -62,13 +82,20 @@ function ProposalModal({
     const trashFeeValue = parseFloat(localTrashFee);
     const cinderRewardValue = parseFloat(localCinderReward);
 
-    if (trashFeeValue < 10) {
-      setErrorMessage('Trash Fee must be at least 10 TRASH.');
+    // Validate Trash Fee
+    if (trashFeeValue < 1000) {
+      setErrorMessage('Trash Fee must be at least 1,000 TRASH.');
       return;
     }
 
-    if (cinderRewardValue > 5000) {
-      setErrorMessage('Cinder Reward must not exceed 5,000.000000 CINDER.');
+    if (trashFeeValue > 100000) {
+      setErrorMessage('Trash Fee must not exceed 100,000 TRASH.');
+      return;
+    }
+
+    // Validate Cinder Reward
+    if (cinderRewardValue > 50) {
+      setErrorMessage('Cinder Reward must not exceed 50.000000 CINDER.');
       return;
     }
 
@@ -78,7 +105,17 @@ function ProposalModal({
     setTrashFee(`${formattedTrashFee} TRASH`);
     setCinderReward(`${formattedCinderReward} CINDER`);
 
-    handleProposalSubmit();
+    // Properly invoke handleProposalSubmit
+    if (handleProposalSubmit) {
+      handleProposalSubmit({
+        trashFee: `${formattedTrashFee} TRASH`,
+        cinderReward: `${formattedCinderReward} CINDER`,
+        templateId,
+        proposalType,
+      });
+    } else {
+      setErrorMessage('Error: Proposal submission handler is not defined.');
+    }
   };
 
   return (
@@ -87,8 +124,8 @@ function ProposalModal({
         <h3>Create a Proposal</h3>
         <p>Template ID: <strong>{templateId}</strong></p>
         <p className="proposal-fee-note">Note: A fee of 1,000 TRASH is required to create this proposal.</p>
-        <p className="proposal-note">The TRASH fee for burning an NFT must be at least 10 TRASH.</p>
-        <p className="proposal-note">The CINDER reward must not exceed the cap of 5,000.000000 CINDER.</p>
+        <p className="proposal-note">The TRASH fee must be at least 1,000 TRASH and not exceed 100,000 TRASH.</p>
+        <p className="proposal-note">The CINDER reward must not exceed 50.000000 CINDER.</p>
 
         <div className="modal-field">
           <label>Proposal Type:</label>
