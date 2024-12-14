@@ -276,10 +276,23 @@ const handleProposalSubmit = async () => {
     setIsPopupOpen(!isPopupOpen);
   };
 
-  // Toggle Burn Room visibility
-  const toggleBurnRoom = () => {
-    setIsBurnRoomOpen(!isBurnRoomOpen);
-  };
+// Toggle Burn Room visibility and fetch user balances on close
+const toggleBurnRoom = async () => {
+  setIsBurnRoomOpen(!isBurnRoomOpen);
+
+  // If the Burn Room is closing, fetch the user's balances
+  if (isBurnRoomOpen) {
+    try {
+      const { wax, trash, cinder } = await fetchUserBalances(session.actor);
+      setWaxBalance(wax);
+      setTrashBalance(trash);
+      setCinderBalance(cinder);
+      console.log('[INFO] User balances updated after closing Burn Room.');
+    } catch (error) {
+      console.error('Error updating user balances:', error);
+    }
+  }
+};
 
   return (
     <div className="App">

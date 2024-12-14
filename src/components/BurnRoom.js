@@ -1,5 +1,3 @@
-// src/components/BurnRoom.js
-
 import React, { useCallback, useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import { fetchBurnableNFTs } from '../services/fetchBurnableNFTs';
@@ -26,6 +24,8 @@ const BurnRoom = ({ accountName, onClose }) => {
   const [messageVisible, setMessageVisible] = useState(false);
 
   // Fetch all required data
+const [recentlyBurnedNFTs, setRecentlyBurnedNFTs] = useState([]);
+
 const fetchData = useCallback(async () => {
   setLoading(true);
   try {
@@ -41,7 +41,12 @@ const fetchData = useCallback(async () => {
       asset_id: inc.asset_id || inc.id, // Fallback to `id` if `asset_id` is missing
     }));
 
-    setBurnableNFTs(nfts);
+    // Exclude recently burned NFTs
+    const filteredNFTs = nfts.filter(
+      (nft) => !recentlyBurnedNFTs.includes(nft.asset_id)
+    );
+
+    setBurnableNFTs(filteredNFTs);
     setUnstakedIncinerators(unstaked);
     setStakedIncinerators(normalizedStaked);
 
@@ -59,7 +64,7 @@ const fetchData = useCallback(async () => {
   } finally {
     setLoading(false);
   }
-}, [accountName]);
+}, [accountName, recentlyBurnedNFTs]);
 
   useEffect(() => {
     fetchData(); // Fetch data on component mount
@@ -165,39 +170,45 @@ const fetchData = useCallback(async () => {
     }, 10000);
   };
 
-  const pollBurnStatus = (assetId, timeout = 10000, interval = 500) => {
-    const startTime = Date.now();
+const pollBurnStatus = (assetId, timeout = 10000, interval = 100) => {
+  const startTime = Date.now();
+  const pollInterval = setInterval(async () => {
+    try {
+      console.log(`[INFO] Polling burn status for asset ${assetId}...`);
+      const records = await getBurnRecordsByAssetId(assetId);
+      console.log('[DEBUG] Burn records:', records);
 
-    const poll = async () => {
-      try {
-        const records = await getBurnRecordsByAssetId(assetId);
-        const burnRecord = records.find((record) => record.asset_id === assetId);
+      const burnRecord = records.find((record) => record.asset_id === assetId);
 
-        if (burnRecord) {
-          if (burnRecord.status === 'burned') {
-            showMessage(`Burn successful! Reward: ${burnRecord.cinder_reward}`);
-            clearInterval(pollInterval);
-            await fetchData(); // Refresh data after a successful burn
-          } else if (burnRecord.status === 'failed') {
-            showMessage('Burn failed. Please try again.');
-            clearInterval(pollInterval);
-          }
-        }
+      if (burnRecord) {
+        if (burnRecord.status === 'burned') {
+          showMessage(`Burn successful! Reward: ${burnRecord.cinder_reward}`);
+          clearInterval(pollInterval); // Stop polling
 
-        if (Date.now() - startTime > timeout) {
-          showMessage('Burn process timed out. Please check later.');
+          // Delay before refreshing the grid
+          setTimeout(async () => {
+            await fetchData(); // Refresh burnable NFTs and other data
+          }, 6000); // 2-second delay
+        } else if (burnRecord.status === 'failed') {
+          showMessage('Burn failed. Please try again.');
           clearInterval(pollInterval);
         }
-      } catch (error) {
-        console.error('Error polling burn status:', error);
-        showMessage('Error fetching burn status.');
-        clearInterval(pollInterval);
+        return; // Exit the polling function
       }
-    };
 
-    const pollInterval = setInterval(poll, interval);
-  };
-const pollIncineratorData = async (interval = 2500, duration = 15000) => {
+      if (Date.now() - startTime > timeout) {
+        showMessage('Burn process timed out. Please check later.');
+        clearInterval(pollInterval); // Stop polling on timeout
+      }
+    } catch (error) {
+      console.error('[ERROR] Polling failed:', error);
+      showMessage('Error fetching burn status.');
+      clearInterval(pollInterval); // Stop polling on error
+    }
+  }, interval);
+};
+
+const pollIncineratorData = async (interval = 500, duration = 15000) => {
   const startTime = Date.now();
 
   const poll = async () => {
@@ -219,7 +230,6 @@ const pollIncineratorData = async (interval = 2500, duration = 15000) => {
     }
   }, interval);
 };
-
 const handleBurnNFT = async (slotIndex) => {
   try {
     const incinerator = slots[slotIndex];
@@ -234,6 +244,14 @@ const handleBurnNFT = async (slotIndex) => {
     showMessage('Burn process initiated...');
     await burnNFT(accountName, nft, incinerator);
 
+    // Remove the burned NFT from the local burnableNFTs state
+    setBurnableNFTs((prevNFTs) =>
+      prevNFTs.filter((burnable) => burnable.asset_id !== nft.asset_id)
+    );
+
+    // Add the burned NFT to recentlyBurnedNFTs
+    setRecentlyBurnedNFTs((prev) => [...prev, nft.asset_id]);
+
     // Poll burn status after initiating the burn
     pollBurnStatus(nft.asset_id);
 
@@ -244,13 +262,14 @@ const handleBurnNFT = async (slotIndex) => {
       return updatedSlots;
     });
 
-    // Poll incinerator data for 5 seconds to allow updates to finish
-    pollIncineratorData(1000, 5000);
+    // Poll incinerator data for updates
+    pollIncineratorData(1000, 10000);
   } catch (error) {
     console.error('[ERROR] Burn transaction failed:', error);
     showMessage('Failed to burn NFT. Please try again.');
   }
 };
+
 
   return (
     <div className="burn-room">
