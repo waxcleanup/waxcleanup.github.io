@@ -92,18 +92,19 @@ function App() {
   }, [session]);
 
   // Fetch only open (verified) proposals when session is available
-  useEffect(() => {
-    const loadOpenProposals = async () => {
-      if (!session) return;
-      try {
-        const data = await fetchOpenProposals();
-        setProposals(data);
-      } catch (error) {
-        console.error('Error fetching open proposals:', error);
-      }
-    };
-    loadOpenProposals();
-  }, [session]);
+useEffect(() => {
+  const loadOpenProposals = async () => {
+    if (!session) return;
+    try {
+      const data = await fetchOpenProposals();
+      console.log('Fetched proposals from backend:', data); // Debug log
+      setProposals(data.proposals || []); // Ensure proposals is always an array
+    } catch (error) {
+      console.error('Error fetching open proposals:', error);
+    }
+  };
+  loadOpenProposals();
+}, [session]);
 
   // Fetch approved collections when the popup is opened
   useEffect(() => {

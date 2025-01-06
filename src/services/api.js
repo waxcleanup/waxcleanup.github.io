@@ -117,10 +117,13 @@ export const fetchUserBalances = async (accountName) => {
 /**
  * Fetches all proposals from the backend.
  */
-export const fetchProposals = async () => {
+export const fetchProposals = async (page = 1, limit = 100) => {
   try {
-    const response = await axios.get(`${API_URL}/cleanup/proposals`);
-    return response.data;
+    const response = await axios.get(`${API_URL}/cleanup/proposals`, {
+      params: { page, limit }, // Pass page and limit to the backend
+    });
+    const { proposals, pagination } = response.data; // Extract proposals and pagination metadata
+    return { proposals, pagination };
   } catch (error) {
     console.error('Error fetching proposals:', error);
     throw error;
