@@ -1,14 +1,14 @@
-// components/Proposals.js
-import React from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { fetchBlockchainTime } from '../services/api'; // Corrected path to API
 
 const Proposals = ({ proposals, handleVote }) => {
+  const [timeLeft, setTimeLeft] = useState({});
+  const [blockchainTime, setBlockchainTime] = useState(Date.now()); // Default to local time initially
 
-  // Helper function to calculate remaining time for voting deadline
-  const calculateRemainingTime = (createdAt) => {
-    const now = new Date();
-    const createdDate = new Date(createdAt);
-    const timeElapsed = now - createdDate;
-    const timeRemaining = 86400000 - timeElapsed; // 24 hours in milliseconds
+  const calculateRemainingTime = useCallback((createdAt) => {
+    const createdTime = new Date(createdAt).getTime(); // Parse `created_at` to milliseconds
+    const deadline = createdTime + 24 * 60 * 60 * 1000; // Add 24 hours
+    const timeRemaining = deadline - blockchainTime;
 
     if (timeRemaining <= 0) {
       return 'Voting closed';
@@ -18,12 +18,31 @@ const Proposals = ({ proposals, handleVote }) => {
     const minutes = Math.floor((timeRemaining / (1000 * 60)) % 60);
     const seconds = Math.floor((timeRemaining / 1000) % 60);
     return `${hours}h ${minutes}m ${seconds}s`;
-  };
+  }, [blockchainTime]); // Dependency on `blockchainTime`
 
-  // Format vote count
-  const formatVoteCount = (count) => {
-    return Number(count).toFixed(2); // Round to 2 decimal places
-  };
+  useEffect(() => {
+    const fetchTime = async () => {
+      const time = await fetchBlockchainTime();
+      setBlockchainTime(time);
+    };
+
+    fetchTime(); // Fetch blockchain time on component mount
+
+    const interval = setInterval(fetchTime, 10000); // Update every 10 seconds
+    return () => clearInterval(interval); // Cleanup interval on unmount
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const updatedTimeLeft = proposals.reduce((acc, proposal) => {
+        acc[proposal.prop_id] = calculateRemainingTime(proposal.created_at);
+        return acc;
+      }, {});
+      setTimeLeft(updatedTimeLeft);
+    }, 1000);
+
+    return () => clearInterval(interval); // Cleanup interval on unmount
+  }, [proposals, calculateRemainingTime]);
 
   return (
     <div className="proposals-section">
@@ -47,28 +66,38 @@ const Proposals = ({ proposals, handleVote }) => {
           </thead>
           <tbody>
             {proposals.map((proposal) => {
-              const remainingTime = calculateRemainingTime(proposal.created_at);
+              const remainingTime = timeLeft[proposal.prop_id] || 'Loading...';
               const votingClosed = remainingTime === 'Voting closed';
 
               return (
                 <tr key={proposal.prop_id} className="proposal-row">
                   <td>{proposal.prop_id}</td>
                   <td>{proposal.proposal_type}</td>
-                  <td>{proposal.collection_name}</td>
-                  <td>{proposal.schema_name}</td>
+                  <td>{proposal.collection}</td>
+                  <td>{proposal.schema}</td>
                   <td>{proposal.template_id}</td>
                   <td>{proposal.trash_fee}</td>
                   <td>{proposal.cinder_reward}</td>
-                  <td>{formatVoteCount(proposal.votes_for)}</td> {/* Display formatted total votes for */}
-                  <td>{formatVoteCount(proposal.votes_against)}</td> {/* Display formatted total votes against */}
+                  <td>{Number(proposal.votes_for).toFixed(2)}</td>
+                  <td>{Number(proposal.votes_against).toFixed(2)}</td>
                   <td>{remainingTime}</td>
                   <td>
                     {votingClosed ? (
                       <span className="voting-closed">Voting Closed</span>
                     ) : (
                       <div className="vote-buttons">
-                        <button className="vote-for" onClick={() => handleVote(proposal.prop_id, true)}>Vote For</button>
-                        <button className="vote-against" onClick={() => handleVote(proposal.prop_id, false)}>Vote Against</button>
+                        <button
+                          className="vote-button vote-for"
+                          onClick={() => handleVote(proposal.prop_id, true)}
+                        >
+                          Vote For
+                        </button>
+                        <button
+                          className="vote-button vote-against"
+                          onClick={() => handleVote(proposal.prop_id, false)}
+                        >
+                          Vote Against
+                        </button>
                       </div>
                     )}
                   </td>

@@ -136,6 +136,7 @@ export const fetchProposals = async (page = 1, limit = 100) => {
 export const fetchOpenProposals = async () => {
   try {
     const response = await axios.get(`${API_URL}/cleanup/proposals/open`);
+    console.log('Fetched proposals from API:', response.data); // Log response data
     return response.data;
   } catch (error) {
     console.error('Error fetching open proposals:', error);
@@ -148,13 +149,26 @@ export const fetchOpenProposals = async () => {
  */
 export const fetchApprovedCollections = async () => {
   try {
-    const response = await axios.get(`${API_URL}/cleanup/approved-collections`);
-    return response.data.map(collection => ({
-      id: collection.id,
-      collection: collection.collection,
-      schema: collection.schema,
-      template_id: collection.template_id
-    }));
+    let allApprovedCollections = [];
+    let page = 1;
+    const limit = 1000; // Set the limit for each API request
+    let hasMore = true;
+
+    while (hasMore) {
+      const response = await axios.get(`${API_URL}/cleanup/approved-collections?page=${page}&limit=${limit}`);
+      const collections = response.data.map(collection => ({
+        id: collection.id,
+        collection: collection.collection,
+        schema: collection.schema,
+        template_id: collection.template_id,
+      }));
+
+      allApprovedCollections = [...allApprovedCollections, ...collections];
+      hasMore = collections.length === limit; // Check if the current page has the maximum number of items
+      page++;
+    }
+
+    return allApprovedCollections;
   } catch (error) {
     console.error('Error fetching approved collections:', error);
     throw error;
@@ -361,5 +375,20 @@ export const fetchUserNFTsFromBlockchain = async (accountName) => {
   } catch (error) {
     console.error('Error fetching user NFTs from contract:', error);
     throw error;
+  }
+};
+
+/**
+ * Fetches the current blockchain time from the WAX RPC.
+ */
+export const fetchBlockchainTime = async () => {
+  try {
+    const response = await axios.get(`${rpc.endpoint}/v1/chain/get_info`); // Fetch blockchain info
+    const headBlockTime = response.data.head_block_time; // Get the head block time (ISO 8601 format)
+    console.log('Fetched blockchain time:', headBlockTime); // Debugging log
+    return new Date(headBlockTime).getTime(); // Convert to milliseconds
+  } catch (error) {
+    console.error('Error fetching blockchain time:', error);
+    return Date.now(); // Fallback to local time if API call fails
   }
 };

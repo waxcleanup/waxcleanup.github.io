@@ -58,9 +58,9 @@ function ProposalModal({
   const handleCinderRewardChange = (e) => {
     const value = e.target.value;
 
-    // Prevent values above 50.000000
-    if (value && parseFloat(value) > 50) {
-      setErrorMessage('Cinder Reward must not exceed 50.000000 CINDER.');
+    // Prevent values above 5.000000
+    if (value && parseFloat(value) > 5) {
+      setErrorMessage('Cinder Reward must not exceed 5.000000 CINDER.');
       return;
     }
 
@@ -94,8 +94,8 @@ function ProposalModal({
     }
 
     // Validate Cinder Reward
-    if (cinderRewardValue > 50) {
-      setErrorMessage('Cinder Reward must not exceed 50.000000 CINDER.');
+    if (cinderRewardValue > 5) {
+      setErrorMessage('Cinder Reward must not exceed 5.000000 CINDER.');
       return;
     }
 
@@ -125,7 +125,7 @@ function ProposalModal({
         <p>Template ID: <strong>{templateId}</strong></p>
         <p className="proposal-fee-note">Note: A fee of 1,000 TRASH is required to create this proposal.</p>
         <p className="proposal-note">The TRASH fee must be at least 1,000 TRASH and not exceed 100,000 TRASH.</p>
-        <p className="proposal-note">The CINDER reward must not exceed 50.000000 CINDER.</p>
+        <p className="proposal-note">The CINDER reward must not exceed 5.000000 CINDER.</p>
 
         <div className="modal-field">
           <label>Proposal Type:</label>

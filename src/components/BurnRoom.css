@@ -68,20 +68,19 @@
   }
 
   .nft-card {
-    padding: 5px; /* Reduce padding for smaller cards */
+    padding: 1px; /* Reduce padding for smaller cards */
   }
 
   .nft-image {
-    max-width: 50%; /* Slightly smaller images */
+    max-width: 70%; /* Slightly smaller images */
   }
 
   .nft-name {
-    font-size: 16px; /* Smaller text */
+    font-size: 15px; /* Smaller text */
   }
 
   .nft-reward {
-    font-size: 13o
-x; /* Adjusted font size */
+    font-size: 13px; /* Adjusted font size */
   }
 }
 
@@ -312,7 +311,7 @@ x; /* Adjusted font size */
   border-radius: 5px;
   font-size: 14px;
   width: 100%;
-  max-width: 300px;
+  max-width: 200px;
   cursor: pointer;
   transition: background-color 0.3s ease;
 }
@@ -334,7 +333,7 @@ x; /* Adjusted font size */
 }
 
 /* Responsive Adjustments */
-@media (max-width: 768px) {
+@media (max-width: 300px) {
   .incinerator-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -402,6 +401,7 @@ x; /* Adjusted font size */
   text-align: center;
   font-size: 16px;
   font-weight: bold;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   animation: fadeOut 1s ease-in-out 9s forwards;
 }
 

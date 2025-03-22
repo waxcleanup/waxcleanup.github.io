@@ -170,7 +170,6 @@ const BurnRoom = ({ accountName, onClose }) => {
       </button>
       <h2>Burn Room</h2>
 
-      {loading && <p>Loading...</p>}
 
       <NFTGrid
         burnableNFTs={burnableNFTs}

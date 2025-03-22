@@ -1,18 +1,19 @@
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
-import { loadFuel, loadEnergy } from '../services/transactionActions'; // Import transaction actions
+import { loadFuel, loadEnergy } from '../services/transactionActions';
 
 const IncineratorDetails = ({
   incinerator,
   onRepair,
   onRemove,
-  fetchIncineratorData, // Function to refresh incinerator data
-  showButtons = true, // Toggle buttons visibility
+  fetchIncineratorData,
+  showButtons = true,
 }) => {
   const [showModal, setShowModal] = useState(false);
   const [transactionType, setTransactionType] = useState('');
-  const [amount, setAmount] = useState(0); // For fuel amount
-  const [loading, setLoading] = useState(false); // To show loading state for transactions
+  const [amount, setAmount] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   if (!incinerator) {
     return <p>Click to assign an incinerator</p>;
@@ -28,13 +29,18 @@ const IncineratorDetails = ({
     owner = '',
   } = incinerator;
 
+  const maxFuelCapacity = 100000;
+  const maxEnergyCapacity = 10;
+  const maxDurability = 500;
+  const remainingFuelCapacity = maxFuelCapacity - fuel;
+
   const pollIncineratorData = async (interval = 1000, duration = 5000) => {
     const startTime = Date.now();
 
     const poll = async () => {
       try {
         console.log('[INFO] Polling incinerator data...');
-        await fetchIncineratorData(); // Fetch updated incinerator data
+        await fetchIncineratorData();
       } catch (error) {
         console.error('[ERROR] Polling incinerator data failed:', error);
       }
@@ -43,14 +49,13 @@ const IncineratorDetails = ({
     const intervalId = setInterval(() => {
       const elapsedTime = Date.now() - startTime;
       if (elapsedTime >= duration) {
-        clearInterval(intervalId); // Stop polling after the duration
+        clearInterval(intervalId);
         console.log('[INFO] Stopped polling incinerator data.');
       } else {
-        poll(); // Fetch data at each interval
+        poll();
       }
     }, interval);
 
-    // Fallback to a final fetch after polling ends
     setTimeout(async () => {
       console.log('[INFO] Final fetch to ensure data is updated.');
       await fetchIncineratorData();
@@ -61,8 +66,8 @@ const IncineratorDetails = ({
     setLoading(true);
     try {
       if (transactionType === 'fuel') {
-        if (amount <= 0) {
-          alert('Please enter a valid fuel amount greater than 0.');
+        if (amount <= 0 || amount > remainingFuelCapacity) {
+          alert(`Please enter a valid amount (1 - ${remainingFuelCapacity}).`);
           setLoading(false);
           return;
         }
@@ -72,26 +77,40 @@ const IncineratorDetails = ({
         await loadEnergy(owner, id);
         alert('Energy fully loaded!');
       }
-
-      // Start polling to refresh incinerator data for 5 seconds
       pollIncineratorData(1000, 5000);
     } catch (error) {
       console.error('Transaction failed:', error);
       alert(error.message || 'Transaction failed. Please try again.');
     } finally {
-      setLoading(false); // End loading state
-      setShowModal(false); // Close the modal
+      setLoading(false);
+      setShowModal(false);
     }
   };
 
   const handleFuelClick = (e) => {
-    e.stopPropagation(); // Prevent parent click handler
+    e.stopPropagation();
     setTransactionType('fuel');
+    setAmount(0);
+    setErrorMessage('');
     setShowModal(true);
   };
 
+  const handleFuelInputChange = (e) => {
+    const input = Number(e.target.value);
+    if (input > remainingFuelCapacity) {
+      setAmount(remainingFuelCapacity);
+      setErrorMessage(`Maximum fuel load is ${remainingFuelCapacity}.`);
+    } else if (input < 0) {
+      setAmount(0);
+      setErrorMessage('');
+    } else {
+      setAmount(input);
+      setErrorMessage('');
+    }
+  };
+
   const handleEnergyClick = (e) => {
-    e.stopPropagation(); // Prevent parent click handler
+    e.stopPropagation();
     setTransactionType('energy');
     setShowModal(true);
   };
@@ -115,33 +134,34 @@ const IncineratorDetails = ({
         <div
           className="progress-bar-fill fuel-bar"
           style={{
-            width: fuel >= 100000 ? '100%' : `${Math.min((fuel / 100000) * 100, 100)}%`, // Clamp value
-            backgroundColor: '#ADD8E6', // Light blue for fuel
+            width: `${Math.min((fuel / maxFuelCapacity) * 100, 100)}%`,
+            backgroundColor: '#ADD8E6',
           }}
         >
-          <span className="progress-bar-text">Fuel: {fuel}/100000</span>
+          <span className="progress-bar-text">Fuel: {fuel}/{maxFuelCapacity}</span>
         </div>
       </div>
       <div className="progress-bar-container">
         <div
           className="progress-bar-fill energy-bar"
           style={{
-            width: `${Math.min((energy / 10) * 100, 100)}%`,
-            backgroundColor: '#FFA500', // Orange for energy
+            width: `${Math.min((energy / maxEnergyCapacity) * 100, 100)}%`,
+            backgroundColor: '#FFA500',
           }}
         >
-          <span className="progress-bar-text">Energy: {energy}/10</span>
+          <span className="progress-bar-text">Energy: {energy}/{maxEnergyCapacity}</span>
         </div>
       </div>
       <div className="progress-bar-container">
         <div
           className="progress-bar-fill durability-bar"
           style={{
-            width: `${Math.min((durability / 500) * 100, 100)}%`,
-            backgroundColor: durability > 250 ? '#C0C0C0' : durability > 100 ? '#FFA500' : '#FF0000',
+            width: `${Math.min((durability / maxDurability) * 100, 100)}%`,
+            backgroundColor:
+              durability > 250 ? '#C0C0C0' : durability > 100 ? '#FFA500' : '#FF0000',
           }}
         >
-          <span className="progress-bar-text">Durability: {durability}/500</span>
+          <span className="progress-bar-text">Durability: {durability}/{maxDurability}</span>
         </div>
       </div>
 
@@ -188,11 +208,14 @@ const IncineratorDetails = ({
                 <input
                   type="number"
                   value={amount}
-                  onChange={(e) => setAmount(Number(e.target.value))}
+                  onChange={handleFuelInputChange}
                   placeholder="Fuel amount"
+                  min="1"
+                  max={remainingFuelCapacity}
                   disabled={loading}
                 />
                 <p>Cost: {amount} TRASH tokens</p>
+                {errorMessage && <p className="error-message">{errorMessage}</p>}
               </div>
             ) : (
               <p>Loading energy will cost 2 CINDER tokens. Do you wish to proceed?</p>
