@@ -14,6 +14,17 @@ jobs:
         with:
           submodules: false
 
+      - name: Remove leftover submodule references
+        run: |
+          # Remove .gitmodules if it exists
+          if [ -f .gitmodules ]; then
+            rm .gitmodules
+          fi
+          # Remove any submodule config from local git config
+          git config --local --remove-section submodule.cleanupcenter || true
+          # Remove the submodule folder if exists
+          rm -rf cleanupcenter || true
+
       - name: Setup Node.js environment
         uses: actions/setup-node@v3
         with:
