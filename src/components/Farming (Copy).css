@@ -1,0 +1,120 @@
+/* src/components/Farming.css */
+
+/* Container with a dark, overcast background */
+.farming-container {
+  position: relative;
+  min-height: 100vh;
+  background-color: #121212;
+  padding: 20px;
+  box-sizing: border-box;
+  overflow: visible; /* Allow clouds to travel offscreen */
+}
+
+/* Header styling */
+.farming-header {
+  text-align: center;
+  color: #f5f5f5;
+  margin-top: 0;
+  padding-top: 20px;
+  font-family: 'Arial', sans-serif;
+}
+
+/* Weather card styling with fade-in animation */
+.weather-card {
+  position: relative; /* So z-index applies */
+  z-index: 2;        /* Above the clouds */
+  max-width: 400px;
+  margin: 3rem auto;
+  padding: 2rem;
+  border-radius: 8px;
+  background-color: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  text-align: center;
+  font-family: 'Arial', sans-serif;
+  opacity: 0;
+  animation: fadeInUp 0.8s ease forwards;
+}
+
+/* Divider inside the weather card */
+.weather-divider {
+  height: 2px;
+  background-color: #eee;
+  margin: 1rem 0;
+}
+
+/* Weather detail rows */
+.weather-row {
+  margin: 0.75rem 0;
+  font-size: 1.1rem;
+  color: #333;
+}
+
+/* Status text styling (for loading or error) */
+.farming-status {
+  text-align: center;
+  color: #f5f5f5;
+  font-family: 'Arial', sans-serif;
+  margin-top: 2rem;
+  font-size: 1.1rem;
+}
+
+/* Fade-in-up animation for the weather card */
+@keyframes fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 30%, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ------------------ Cloud Styles & Animations ------------------ */
+
+/* Base style for clouds using an inline SVG */
+.cloud {
+  position: absolute;
+  z-index: 1; /* Below the card */
+  /* Cloud image as inline SVG */
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='120'><path fill='%23ffffff' opacity='0.8' d='M60,80 Q40,60 60,40 Q80,20 100,40 Q120,40 130,60 Q150,60 150,80 Q150,100 130,100 L70,100 Q50,100 60,80 Z'/></svg>") no-repeat center/contain;
+  opacity: 0.8;
+
+  /* Center the cloud bounding box horizontally */
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Keyframes for moving clouds fully across the screen */
+@keyframes moveClouds {
+  0% {
+    /* Start well off to the left (-150%), plus the base translateX(-50%) for centering */
+    transform: translate(-50%, 0) translateX(-150%);
+  }
+  100% {
+    /* End well off to the right (+150%), plus the base translateX(-50%) for centering */
+    transform: translate(-50%, 0) translateX(150%);
+  }
+}
+
+/* Cloud variations with different sizes, positions, and durations */
+.cloud1 {
+  width: 200px;
+  height: 120px;
+  top: 10%;
+  animation: moveClouds 40s linear infinite;
+}
+
+.cloud2 {
+  width: 300px;
+  height: 180px;
+  top: 30%;
+  animation: moveClouds 60s linear infinite;
+}
+
+.cloud3 {
+  width: 250px;
+  height: 150px;
+  top: 60%;
+  animation: moveClouds 50s linear infinite;
+}
