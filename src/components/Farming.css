@@ -1,6 +1,24 @@
-/* src/components/Farming.css */
+/* ------------ Navigation Bar ------------ */
+.farm-nav {
+  display: flex;
+  gap: 1rem;
+  background: #1a1a1a;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid #333;
+}
 
-/* Base container styling with a dark background and floating clouds */
+.farm-nav .nav-link {
+  color: #ccc;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.farm-nav .nav-link.active {
+  color: #88ff88;
+  border-bottom: 2px solid #88ff88;
+}
+
+/* ------------ Farming Container & Background ------------ */
 .farming-container {
   position: relative;
   min-height: 40vh;
@@ -10,7 +28,6 @@
   overflow: visible;
 }
 
-/* Title at the top */
 .farming-header {
   text-align: center;
   color: #f5f5f5;
@@ -19,315 +36,308 @@
   font-family: 'Roboto', sans-serif;
 }
 
-/* The main weather card base styling (fade in) */
 .weather-card {
   position: relative;
   z-index: 2;
   max-width: 200px;
-  margin: 3rem auto;
-  padding: 2rem 1.5rem;
+  margin: 2rem auto;
+  padding: 3rem 1.5rem;
   border-radius: 12px;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.2);
   text-align: center;
-  font-family: 'Roboto', sans-serif;
   opacity: 0;
   animation: fadeInUp 0.8s ease forwards;
 }
 
-/* Divider inside the card */
 .weather-divider {
   height: 2px;
   background-color: #eee;
   margin: 1rem 0 1.5rem;
 }
 
-/* Card title for condition */
-.card-title {
-  font-size: 1.4rem;
-  font-weight: 500;
-  margin-bottom: 0.75rem;
-  color: #333;
-}
+.card-title { font-size:1.4rem; font-weight:500; color:#333; margin-bottom:.75rem; }
+.temp-row   { font-size:1.6rem; font-weight:500; color:#444; margin-bottom:.75rem; }
+.weather-row{ margin: .5rem 0; font-size:1.1rem; color:#555; }
 
-/* Temperature row emphasis */
-.temp-row {
-  font-size: 1.6rem;
-  font-weight: 500;
-  margin-bottom: 0.75rem;
-  color: #444;
-}
-
-/* Other weather detail rows */
-.weather-row {
-  margin: 0.5rem 0;
-  font-size: 1.1rem;
-  color: #555;
-}
-
-/* Loading/error status text */
 .farming-status {
-  text-align: center;
-  color: #f5f5f5;
-  font-family: 'Roboto', sans-serif;
-  margin-top: 2rem;
-  font-size: 1.1rem;
+  text-align:center;
+  color:#f5f5f5;
+  margin-top:2rem;
+  font-size:1.1rem;
 }
 
-/* Fade-in-up animation for the weather card */
+/* Fade in keyframe */
 @keyframes fadeInUp {
-  0% {
-    opacity: 0;
-    transform: translate3d(0, 30%, 0);
-  }
-  100% {
-    opacity: 1;
-    transform: none;
-  }
+  0% { opacity:0; transform:translate3d(0,30%,0); }
+ 100% { opacity:1; transform:none; }
 }
 
-/* ------------ NEW: Farm Status Card ------------ */
+/* ------------ Farm Status Card ------------ */
 .farm-status-card {
-  position: relative;
-  z-index: 2;
-  max-width: 300px;
-  margin: 2rem auto;
-  padding: 1.5rem 1rem;
-  border-radius: 12px;
-  background-color: #222;
-  border: 1px solid #444;
-  color: #fff;
-  font-family: 'Roboto', sans-serif;
-  box-shadow: 0 0 12px rgba(0, 255, 128, 0.4);
+  max-width:300px;
+  margin:2rem auto;
+  padding:1.5rem 1rem;
+  background:#222;
+  border:1px solid #444;
+  border-radius:12px;
+  color:#fff;
+  box-shadow:0 0 12px rgba(0,255,128,0.4);
   animation: fadeInUp 0.6s ease forwards;
 }
 
-.farm-status-card p {
-  margin: 0.5rem 0;
-  font-size: 1rem;
-}
+.farm-status-card p { margin:.5rem 0; font-size:1rem; }
+.farm-status-card ul { margin-top:.5rem; padding-left:1.2rem; list-style:disc; }
 
-.farm-status-card ul {
-  padding-left: 1.2rem;
-  list-style: disc;
-  margin-top: 0.5rem;
-  font-size: 0.95rem;
-}
+/* ------------ Condition‐Specific BGs ------------ */
+.weather-clear       { background:#fffacd; }
+.weather-cloudy     { background:#d3d3d3; }
+.weather-rain       { background:#a3a3a3; }
+.weather-heavy-rain { background:#808080; }
+.weather-thunderstorm { background:#888888; }
+.weather-flood      { background:#9ecaea; }
+.weather-tornado    { background:#aaaaaa; }
+.weather-drought    { background:#f5deb3; }
+.weather-heatwave   { background:#ffcccb; }
+.weather-chill-setup { background:#add8e6; }
+.weather-snow       { background:#e0f7fa; }
+.weather-sleet      { background:#cfd8dc; }
+.weather-blizzard   { background:#90a4ae; }
+.weather-windy      { background:#e0e0e0; }
+.weather-foggy      { background:#b0bec5; }
+.weather-hail       { background:#cfd8dc; }
+.weather-lightning-strike { background:#999999; }
+.weather-hurricane  { background:#777777; }
+.weather-dust-storm { background:#f5f5dc; }
+.weather-drizzle    { background:#bdbdbd; }
+.weather-overcast   { background:#d3d3d3; }
+.weather-spring-bloom { background:#f5e1f0; }
+.weather-gentle-showers { background:#a3a3a3; }
+.weather-autumn-spark { background:#ffe5b4; }
+.weather-frigid-mist { background:#cfd8dc; }
+.weather-evening-calm { background:#f5f5f5; }
+.weather-morning-dew { background:#cce6cc; }
+.weather-default    { background:#ffffff; }
 
-/* -------------- Condition-Specific Classes -------------- */
-
-/* 1. Clear */
-.weather-card.weather-clear {
-  background-color: #fffacd; /* Light yellow */
-}
-
-/* 2. Cloudy */
-.weather-card.weather-cloudy {
-  background-color: #d3d3d3; /* Light gray */
-}
-
-/* 3. Rain */
-.weather-card.weather-rain {
-  background-color: #a3a3a3; /* Grayish */
-}
-
-/* 4. Heavy Rain */
-.weather-card.weather-heavy-rain {
-  background-color: #808080; /* Darker gray */
-}
-
-/* 5. Thunderstorm */
-.weather-card.weather-thunderstorm {
-  background-color: #888888;
-}
-
-/* 6. Flood */
-.weather-card.weather-flood {
-  background-color: #9ecaea; /* watery blue */
-}
-
-/* 7. Tornado */
-.weather-card.weather-tornado {
-  background-color: #aaaaaa;
-}
-
-/* 8. Drought */
-.weather-card.weather-drought {
-  background-color: #f5deb3; /* wheat color */
-}
-
-/* 9. Heatwave */
-.weather-card.weather-heatwave {
-  background-color: #ffcccb; /* Light red for heat */
-}
-
-/* 10. Chill Setup */
-.weather-card.weather-chill-setup {
-  background-color: #add8e6; /* Light blue */
-}
-
-/* 11. Snow */
-.weather-card.weather-snow {
-  background-color: #e0f7fa; /* Light blueish */
-}
-
-/* 12. Sleet */
-.weather-card.weather-sleet {
-  background-color: #cfd8dc; /* Cool gray */
-}
-
-/* 13. Blizzard */
-.weather-card.weather-blizzard {
-  background-color: #90a4ae;
-}
-
-/* 14. Windy */
-.weather-card.weather-windy {
-  background-color: #e0e0e0;
-}
-
-/* 15. Foggy */
-.weather-card.weather-foggy {
-  background-color: #b0bec5;
-}
-
-/* 16. Hail */
-.weather-card.weather-hail {
-  background-color: #cfd8dc;
-}
-
-/* 17. Lightning Strike */
-.weather-card.weather-lightning-strike {
-  background-color: #999999;
-}
-
-/* 18. Hurricane */
-.weather-card.weather-hurricane {
-  background-color: #777777;
-}
-
-/* 19. Dust Storm */
-.weather-card.weather-dust-storm {
-  background-color: #f5f5dc; /* Beige-ish */
-}
-
-/* 20. Drizzle */
-.weather-card.weather-drizzle {
-  background-color: #bdbdbd;
-}
-
-/* 21. Overcast */
-.weather-card.weather-overcast {
-  background-color: #d3d3d3;
-}
-
-/* 22. Spring Bloom */
-.weather-card.weather-spring-bloom {
-  background-color: #f5e1f0; /* Soft pink/purple */
-}
-
-/* 23. Gentle Showers */
-.weather-card.weather-gentle-showers {
-  background-color: #a3a3a3;
-}
-
-/* 24. Autumn Spark */
-.weather-card.weather-autumn-spark {
-  background-color: #ffe5b4; /* Autumn orange */
-}
-
-/* 25. Frigid Mist */
-.weather-card.weather-frigid-mist {
-  background-color: #cfd8dc;
-}
-
-/* 26. Evening Calm */
-.weather-card.weather-evening-calm {
-  background-color: #f5f5f5;
-}
-
-/* 27. Morning Dew */
-.weather-card.weather-morning-dew {
-  background-color: #cce6cc; /* Light green maybe */
-}
-
-/* Default fallback if no condition is matched */
-.weather-card.weather-default {
-  background-color: #ffffff;
-}
-
-/* ------------------ Cloud Styles & Animations ------------------ */
+/* ------------ Clouds & Sun ------------ */
 .cloud {
-  position: absolute;
-  z-index: 1;
-  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='120'><path fill='%23ffffff' opacity='0.8' d='M60,80 Q40,60 60,40 Q80,20 100,40 Q120,40 130,60 Q150,60 150,80 Q150,100 130,100 L70,100 Q50,100 60,80 Z'/></svg>") no-repeat center/contain;
-  opacity: 0.8;
-  left: 50%;
-  transform: translateX(-50%);
+  position:absolute; z-index:1; opacity:.8;
+  background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='120'><path fill='%23fff' opacity='.8' d='M60,80 Q40,60 60,40 Q80,20 100,40 Q120,40 130,60 Q150,60 150,80 Q150,100 130,100 L70,100 Q50,100 60,80 Z'/></svg>")
+    no-repeat center/contain;
+  left:50%; transform:translateX(-50%);
 }
-
 @keyframes moveClouds {
-  0% {
-    transform: translate(-50%, 0) translateX(-150%);
-  }
-  100% {
-    transform: translate(-50%, 0) translateX(150%);
-  }
+  0% { transform:translate(-50%,0) translateX(-150%); }
+ 100% { transform:translate(-50%,0) translateX(150%); }
 }
+.cloud1 { width:200px; height:120px; top:10%; animation:moveClouds 40s linear infinite;}
+.cloud2 { width:300px; height:180px; top:30%; animation:moveClouds 60s linear infinite;}
+.cloud3 { width:250px; height:150px; top:60%; animation:moveClouds 50s linear infinite;}
 
-.cloud1 {
-  width: 200px;
-  height: 120px;
-  top: 10%;
-  animation: moveClouds 40s linear infinite;
-}
-
-.cloud2 {
-  width: 300px;
-  height: 180px;
-  top: 30%;
-  animation: moveClouds 60s linear infinite;
-}
-
-.cloud3 {
-  width: 250px;
-  height: 150px;
-  top: 60%;
-  animation: moveClouds 50s linear infinite;
-}
-
-/* === Sun Animation for Clear Weather === */
 .sun {
-  position: absolute;
-  top: 8%;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 120px;
-  height: 120px;
-  background: radial-gradient(circle at center, #FFD700 40%, #FFA500 70%, transparent 90%);
-  border-radius: 50%;
-  box-shadow: 0 0 40px 15px #FFD700;
-  animation: pulseSun 3s ease-in-out infinite;
-  z-index: 1;
+  position:absolute; top:8%; left:50%; transform:translateX(-50%);
+  width:120px; height:120px; border-radius:50%;
+  background:radial-gradient(circle at center,#FFD700 40%,#FFA500 70%,transparent 90%);
+  box-shadow:0 0 40px 15px #FFD700; animation:pulseSun 3s ease-in-out infinite; z-index:1;
 }
-
 @keyframes pulseSun {
-  0%, 100% {
-    transform: translateX(-50%) scale(1);
-    opacity: 1;
+  0%,100% { transform:translateX(-50%) scale(1); opacity:1;}
+  50% { transform:translateX(-50%) scale(1.1); opacity:.9;}
+}
+
+/* ------------ Farm‐NFT Display ------------ */
+.farm-nft-image {
+  max-width:200px; border-radius:12px; box-shadow:0 4px 12px rgba(255,255,255,0.2);
+  display:block; margin:1rem auto;
+}
+
+/* ------------ Farm‐Card Grid ------------ */
+.farm-card-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+  gap:1rem;
+  padding:1rem;
+}
+.farm-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0;
+  font-weight: bold;
+  color: #ffaa00;
+}
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 3px solid #ffaa00;
+  border-top: 3px solid transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Farming.css — Alcor-Inspired Horizontal Global Farm Layout */
+
+/* Horizontal Scrollable Container for Global Farms */
+/* Farming.css — Alcor-Inspired Horizontal Global Farm Layout */
+
+/* Horizontal Scrollable Container for Global Farms */
+.farm-card-grid.compact-global-farms {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.5rem 1rem;
+  gap: 1rem;
+  max-width: 100%;
+  white-space: nowrap;
+  border-top: 1px solid #333;
+  border-bottom: 1px solid #333;
+  background-color: #101010;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
+  scroll-snap-type: x mandatory;
+}
+
+.farm-card-grid.compact-global-farms .farm-card {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  width: 420px;
+  font-size: 0.85rem;
+  padding: 1rem;
+  border: 1px solid #444;
+  background-color: #1a1a1a;
+  border-radius: 10px;
+  box-shadow: 0 0 8px rgba(0,255,128,0.2);
+  color: #ccc;
+  transition: transform 0.2s ease;
+  scroll-snap-align: start;
+  gap: 1rem;
+  position: relative;
+}
+
+.farm-card-grid.compact-global-farms .farm-card:hover {
+  transform: scale(1.02);
+  box-shadow: 0 0 12px rgba(0,255,128,0.4);
+}
+
+.farm-card-grid.compact-global-farms .farm-card img {
+  width: 80px;
+  height: 80px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  object-fit: cover;
+  margin: 0;
+  position: relative;
+  z-index: 1;
+  align-self: flex-start;
+  order: -1;
+}
+
+.farm-card-grid.compact-global-farms .farm-card .farm-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.25rem;
+  padding-left: 0.25rem;
+  flex: 1;
+}
+
+.farm-card-grid.compact-global-farms .farm-card .farm-info p {
+  color: #ccc;
+  text-shadow: 0 0 2px rgba(0,255,128,0.3);
+}
+
+.farm-card-grid.compact-global-farms .farm-card .title-overlay {
+  position: left;
+  top: -18px;
+  left: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-weight: bold;
+  padding: 2px 8px;
+  border-radius: 6px 6px 0 0;
+  z-index: 3;
+}
+
+.farm-card-grid.compact-global-farms .farm-card .template-label {
+  position: absolute;
+  top: 88px;
+  left: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  color: #88ff88;
+  font-size: 0.7rem;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 0 0 6px 6px;
+  z-index: 3;
+}
+
+@media (max-width: 600px) {
+  .farm-card-grid.compact-global-farms {
+    flex-direction: column;
+    overflow-x: hidden;
+    white-space: normal;
+    align-items: center;
   }
-  50% {
-    transform: translateX(-50%) scale(1.1);
-    opacity: 0.9;
+
+  .farm-card-grid.compact-global-farms .farm-card {
+    flex-direction: column;
+    width: 100%;
+    max-width: 320px;
+    text-align: center;
+  }
+
+  .farm-card-grid.compact-global-farms .farm-card img {
+    width: 100px;
+    height: 100px;
+    align-self: center;
+    order: initial;
+  }
+
+  .farm-card-grid.compact-global-farms .farm-card .farm-info {
+    padding-left: 0;
+    padding-top: 0.5rem;
+  }
+
+  .farm-card-grid.compact-global-farms .farm-card .title-overlay {
+    top: -18px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .farm-card-grid.compact-global-farms .farm-card .template-label {
+    top: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .farm-card-grid.compact-global-farms .farm-card:active {
+    transform: scale(0.98);
+    background-color: #181818;
   }
 }
 
-.farm-nft-display {
-  text-align: center;
-  margin-top: 2rem;
+.farm-card-grid.compact-global-farms::-webkit-scrollbar {
+  height: 8px;
 }
 
-.farm-nft-img {
-  max-width: 200px;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
+.farm-card-grid.compact-global-farms::-webkit-scrollbar-track {
+  background: #181818;
+}
+
+.farm-card-grid.compact-global-farms::-webkit-scrollbar-thumb {
+  background: #444;
+  border-radius: 4px;
+}
+
+.farm-card-grid.compact-global-farms::-webkit-scrollbar-thumb:hover {
+  background: #666;
 }

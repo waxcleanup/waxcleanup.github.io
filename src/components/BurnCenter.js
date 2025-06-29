@@ -1,7 +1,6 @@
 // src/components/BurnCenter.js
 import React, { useState, useEffect } from 'react';
-import '../App.css';
-import logo from '../assets/cleanupcentr.png';
+import './BurnCenter.css'
 import BurnRoom from './BurnRoom';
 import ProposalModal from './ProposalModal';
 import Proposals from './Proposals';
@@ -289,8 +288,7 @@ const BurnCenter = () => {
   return (
     <div className="BurnCenter">
       <header className="app-header">
-        <img src={logo} alt="Cleanup Logo" className="app-logo" />
-        <h1 className="app-title">TheCleanupCentr - Cleanup Center</h1>
+        <h1 className="app-title">The BurnCentr</h1>
       </header>
 
       {session && (

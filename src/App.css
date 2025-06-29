@@ -1,237 +1,39 @@
-/* Global Styling */
+/* ======================
+   APP GLOBAL CSS
+   Only truly global styles—no component-specific rules
+   ====================== */
+
+/* Global Reset & Theme */
 body {
   background-color: #1a1a1a;
-  color: #e0e0e0;
-  font-family: 'Arial', sans-serif;
-  margin: 0;
-  padding: 0;
+  color:            #e0e0e0;
+  font-family:      'Arial', sans-serif;
+  margin:           0;
+  padding:          0;
 }
 
-/* Header Styling */
+/* Header (NavBar & App Title) */
 .app-header {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  display:         flex;
+  flex-direction:  column;
+  align-items:     center;
   justify-content: center;
-  padding: 15px;
   background-color: #1a1a1a;
-  margin-bottom: 10px;
-}
-
-.app-logo {
-  width: 300px;
-  height: auto;
-  margin-bottom: 8px;
+  padding:         15px;
+  margin-bottom:   10px;
 }
 
 .app-title {
-  color: #00bfff;
-  font-size: 32px;
+  color:       #00bfff;
+  font-size:   32px;
   font-weight: bold;
-  margin: 0;
-  text-align: center;
+  margin:      0;
+  text-align:  center;
 }
 
-/* Login Button */
-.login-section {
-  text-align: center;
-  margin: 30px 0;
-}
-
-/* Heading Colors */
+/* Global Heading Styles */
 h1, h2, h3 {
-  color: #00ff80;
+  color:      #00ff80;
   text-align: center;
-  font-size: 24px;
-}
-
-/* Input and Button Styling */
-input[type="text"], select, button {
-  border-radius: 5px;
-  border: none;
-  padding: 5px;
-  font-size: 15px;
-  width: 28%;
-}
-
-input[type="text"] {
-  background-color: #333;
-  color: #e0e0e0;
-  border: 1px solid #555;
-}
-
-button {
-  background-color: #00ff80;
-  color: #1a1a1a;
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-button:hover {
-  background-color: #00cc66;
-}
-
-button:disabled {
-  background-color: #555;
-  cursor: not-allowed;
-}
-
-/* Burn Room Button Styling */
-.burn-room-button {
-  padding: 12px 25px;
-  background-color: #ff4500;
-  color: #fff;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-weight: bold;
-  box-shadow: 0px 0px 10px rgba(255, 69, 0, 0.6);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  animation: flicker 1.5s infinite alternate;
-  position: relative;
-}
-
-.burn-room-button::before {
-  content: '';
-  position: absolute;
-  top: -10px;
-  left: -10px;
-  right: -10px;
-  bottom: -10px;
-  border-radius: 10px;
-  background: radial-gradient(circle, rgba(255,69,0,0.5) 0%, rgba(255,140,0,0) 70%);
-  opacity: 0.6;
-  animation: glow 2s infinite alternate;
-}
-
-/* Flicker Animation */
-@keyframes flicker {
-  0% { opacity: 1; transform: scale(1); box-shadow: 0 0 15px rgba(255, 69, 0, 0.8); }
-  25% { opacity: 0.9; transform: scale(1.02); box-shadow: 0 0 18px rgba(255, 140, 0, 0.9); }
-  50% { opacity: 0.8; transform: scale(1.01); box-shadow: 0 0 12px rgba(255, 69, 0, 0.7); }
-  75% { opacity: 0.95; transform: scale(1.03); box-shadow: 0 0 20px rgba(255, 69, 0, 1); }
-  100% { opacity: 1; transform: scale(1); box-shadow: 0 0 15px rgba(255, 69, 0, 0.8); }
-}
-
-/* Glow Animation */
-@keyframes glow {
-  0% { box-shadow: 0 0 20px rgba(255, 69, 0, 0.6); }
-  100% { box-shadow: 0 0 30px rgba(255, 140, 0, 0.8); }
-}
-
-/* Table Styling */
-table {
-  width: 60%;
-  border-collapse: collapse;
-  margin: 0 auto;
-}
-
-th, td {
-  padding: 8px;
-  border: 1px solid #333;
-  color: #e0e0e0;
-  text-align: center;
-  font-size: 14px;
-}
-
-th {
-  background-color: #2e2e2e;
-}
-
-tbody tr:nth-child(even) {
-  background-color: #252525;
-}
-
-tbody tr:nth-child(odd) {
-  background-color: #1f1f1f;
-}
-
-/* Responsive Table Styling for Mobile */
-@media (max-width: 750px) {
-  table, tbody, tr, th, td {
-    display: block;
-    width: 95%;
-  }
-
-  thead {
-    display: none;
-  }
-
-  tr {
-    margin-bottom: 3px;
-    border-bottom: 1px solid #333;
-  }
-
-  td {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px;
-    font-size: 14px;
-  }
-
-  td::before {
-    content: attr(data-label);
-    font-weight: bold;
-    color: #00ff80;
-    margin-right: 10px;
-  }
-}
-
-/* Voting Button Styling */
-.vote-button {
-  padding: 10px 10px;
-  font-size: 14px;
-  border: none;
-  border-radius: 5px;
-  margin: 5px 0;
-  cursor: pointer;
-  width: 80%;
-}
-
-.vote-for {
-  background-color: #00ff80;
-  color: #1a1a1a;
-}
-
-.vote-against {
-  background-color: #dc3545;
-  color: #fff;
-}
-
-.vote-button:hover {
-  opacity: 0.8;
-}
-
-@media (max-width: 768px) {
-  .vote-button {
-    padding: 12px;
-    font-size: 16px;
-  }
-}
-
-/* Pagination Styling */
-.pagination {
-  display: flex;
-  justify-content: center;
-  margin-top: 15px;
-}
-
-.pagination button {
-  background-color: #3b3b3b;
-  color: #00ff80;
-  border: 1px solid #00ff80;
-  padding: 5px 10px;
-  border-radius: 5px;
-  transition: background-color 0.3s;
-  margin: 0 5px;
-}
-
-.pagination button:hover {
-  background-color: #00cc66;
-}
-
-.pagination span {
-  color: #e0e0e0;
-  margin: 0 10px;
+  margin:     0.5em 0;
 }

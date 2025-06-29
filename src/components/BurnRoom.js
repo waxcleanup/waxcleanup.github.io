@@ -2,19 +2,19 @@ import React, { useCallback, useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import { fetchBurnableNFTs } from '../services/fetchBurnableNFTs';
 import { fetchUnstakedIncinerators, fetchStakedIncinerators } from '../services/incinerators';
-import { stakeIncinerator, burnNFT, unstakeIncinerator } from '../services/transactionActions';
-import { getBurnRecordsByAssetId } from '../services/burnRecordsApi';
-import './BurnRoom.css';
+import { stakeIncinerator, burnNFT, unstakeIncinerator, finalizeRepair } from '../services/transactionActions';
+import { getRepairStatus } from '../services/repairStatusApi';
 import NFTGrid from './NFTGrid';
 import NFTSlots from './NFTSlots';
 import IncineratorModal from './IncineratorModal';
 import IncineratorDetails from './IncineratorDetails';
+import RepairModal from './RepairModal';
 
 const BurnRoom = ({ accountName, onClose }) => {
   const [burnableNFTs, setBurnableNFTs] = useState([]);
   const [slots, setSlots] = useState([null, null, null]);
   const [nftSlots, setNftSlots] = useState([null, null, null]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [selectedNFT, setSelectedNFT] = useState(null);
   const [stakedIncinerators, setStakedIncinerators] = useState([]);
   const [unstakedIncinerators, setUnstakedIncinerators] = useState([]);
@@ -23,12 +23,13 @@ const BurnRoom = ({ accountName, onClose }) => {
   const [burnMessage, setBurnMessage] = useState('');
   const [messageVisible, setMessageVisible] = useState(false);
   const [recentlyBurnedNFTs, setRecentlyBurnedNFTs] = useState([]);
-  const [fetching, setFetching] = useState(false);
+  const [repairTimers, setRepairTimers] = useState({});
+  const [showRepairModal, setShowRepairModal] = useState(false);
+  const [repairIncineratorTarget, setRepairIncineratorTarget] = useState(null);
+  const [repairPoints, setRepairPoints] = useState('');
+  const [repairError, setRepairError] = useState('');
 
   const fetchData = useCallback(async () => {
-    if (fetching) return; // Prevent overlapping fetches
-
-    setFetching(true);
     setLoading(true);
     try {
       const [nfts, unstaked, staked] = await Promise.all([
@@ -37,206 +38,188 @@ const BurnRoom = ({ accountName, onClose }) => {
         fetchStakedIncinerators(accountName),
       ]);
 
-      const normalizedStaked = staked.map((inc) => ({
-        ...inc,
-        asset_id: inc.asset_id || inc.id, // Normalize `asset_id`
-      }));
+      const normalizedStaked = staked.map(inc => ({ ...inc, asset_id: inc.asset_id || inc.id }));
+      const stakedIds = new Set(normalizedStaked.map(inc => inc.asset_id));
+      const filteredUnstaked = unstaked.filter(inc => !stakedIds.has(inc.asset_id));
 
-      const filteredNFTs = nfts.filter(
-        (nft) =>
-          !recentlyBurnedNFTs.includes(nft.asset_id) &&
-          nft.template_id !== 294990 // Exclude template ID 294990
-      );
-
-      setBurnableNFTs(filteredNFTs);
-      setUnstakedIncinerators(unstaked);
+      setBurnableNFTs(nfts.filter(nft => !recentlyBurnedNFTs.includes(nft.asset_id) && nft.template_id !== 294990));
+      setUnstakedIncinerators(filteredUnstaked);
       setStakedIncinerators(normalizedStaked);
 
-      setSlots((prevSlots) =>
-        prevSlots.map((slot) => {
-          if (!slot) return null;
-          return normalizedStaked.find((inc) => inc.asset_id === slot.asset_id) || null;
-        })
+      setSlots(prev =>
+        prev.map(slot =>
+          slot ? normalizedStaked.find(inc => inc.asset_id === slot.asset_id || inc.id === slot.id) || slot : null
+        )
       );
 
-      console.log('[INFO] Data fetched successfully.');
+      const timerData = {};
+      for (const inc of normalizedStaked) {
+        const id = inc.asset_id || inc.id;
+        try {
+          const status = await getRepairStatus(id);
+          if (status?.repair_time) {
+            const repairMillis = new Date(status.repair_time + 'Z').getTime();
+            const secondsLeft = Math.floor((repairMillis - Date.now()) / 1000);
+            timerData[id] = Math.max(0, secondsLeft);
+          }
+        } catch (err) {
+          if (!err.message.includes('404')) console.error(`[ERROR] Failed to fetch repair status for ${id}:`, err);
+        }
+      }
+
+      setRepairTimers(timerData);
     } catch (error) {
-      console.error('[ERROR] Failed to fetch data:', error);
+      console.error('[ERROR] Data fetch error:', error);
     } finally {
       setLoading(false);
-      setFetching(false);
     }
-  }, [accountName, recentlyBurnedNFTs, fetching]);
+  }, [accountName, recentlyBurnedNFTs]);
 
-  const safeFetchData = async () => {
-    if (!fetching) {
-      await fetchData();
-    }
-  };
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   useEffect(() => {
-    safeFetchData(); // Fetch data on component mount
-  }, [safeFetchData]);
+    const interval = setInterval(() => {
+      fetchData();
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [fetchData]);
 
-  const handleStakeUnstakedIncinerator = async (incinerator) => {
-    try {
-      const transactionId = await stakeIncinerator(accountName, incinerator);
-      if (transactionId) {
-        console.log('[INFO] Staking successful. Refreshing data...');
-        await safeFetchData();
-      }
-    } catch (error) {
-      console.error('[ERROR] Staking failed:', error);
-    }
-  };
-
-  const handleUnstakeIncinerator = async (incinerator) => {
-    try {
-      const transactionId = await unstakeIncinerator(accountName, incinerator);
-      if (transactionId) {
-        console.log('[INFO] Unstaking successful. Refreshing data...');
-        await safeFetchData();
-      }
-    } catch (error) {
-      console.error('[ERROR] Unstaking failed:', error);
-    }
-  };
-
-  const pollForTransaction = async (transactionId, timeout = 15000, interval = 1000) => {
-    const startTime = Date.now();
-
-    const poll = async () => {
-      const elapsedTime = Date.now() - startTime;
-      if (elapsedTime > timeout) {
-        console.warn('[WARNING] Polling timed out.');
-        clearInterval(pollInterval);
-        return;
-      }
-
-      console.log('[INFO] Polling for transaction update...');
-      await safeFetchData();
-    };
-
-    const pollInterval = setInterval(poll, interval);
-    setTimeout(() => clearInterval(pollInterval), timeout);
-  };
-
-  const handleBurnNFT = async (slotIndex) => {
-    try {
-      const incinerator = slots[slotIndex];
-      const nft = nftSlots[slotIndex];
-
-      if (!nft || !incinerator) {
-        alert('Please assign both an NFT and an incinerator to the slot.');
-        return;
-      }
-
-      console.log('[INFO] Burning NFT:', { nft, incinerator });
-      showMessage('Burn process initiated...');
-      await burnNFT(accountName, nft, incinerator);
-
-      setBurnableNFTs((prevNFTs) =>
-        prevNFTs.filter((burnable) => burnable.asset_id !== nft.asset_id)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setRepairTimers(prev =>
+        Object.fromEntries(
+          Object.entries(prev).map(([id, time]) => [id, time > 0 ? time - 1 : 0])
+        )
       );
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
-      setRecentlyBurnedNFTs((prev) => [...prev, nft.asset_id]);
+  const handleBurnNFT = async slotIndex => {
+    const nft = nftSlots[slotIndex];
+    const incinerator = slots[slotIndex];
+    if (!nft || !incinerator) return alert('Please assign both NFT and incinerator.');
 
-      setNftSlots((prevSlots) => {
-        const updatedSlots = [...prevSlots];
-        updatedSlots[slotIndex] = null;
-        return updatedSlots;
-      });
-
-      pollForTransaction(nft.asset_id);
+    try {
+      setBurnMessage('Burn initiated...');
+      setMessageVisible(true);
+      await burnNFT(accountName, nft, incinerator);
+      setBurnableNFTs(prev => prev.filter(item => item.asset_id !== nft.asset_id));
+      setRecentlyBurnedNFTs(prev => [...prev, nft.asset_id]);
+      setNftSlots(prev => prev.map((slot, i) => (i === slotIndex ? null : slot)));
+      fetchData();
     } catch (error) {
-      console.error('[ERROR] Burn transaction failed:', error);
-      showMessage('Failed to burn NFT. Please try again.');
+      console.error('[ERROR] Burn failed:', error);
+      setBurnMessage('Burn failed. Try again.');
+    } finally {
+      setTimeout(() => setMessageVisible(false), 10000);
     }
   };
 
-  const showMessage = (message) => {
-    setBurnMessage(message);
-    setMessageVisible(true);
-    setTimeout(() => {
-      setMessageVisible(false);
-      setBurnMessage('');
-    }, 10000);
+  const onIncineratorSelect = incinerator => {
+    const updatedSlots = [...slots];
+    updatedSlots[selectedSlotIndex] = incinerator;
+    setSlots(updatedSlots);
+    setStakedIncinerators(prev => prev.filter(i => i.asset_id !== incinerator.asset_id));
+    setShowIncineratorModal(false);
+  };
+
+  const onRepair = incinerator => {
+    setRepairIncineratorTarget(incinerator);
+    setRepairPoints('');
+    setRepairError('');
+    setShowRepairModal(true);
+  };
+
+  const handleFinalizeRepair = async incineratorId => {
+    try {
+      await finalizeRepair(accountName, incineratorId);
+      fetchData();
+    } catch (err) {
+      alert(`Failed to finalize: ${err.message}`);
+    }
+  };
+
+  const handleUnstake = async incinerator => {
+    try {
+      await unstakeIncinerator(accountName, incinerator);
+      await fetchData();
+    } catch (err) {
+      alert(`Unstake failed: ${err.message}`);
+    }
+  };
+
+  const handleUnstakedStake = async (incinerator) => {
+    const inc = { ...incinerator, asset_id: incinerator.asset_id || incinerator.id };
+    try {
+      await stakeIncinerator(accountName, inc);
+      await new Promise(resolve => setTimeout(resolve, 3000)); // wait for indexer
+      await fetchData();
+    } catch (err) {
+      console.error('[ERROR] Staking failed:', err);
+      alert(`Staking failed: ${err.message}`);
+    }
   };
 
   return (
     <div className="burn-room">
-      <button className="close-button" onClick={onClose}>
-        &times;
-      </button>
+      <button className="close-button" onClick={onClose}>&times;</button>
       <h2>Burn Room</h2>
-
 
       <NFTGrid
         burnableNFTs={burnableNFTs}
         selectedNFT={selectedNFT}
-        onNFTClick={(nft) => setSelectedNFT(nft)}
-        onAssignNFT={(nft, index) => {
-          const updatedSlots = [...nftSlots];
-          updatedSlots[index] = nft;
-          setNftSlots(updatedSlots);
-        }}
+        onNFTClick={setSelectedNFT}
+        onAssignNFT={(nft, index) => setNftSlots(prev => prev.map((slot, i) => (i === index ? nft : slot)))}
         nftSlots={nftSlots}
       />
 
       {messageVisible && <div className="burn-message">{burnMessage}</div>}
 
-      <div className="selected-nfts-container">
-        <h3>Selected NFTs to Burn</h3>
-        <NFTSlots nftSlots={nftSlots} slots={slots} onBurn={handleBurnNFT} />
-      </div>
+      <NFTSlots nftSlots={nftSlots} slots={slots} onBurn={handleBurnNFT} />
 
       <h3>Incinerator Slots</h3>
       <div className="incinerator-grid">
-        {slots.map((slot, index) => (
-          <div
-            key={index}
-            className={`incinerator-card ${slot ? '' : 'empty-incinerator'}`}
-            onClick={() => {
-              setSelectedSlotIndex(index);
-              setShowIncineratorModal(true);
-            }}
-          >
-            {slot ? (
-              <IncineratorDetails
-                incinerator={slot}
-                onRemove={() => {
-                  const updatedSlots = [...slots];
-                  updatedSlots[index] = null;
-                  setSlots(updatedSlots);
-                }}
-                fetchIncineratorData={safeFetchData}
-              />
-            ) : (
-              <p>Slot {index + 1} - Empty</p>
-            )}
-          </div>
-        ))}
+        {slots.map((slot, index) => {
+          const id = slot?.asset_id || slot?.id;
+          const seconds = repairTimers[id];
+          const showFinalize = seconds !== undefined && seconds <= 0;
+
+          return (
+            <div key={index} className={`incinerator-card ${slot ? '' : 'empty-incinerator'}`} onClick={() => { setSelectedSlotIndex(index); setShowIncineratorModal(true); }}>
+              {slot ? (
+                <>
+                  <IncineratorDetails
+                    incinerator={slot}
+                    onRemove={() => setSlots(prev => prev.map((s, i) => i === index ? null : s))}
+                    fetchIncineratorData={fetchData}
+                    onRepair={onRepair}
+                  />
+                  {seconds > 0 && <div className="repair-timer">Repair in: {seconds}s</div>}
+                  {showFinalize && <button className="fuel-button" onClick={() => handleFinalizeRepair(id)}>Finalize Repair</button>}
+                </>
+              ) : (
+                <p>Slot {index + 1} - Empty</p>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {showIncineratorModal && (
         <IncineratorModal
-          accountName={accountName}
+          accountName={typeof accountName === 'string' ? accountName : accountName?.name || ''}
           stakedIncinerators={stakedIncinerators}
           unstakedIncinerators={unstakedIncinerators}
           assignedSlots={slots}
-          onIncineratorSelect={(incinerator) => {
-            const updatedSlots = [...slots];
-            updatedSlots[selectedSlotIndex] = incinerator;
-            setSlots(updatedSlots);
-            setStakedIncinerators((prev) =>
-              prev.filter((i) => i.asset_id !== incinerator.asset_id)
-            );
-            setShowIncineratorModal(false);
-          }}
-          onUnstakedStake={handleStakeUnstakedIncinerator}
-          onUnstake={handleUnstakeIncinerator}
+          onIncineratorSelect={onIncineratorSelect}
+          onUnstakedStake={handleUnstakedStake}
+          onUnstake={handleUnstake}
+          loadFuel={() => {}}
           onClose={() => setShowIncineratorModal(false)}
-          fetchData={safeFetchData}
+          fetchData={fetchData}
+          repairTimers={repairTimers}
+          onFinalizeRepair={handleFinalizeRepair}
         />
       )}
     </div>

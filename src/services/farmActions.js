@@ -3,10 +3,7 @@ import { InitTransaction } from '../hooks/useSession';
 
 /**
  * Stake a farm NFT by transferring it to the rhythmfarmer contract.
- * @param {string} accountName - The WAX account name of the user.
- * @param {string|number} asset_id - The asset ID of the farm NFT to stake.
- * @param {string|number} template_id - The template ID of the NFT.
- * @returns {Promise<string>} - The transaction ID of the staking transaction.
+ * Memo format: "Stake Farm:<asset_id>:<template_id>"
  */
 export const stakeFarm = async (accountName, asset_id, template_id) => {
   if (!asset_id || !template_id) {
@@ -14,15 +11,16 @@ export const stakeFarm = async (accountName, asset_id, template_id) => {
   }
 
   const memo = `Stake Farm:${asset_id}:${template_id}`;
+
   const dataTrx = {
     actions: [
       {
         account: 'atomicassets',
-        name: 'transfer',
+        name:    'transfer',
         authorization: [{ actor: accountName, permission: 'active' }],
         data: {
-          from: accountName,
-          to: 'rhythmfarmer',
+          from:      accountName,
+          to:        'rhythmfarmer',
           asset_ids: [String(asset_id)],
           memo,
         },
@@ -32,7 +30,9 @@ export const stakeFarm = async (accountName, asset_id, template_id) => {
 
   try {
     const result = await InitTransaction(dataTrx);
-    if (!result || !result.transactionId) throw new Error('Farm staking transaction failed.');
+    if (!result?.transactionId) {
+      throw new Error('Farm staking transaction failed.');
+    }
     return result.transactionId;
   } catch (error) {
     console.error('[ERROR] Stake farm failed:', error);
@@ -41,33 +41,25 @@ export const stakeFarm = async (accountName, asset_id, template_id) => {
 };
 
 /**
- * Unstake a farm by calling the smart contract action directly.
- * @param {string} accountName - The WAX account name of the user.
- * @param {string|number} asset_id - The asset ID of the farm NFT to unstake.
- * @returns {Promise<string>} - The transaction ID of the unstake transaction.
+ * Unstake a farm via backend API (production-safe method)
  */
 export const unstakeFarm = async (accountName, asset_id) => {
-  if (!asset_id) throw new Error('Missing asset_id for unstake.');
-
-  const dataTrx = {
-    actions: [
-      {
-        account: 'rhythmfarmer',
-        name: 'removefarm',
-        authorization: [{ actor: accountName, permission: 'active' }],
-        data: {
-          asset_id: Number(asset_id),
-        },
-      },
-    ],
-  };
+  if (!accountName || !asset_id) {
+    throw new Error('Missing account name or asset ID');
+  }
 
   try {
-    const result = await InitTransaction(dataTrx);
-    if (!result || !result.transactionId) throw new Error('Unstake transaction failed.');
-    return result.transactionId.toString();
-  } catch (error) {
-    console.error('[ERROR] Unstake farm failed:', error);
-    throw new Error(error.message || 'Farm unstaking failed.');
+    const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/api/farms/unstake`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ owner: accountName, asset_id }),
+    });
+
+    const result = await response.json();
+    if (!result.success) throw new Error(result.message || 'Unstake failed');
+    return result.transaction_id;
+  } catch (err) {
+    console.error('[API ERROR] Failed to unstake via backend:', err);
+    throw err;
   }
 };

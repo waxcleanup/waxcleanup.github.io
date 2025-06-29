@@ -1,0 +1,33 @@
+.farm-card {
+  background: #121212;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 1rem;
+  margin: 1rem;
+  color: #fff;
+  box-shadow: 0 0 10px rgba(0,0,0,0.5);
+}
+
+.farm-card h3 {
+  margin-top: 0;
+  color: #88ff88;
+}
+
+.rent-btn {
+  margin-top: 10px;
+  background: #00d084;
+  color: black;
+  border: none;
+  padding: 8px 16px;
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.farm-card-image {
+  width: 100%;
+  border-radius: 12px;
+  margin-bottom: 1rem;
+  object-fit: cover;
+  border: 2px solid #333;
+  box-shadow: 0 0 8px rgba(0,0,0,0.2);
+}

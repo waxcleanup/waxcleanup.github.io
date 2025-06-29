@@ -1,5 +1,5 @@
 import React from 'react';
-import './BurnRoom.css';
+import './BurnCenter.css';
 
 const NFTSlots = ({ nftSlots = [null, null, null], slots, onBurn }) => {
   // Function to resolve IPFS URL

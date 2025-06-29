@@ -1,39 +1,25 @@
 // src/components/HomePage.js
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import useSession from '../hooks/useSession';
+import { JsonRpc } from 'eosjs';
+import { useSession } from '../hooks/SessionContext';
 import logo from '../assets/cleanupcentr.png';
 import './HomePage.css';
-import { JsonRpc } from 'eosjs';
 
 const rpc = new JsonRpc('https://api.wax.alohaeos.com');
 
-const HomePage = () => {
+export default function HomePage() {
   const { session, handleLogin, handleLogout } = useSession();
   const [accountInfo, setAccountInfo] = useState(null);
 
+  // fetch on-chain account info after login
   useEffect(() => {
-    console.log('🚀 Full session object:', session);
     if (session?.permissionLevel?.actor) {
       const actor = String(session.permissionLevel.actor);
-      console.log('✅ actor from permissionLevel:', actor);
-      fetchAccountInfo(actor);
+      rpc.get_account(actor)
+        .then(res => setAccountInfo(res))
+        .catch(err => console.error('Failed to fetch account info:', err));
     }
   }, [session]);
-
-  const fetchAccountInfo = async (accountName) => {
-    try {
-      const result = await rpc.get_account(accountName);
-      setAccountInfo(result);
-    } catch (error) {
-      console.error('Failed to fetch account info:', error);
-    }
-  };
-
-  let actor = '';
-  if (session?.permissionLevel?.actor) {
-    actor = String(session.permissionLevel.actor);
-  }
 
   const renderUsageBar = (used, max, label) => {
     const percent = Math.min((used / max) * 100, 100).toFixed(2);
@@ -41,51 +27,46 @@ const HomePage = () => {
       <div className="usage-bar">
         <div className="usage-label">{label}: {used} / {max}</div>
         <div className="usage-track">
-          <div className="usage-fill" style={{ width: `${percent}%` }}></div>
+          <div className="usage-fill" style={{ width: `${percent}%` }} />
         </div>
       </div>
     );
   };
 
-  return (
-    <div className="homepage-container">
-      <header className="homepage-header">
-        <img src={logo} alt="Cleanup Logo" className="homepage-logo" />
-        <h1 className="homepage-title">TheCleanupCentr</h1>
-      </header>
-      {!session ? (
+  // If not logged in, show logo + login button
+  if (!session) {
+    return (
+      <div className="homepage-container">
+        <header className="homepage-header">
+          <img src={logo} alt="Cleanup Logo" className="homepage-logo" />
+          <h1 className="homepage-title">TheCleanupCentr</h1>
+        </header>
         <div className="homepage-login">
           <button onClick={() => handleLogin('anchor')} className="homepage-login-button">
             Login
           </button>
         </div>
-      ) : (
-        <div className="homepage-session">
-          <p className="homepage-welcome">Welcome, <strong>{actor}</strong>!</p>
+      </div>
+    );
+  }
 
-          {accountInfo && (
-            <div className="account-info">
-              <p><strong>Balance:</strong> {accountInfo.core_liquid_balance || '0.00000000 WAX'}</p>
-              {renderUsageBar(accountInfo.cpu_limit.used, accountInfo.cpu_limit.max, 'CPU')}
-              {renderUsageBar(accountInfo.ram_usage, accountInfo.ram_quota, 'RAM')}
-            </div>
-          )}
+  // If logged in, show account info + logout
+  const actor = String(session.permissionLevel.actor);
+  return (
+    <div className="homepage-session">
+      <p className="homepage-welcome">Welcome, <strong>{actor}</strong>!</p>
 
-          <button onClick={handleLogout} className="homepage-logout-button">
-            Log out
-          </button>
-          <div className="homepage-buttons">
-            <Link to="/burn">
-              <button className="homepage-nav-button burn-button">🔥 Burn Center</button>
-            </Link>
-            <Link to="/farming">
-              <button className="homepage-nav-button farm-button">🌿 Farm Center</button>
-            </Link>
-          </div>
+      {accountInfo && (
+        <div className="account-info">
+          <p><strong>Balance:</strong> {accountInfo.core_liquid_balance || '0.00000000 WAX'}</p>
+          {renderUsageBar(accountInfo.cpu_limit.used, accountInfo.cpu_limit.max, 'CPU')}
+          {renderUsageBar(accountInfo.ram_usage, accountInfo.ram_quota, 'RAM')}
         </div>
       )}
+
+      <button onClick={handleLogout} className="homepage-logout-button">
+        Log out
+      </button>
     </div>
   );
-};
-
-export default HomePage;
+}

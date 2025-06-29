@@ -1,12 +1,13 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import './IncineratorSelectionModal.css'; // Optional: Add custom styles for the modal
 
 const IncineratorSelectionModal = ({
   stakedIncinerators,
   unstakedIncinerators,
   onIncineratorSelect,
   onClose,
+  repairTimers = {},
+  onFinalizeRepair = () => {},
 }) => {
   return (
     <div className="incinerator-selection-modal">
@@ -21,17 +22,35 @@ const IncineratorSelectionModal = ({
           <h3>Staked Incinerators</h3>
           <div className="incinerator-grid">
             {stakedIncinerators.length > 0 ? (
-              stakedIncinerators.map((incinerator) => (
-                <div
-                  key={incinerator.asset_id}
-                  className="incinerator-card"
-                  onClick={() => onIncineratorSelect(incinerator)}
-                >
-                  <p>Asset ID: {incinerator.asset_id}</p>
-                  <p>Durability: {incinerator.durability || 'N/A'}</p>
-                  {/* Add more details as needed */}
-                </div>
-              ))
+              stakedIncinerators.map((incinerator) => {
+                const id = incinerator.asset_id || incinerator.id;
+                const seconds = repairTimers[id];
+                const showFinalize = seconds !== undefined && seconds <= 0;
+
+                return (
+                  <div
+                    key={id}
+                    className="incinerator-card"
+                    onClick={() => onIncineratorSelect(incinerator)}
+                  >
+                    <p>Asset ID: {id}</p>
+                    <p>Durability: {incinerator.durability || 'N/A'}</p>
+                    {seconds > 0 && (
+                      <p className="repair-timer">Repair in progress: {seconds}s</p>
+                    )}
+                    {showFinalize && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onFinalizeRepair(id);
+                        }}
+                      >
+                        Finalize Repair
+                      </button>
+                    )}
+                  </div>
+                );
+              })
             ) : (
               <p>No staked incinerators available.</p>
             )}
@@ -51,7 +70,6 @@ const IncineratorSelectionModal = ({
                 >
                   <p>Asset ID: {incinerator.asset_id}</p>
                   <p>Durability: {incinerator.durability || 'N/A'}</p>
-                  {/* Add more details as needed */}
                 </div>
               ))
             ) : (
@@ -69,6 +87,8 @@ IncineratorSelectionModal.propTypes = {
   unstakedIncinerators: PropTypes.array.isRequired,
   onIncineratorSelect: PropTypes.func.isRequired,
   onClose: PropTypes.func.isRequired,
+  repairTimers: PropTypes.object,
+  onFinalizeRepair: PropTypes.func,
 };
 
 export default IncineratorSelectionModal;

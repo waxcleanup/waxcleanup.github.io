@@ -13,10 +13,10 @@ export const stakeIncinerator = async (accountName, incinerator) => {
     throw new Error('No incinerator selected for staking.');
   }
 
-  const { asset_id } = incinerator;
+  const asset_id = incinerator.asset_id || incinerator.id;
 
   if (!asset_id) {
-    throw new Error('Selected incinerator is missing asset_id. Cannot proceed with staking.');
+    throw new Error('Selected incinerator is missing asset_id or id. Cannot proceed with staking.');
   }
 
   let template_id;
@@ -254,64 +254,84 @@ export const loadEnergy = async (accountName, incineratorId) => {
   }
 };
 /**
- * Unstake an incinerator by invoking the contract action.
- * @param {string} accountName - The user's WAX account name.
- * @param {Object} incinerator - The incinerator object to unstake.
- * @returns {string} - The transaction ID.
- * @throws Will throw an error if the unstaking process fails.
+ * Repair an incinerator by sending CINDER to the contract.
+ * @param {string} accountName – The user's WAX account.
+ * @param {string|number} incineratorId – The incinerator asset ID.
+ * @param {number} points – Number of durability points to repair (1 CINDER = 1 point).
  */
-export const unstakeIncinerator = async (accountName, incinerator) => {
-  const asset_id = incinerator.asset_id || incinerator.id; // Fallback to `id` if `asset_id` is missing
+export const repairIncinerator = async (accountName, incineratorId, points) => {
+  if (!Number.isInteger(points) || points < 1) 
+    throw new Error('Repair points must be a positive integer.');
 
-  if (!asset_id) {
-    throw new Error('Invalid incinerator object. Missing asset_id or id.');
-  }
-
-  const dataTrx = {
-    actions: [
-      {
-        account: process.env.REACT_APP_CONTRACT_NAME, // Cleanup contract
-        name: 'unstakeincin', // Unstake action
-        authorization: [
-          {
-            actor: accountName,
-            permission: 'active',
-          },
-        ],
-        data: {
-          user: accountName,
-          incinerator_id: asset_id, // Use extracted asset_id
-        },
-      },
-    ],
+  const quantity = `${points.toFixed(6)} CINDER`;
+  const memo     = `repairincin:${incineratorId}`;
+  const dataTrx  = {
+    actions: [{
+      account: 'cleanuptoken',
+      name:    'transfer',
+      authorization: [{ actor: accountName, permission: 'active' }],
+      data: { from: accountName, to: 'cleanupcentr', quantity, memo }
+    }]
   };
 
   try {
-    console.log('[DEBUG] Initiating unstake transaction:', dataTrx);
-
+    console.log('[DEBUG] Initiating repair transaction:', dataTrx);
     const result = await InitTransaction(dataTrx);
-    console.log('[DEBUG] Unstake transaction result:', result);
-
-    // Extract the transaction ID and handle unexpected formats
-    const transactionId = result.transactionId 
-      ? result.transactionId.toString() // Convert to string if not already
-      : null;
-
-    if (!transactionId) {
-      throw new Error(
-        `Unstake transaction failed for asset_id: ${asset_id}. Missing transaction ID.`
-      );
-    }
-
-    console.log('[DEBUG] Processed transaction ID:', transactionId);
-    return transactionId; // Return the transaction ID for verification
+    if (!result?.transactionId) 
+      throw new Error(`Repair failed for incinerator ${incineratorId}.`);
+    return result.transactionId;
   } catch (error) {
-    console.error(
-      `[ERROR] Error during unstake transaction for asset_id: ${asset_id}`,
-      error.message || error
+    console.error('[ERROR] Repair transaction error:', error);
+    throw new Error(error.message || `Failed to repair incinerator ${incineratorId}.`);
+  }
+};
+
+
+/**
+ * Unstake an incinerator by calling the backend route.
+ * @param {string} accountName - The user's WAX account name.
+ * @param {Object} incinerator - The incinerator object to unstake.
+ * @returns {string} - The transaction ID.
+ */
+export const unstakeIncinerator = async (accountName, incinerator) => {
+  const asset_id = incinerator.asset_id || incinerator.id;
+  if (!asset_id) throw new Error('Invalid incinerator object. Missing asset_id or id.');
+
+  try {
+    const response = await axios.post(
+      'https://maestrobeatz.servegame.com:3003/incinerators/unstake',
+      {
+        owner: accountName,
+        incinerator_id: asset_id,
+      }
     );
-    throw new Error(
-      error.message || `Failed to unstake incinerator (asset_id: ${asset_id}). Please try again.`
+
+    const result = response.data;
+    if (!result.success) throw new Error(result.message || 'Unstake failed');
+
+    return result.tx;
+  } catch (error) {
+    console.error('[UNSTAKE ERROR]', error.message || error);
+    throw new Error(error.message || 'Unstake transaction failed');
+  }
+};
+
+export const finalizeRepair = async (accountName, incineratorId) => {
+  try {
+    const response = await axios.post(
+      'https://maestrobeatz.servegame.com:3003/finalize-repair',
+      { user: accountName, incinerator_id: incineratorId }
     );
+    const data = response.data;
+    if (data.success) {
+      // backend returns result.transaction_id or result.transactionId
+      const txId = data.result?.transaction_id || data.result?.transactionId || data.result;
+      return txId;
+    } else {
+      throw new Error(data.error || 'Failed to finalize repair');
+    }
+  } catch (error) {
+    console.error('[ERROR] finalizeRepair error:', error.message || error);
+    throw new Error(error.message || 'Failed to finalize repair');
   }
 };
