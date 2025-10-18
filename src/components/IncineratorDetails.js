@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { loadFuel, loadEnergy } from '../services/transactionActions';
 
@@ -14,27 +14,30 @@ const IncineratorDetails = ({
   const [amount, setAmount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [imgLoaded, setImgLoaded] = useState(true);
 
-  if (!incinerator) {
-    return <p>Click to assign an incinerator</p>;
-  }
+  const isEmpty = !incinerator;
 
   const {
     name = 'Unnamed Incinerator',
-    id = 'N/A',
     fuel = 0,
     energy = 0,
     durability = 0,
     img = 'default-placeholder.png',
     owner = '',
-  } = incinerator;
+    fuelCap = 100000,
+    energyCap = 10
+  } = incinerator || {};
 
-  const maxFuelCapacity = 100000;
-  const maxEnergyCapacity = 10;
+  const assetId = incinerator?.asset_id || incinerator?.id || 'N/A';
+
+  const maxFuelCapacity = fuelCap;
+  const maxEnergyCapacity = energyCap;
   const maxDurability = 500;
-  const remainingFuelCapacity = maxFuelCapacity - fuel;
 
-  const pollIncineratorData = async (interval = 1000, duration = 5000) => {
+  const remainingFuelCapacity = useMemo(() => maxFuelCapacity - fuel, [fuel, maxFuelCapacity]);
+
+  const pollIncineratorData = async (interval = 2000, duration = 10000) => {
     const startTime = Date.now();
     const poll = async () => {
       try {
@@ -62,10 +65,10 @@ const IncineratorDetails = ({
           setLoading(false);
           return;
         }
-        await loadFuel(owner, id, amount);
+        await loadFuel(owner, assetId, amount);
         alert(`Successfully loaded ${amount} fuel!`);
       } else if (transactionType === 'energy') {
-        await loadEnergy(owner, id);
+        await loadEnergy(owner, assetId);
         alert('Energy fully loaded!');
       }
       pollIncineratorData();
@@ -106,17 +109,30 @@ const IncineratorDetails = ({
     setShowModal(true);
   };
 
+  const handleImageError = () => {
+    setImgLoaded(false);
+  };
+
+  if (isEmpty) {
+    return <p>Click to assign an incinerator</p>;
+  }
+
   return (
     <div className="incinerator-details">
-      <img
-        src={`https://ipfs.io/ipfs/${img}`}
-        alt={name}
-        className="incinerator-image"
-      />
-      <p className="incinerator-name"><strong>Name:</strong> {name}</p>
-      <p className="asset-id"><strong>Asset ID:</strong> {id}</p>
+      {imgLoaded ? (
+        <img
+          src={`${process.env.REACT_APP_IPFS_GATEWAY}/${img}`}
+          alt={name}
+          className="incinerator-image"
+          onError={handleImageError}
+        />
+      ) : (
+        <div className="incinerator-placeholder">Image failed to load</div>
+      )}
 
-      {/* Progress Bars */}
+      <p className="incinerator-name"><strong>Name:</strong> {name}</p>
+      <p className="asset-id"><strong>Asset ID:</strong> {assetId}</p>
+
       <div className="progress-bar-container">
         <div
           className="progress-bar-fill fuel-bar"
@@ -145,7 +161,6 @@ const IncineratorDetails = ({
         </span>
       </div>
 
-      {/* Action Buttons */}
       {showButtons && (
         <div className="button-container organized-buttons">
           {onRemove && (
@@ -167,7 +182,6 @@ const IncineratorDetails = ({
         </div>
       )}
 
-      {/* Confirmation Modal */}
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -205,12 +219,15 @@ const IncineratorDetails = ({
 IncineratorDetails.propTypes = {
   incinerator: PropTypes.shape({
     name: PropTypes.string,
+    asset_id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     fuel: PropTypes.number,
     energy: PropTypes.number,
     durability: PropTypes.number,
     img: PropTypes.string,
     owner: PropTypes.string,
+    fuelCap: PropTypes.number,
+    energyCap: PropTypes.number
   }),
   onRepair: PropTypes.func.isRequired,
   onRemove: PropTypes.func,

@@ -9,10 +9,9 @@ const RepairModal = ({
   setRepairError,
   onCancel,
   onConfirm,
-  onMaxClick
+  onMaxClick,
+  maxPoints
 }) => {
-  const maxDurability = 500;
-
   return (
     <div className="modal-backdrop fade-in">
       <div className="modal-box popup-glow">
@@ -21,21 +20,21 @@ const RepairModal = ({
         <input
           type="number"
           min="1"
-          max={maxDurability}
+          max={maxPoints}
           value={repairPoints}
           onChange={(e) => {
-            const val = parseInt(e.target.value);
+            const val = parseInt(e.target.value, 10);
             if (e.target.value === '') {
               setRepairPoints('');
               setRepairError('');
-            } else if (!isNaN(val) && val >= 1 && val <= maxDurability) {
+            } else if (!isNaN(val) && val >= 1 && val <= maxPoints) {
               setRepairPoints(val);
               setRepairError('');
-            } else if (val > maxDurability) {
-              setRepairPoints(maxDurability);
-              setRepairError(`Max durability is ${maxDurability}.`);
+            } else if (val > maxPoints) {
+              setRepairPoints(maxPoints);
+              setRepairError(`Max repair is ${maxPoints}.`);
             } else {
-              setRepairError('Enter a number between 1 and 500.');
+              setRepairError(`Enter a number between 1 and ${maxPoints}.`);
             }
           }}
           placeholder="Enter repair points"
@@ -55,12 +54,13 @@ const RepairModal = ({
 
 RepairModal.propTypes = {
   repairPoints: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-  setRepairPoints: PropTypes.func,
+  setRepairPoints: PropTypes.func.isRequired,
   repairError: PropTypes.string,
-  setRepairError: PropTypes.func,
-  onCancel: PropTypes.func,
-  onConfirm: PropTypes.func,
-  onMaxClick: PropTypes.func
+  setRepairError: PropTypes.func.isRequired,
+  onCancel: PropTypes.func.isRequired,
+  onConfirm: PropTypes.func.isRequired,
+  onMaxClick: PropTypes.func.isRequired,
+  maxPoints: PropTypes.number.isRequired
 };
 
 export default RepairModal;

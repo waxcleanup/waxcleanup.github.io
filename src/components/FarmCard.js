@@ -1,7 +1,21 @@
+// src/components/FarmCard.js
 import React from 'react';
 import './FarmCard.css';
 
-const FarmCard = ({ farm }) => {
+/**
+ * FarmCard displays a single farm with optional farm-level and battery-level staking/un-staking controls.
+ */
+export default function FarmCard({
+  farm,
+  cellList = [],
+  pendingAction,
+  onStakeFarm,
+  onUnstakeFarm,
+  onStakeCell,
+  onUnstakeCell,
+  allowFarmStake = false,
+  allowCellStake = false
+}) {
   const {
     asset_id,
     template_id,
@@ -9,38 +23,64 @@ const FarmCard = ({ farm }) => {
     created_at,
     farm_energy,
     reward_pool,
-    is_rentable,
-    renter,
     image,
-    name
+    name,
+    cell_asset_id,
+    staked
   } = farm;
 
   const formattedDate = new Date(created_at).toLocaleDateString();
-
-  const rentalStatus = is_rentable === 1 ? 'Active' : 'Inactive';
+  const stakeStatus = staked ? 'Staked' : 'Unstaked';
+  const isPending = key => pendingAction === key;
 
   return (
-    <div className="farm-card">
-      <h3>🌾 {name || `Farm #${asset_id.slice(-5)}`}</h3>
-      {image && (
-        <img
-          src={image}
-          alt="Farm"
-          className="farm-card-image"
-        />
-      )}
-      <p><strong>Template:</strong> {template_id}</p>
-      <p><strong>Owner:</strong> {owner}</p>
-      <p><strong>Rental Status:</strong> {rentalStatus}</p>
-      <p><strong>Created:</strong> {formattedDate}</p>
-      <p><strong>Energy:</strong> ⚡ {farm_energy}</p>
-      <p><strong>Reward Pool:</strong> {reward_pool}</p>
-      {is_rentable === 1 && !renter && (
-        <button className="rent-btn">Rent This Farm</button>
-      )}
-      <button className="rent-btn stake-btn">Stake NFT</button>
+    <div className="farm-card compact">
+      {/* Image */}
+      <img
+        src={image}
+        alt={name || 'Farm'}
+        className="farm-card-image"
+      />
+
+      {/* Info */}
+      <div className="farm-info">
+        <h3 className="farm-title">🌾 {name || `Farm #${asset_id.slice(-5)}`}</h3>
+        <p><strong>Status:</strong> {stakeStatus}</p>
+        <p><strong>Created:</strong> {formattedDate}</p>
+        <p><strong>Energy:</strong> ⚡ {farm_energy}</p>
+        <p><strong>Reward Pool:</strong> {reward_pool} CINDER</p>
+      </div>
+
+      {/* Actions */}
+      <div className="farm-actions">
+        {/* Farm-level stake/un-stake */}
+        {allowFarmStake && (
+          staked
+            ? <button
+                onClick={() => onUnstakeFarm(farm)}
+                disabled={isPending(`farm-${asset_id}`)}
+              >Unstake Farm</button>
+            : <button
+                onClick={() => onStakeFarm(farm)}
+                disabled={isPending(`farm-${asset_id}`)}
+              >Stake Farm</button>
+        )}
+
+        {/* Battery stake/un-stake (only on staked farms) */}
+        {allowCellStake && staked && (
+          cell_asset_id
+            ? <button
+                className="unstake-btn"
+                onClick={() => onUnstakeCell(asset_id)}
+                disabled={isPending(`cell-un-${asset_id}`)}
+              >Unstake Battery</button>
+            : <button
+                className="stake-btn"
+                onClick={() => onStakeCell(asset_id)}
+                disabled={isPending(`cell-${asset_id}`)}
+              >Stake Battery</button>
+        )}
+      </div>
     </div>
   );
-};
-
-export default FarmCard;
+}

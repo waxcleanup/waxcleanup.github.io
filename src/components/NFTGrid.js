@@ -1,8 +1,8 @@
 // src/components/NFTGrid.js
 import React from 'react';
+import PropTypes from 'prop-types';
 
-const NFTGrid = ({ burnableNFTs, selectedNFT, onNFTClick, onAssignNFT, nftSlots }) => {
-  // Check if the NFT is already assigned to a slot
+const NFTGrid = ({ burnableNFTs = [], selectedNFT, onNFTClick, onAssignNFT, nftSlots = [], loading = false }) => {
   const isNFTAssigned = (assetId) => nftSlots.some((slot) => slot?.asset_id === assetId);
 
   const handleAssign = (nft) => {
@@ -20,10 +20,11 @@ const NFTGrid = ({ burnableNFTs, selectedNFT, onNFTClick, onAssignNFT, nftSlots 
 
   return (
     <div className="nft-grid">
-      {burnableNFTs.length === 0 ? (
-        // Message when no NFTs are available
+      {loading ? (
+        <p className="loading-message">🔄 Fetching burnable NFTs...</p>
+      ) : burnableNFTs.length === 0 ? (
         <p className="no-nfts-message">
-          You don't have any approved NFTs available for burning. Please acquire an approved NFTs to proceed.
+          You don't have any approved NFTs available for burning. Please acquire an approved NFT to proceed.
         </p>
       ) : (
         burnableNFTs.map((nft) => (
@@ -32,28 +33,23 @@ const NFTGrid = ({ burnableNFTs, selectedNFT, onNFTClick, onAssignNFT, nftSlots 
             className={`nft-card ${selectedNFT?.asset_id === nft.asset_id ? 'selected' : ''}`}
             onClick={() => onNFTClick(nft)}
           >
-            {/* Display NFT Image */}
             <img
               src={nft.img ? `https://ipfs.io/ipfs/${nft.img}` : 'default-placeholder.png'}
               alt={nft.template_name || 'Unnamed NFT'}
               className="nft-image"
             />
-
-            {/* NFT Information */}
             <div className="nft-info">
               <p className="nft-name">{nft.template_name || 'Unnamed NFT'}</p>
               <p className="nft-reward">Reward: {nft.cinder_reward || 'N/A'}</p>
               <p className="trash-fee">Fee: {nft.trash_fee || 'N/A'}</p>
               <p className="nft-asset-id">Asset ID: {nft.asset_id}</p>
-
-              {/* Enhanced Assign Button */}
               <button
                 className={`assign-button ${isNFTAssigned(nft.asset_id) ? 'disabled' : ''}`}
                 onClick={(e) => {
-                  e.stopPropagation(); // Prevent the click event from selecting the card
+                  e.stopPropagation();
                   handleAssign(nft);
                 }}
-                disabled={isNFTAssigned(nft.asset_id)} // Disable button if already assigned
+                disabled={isNFTAssigned(nft.asset_id)}
               >
                 {isNFTAssigned(nft.asset_id) ? 'Already Assigned' : 'Assign to Slot'}
               </button>
@@ -63,6 +59,15 @@ const NFTGrid = ({ burnableNFTs, selectedNFT, onNFTClick, onAssignNFT, nftSlots 
       )}
     </div>
   );
+};
+
+NFTGrid.propTypes = {
+  burnableNFTs: PropTypes.array,
+  selectedNFT: PropTypes.object,
+  onNFTClick: PropTypes.func.isRequired,
+  onAssignNFT: PropTypes.func.isRequired,
+  nftSlots: PropTypes.array,
+  loading: PropTypes.bool,
 };
 
 export default NFTGrid;

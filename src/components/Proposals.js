@@ -1,35 +1,34 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { fetchBlockchainTime } from '../services/api'; // Corrected path to API
 
 const Proposals = ({ proposals, handleVote }) => {
   const [timeLeft, setTimeLeft] = useState({});
-  const [blockchainTime, setBlockchainTime] = useState(Date.now()); // Default to local time initially
+  const [blockchainTime, setBlockchainTime] = useState(Date.now());
+  const gateway = process.env.REACT_APP_IPFS_GATEWAY || 'https://maestrobeatz.servegame.com/ipfs';
 
   const calculateRemainingTime = useCallback((createdAt) => {
-    const createdTime = new Date(createdAt).getTime(); // Parse `created_at` to milliseconds
-    const deadline = createdTime + 24 * 60 * 60 * 1000; // Add 24 hours
+    const createdTime = new Date(createdAt).getTime();
+    const deadline = createdTime + 24 * 60 * 60 * 1000;
     const timeRemaining = deadline - blockchainTime;
 
-    if (timeRemaining <= 0) {
-      return 'Voting closed';
-    }
+    if (timeRemaining <= 0) return 'Voting closed';
 
     const hours = Math.floor((timeRemaining / (1000 * 60 * 60)) % 24);
     const minutes = Math.floor((timeRemaining / (1000 * 60)) % 60);
     const seconds = Math.floor((timeRemaining / 1000) % 60);
     return `${hours}h ${minutes}m ${seconds}s`;
-  }, [blockchainTime]); // Dependency on `blockchainTime`
+  }, [blockchainTime]);
 
   useEffect(() => {
     const fetchTime = async () => {
-      const time = await fetchBlockchainTime();
-      setBlockchainTime(time);
+      const response = await fetch(`${process.env.REACT_APP_RPC}/v1/chain/get_info`);
+      const data = await response.json();
+      const headBlockTime = new Date(data.head_block_time).getTime();
+      setBlockchainTime(headBlockTime);
     };
 
-    fetchTime(); // Fetch blockchain time on component mount
-
-    const interval = setInterval(fetchTime, 10000); // Update every 10 seconds
-    return () => clearInterval(interval); // Cleanup interval on unmount
+    fetchTime();
+    const interval = setInterval(fetchTime, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -40,9 +39,17 @@ const Proposals = ({ proposals, handleVote }) => {
       }, {});
       setTimeLeft(updatedTimeLeft);
     }, 1000);
-
-    return () => clearInterval(interval); // Cleanup interval on unmount
+    return () => clearInterval(interval);
   }, [proposals, calculateRemainingTime]);
+
+  const normalizeIPFS = (value) => {
+    if (!value) return '';
+    const clean = value
+      .replace(/^ipfs:\/\//, '')
+      .replace(/^https?:\/\/[^/]+\/ipfs\//, '')
+      .replace(/^\/ipfs\//, '');
+    return `${gateway}/${clean}`;
+  };
 
   return (
     <div className="proposals-section">
@@ -56,6 +63,7 @@ const Proposals = ({ proposals, handleVote }) => {
               <th>Collection</th>
               <th>Schema</th>
               <th>Template ID</th>
+              <th>NFT</th>
               <th>Trash Fee</th>
               <th>Cinder Reward</th>
               <th>Votes For</th>
@@ -68,6 +76,8 @@ const Proposals = ({ proposals, handleVote }) => {
             {proposals.map((proposal) => {
               const remainingTime = timeLeft[proposal.prop_id] || 'Loading...';
               const votingClosed = remainingTime === 'Voting closed';
+              const videoUrl = normalizeIPFS(proposal.video);
+              const imgUrl = normalizeIPFS(proposal.img);
 
               return (
                 <tr key={proposal.prop_id} className="proposal-row">
@@ -76,6 +86,29 @@ const Proposals = ({ proposals, handleVote }) => {
                   <td>{proposal.collection}</td>
                   <td>{proposal.schema}</td>
                   <td>{proposal.template_id}</td>
+                  <td>
+                    {proposal.video ? (
+                      <video
+                        src={videoUrl}
+                        title={proposal.template_name || ''}
+                        controls
+                        autoPlay
+                        loop
+                        muted
+                        type="video/mp4"
+                        style={{ width: '50px', height: '50px', objectFit: 'contain' }}
+                      />
+                    ) : proposal.img ? (
+                      <img
+                        src={imgUrl}
+                        alt={proposal.template_name || 'NFT'}
+                        title={proposal.template_name || ''}
+                        style={{ width: '50px', height: '50px', objectFit: 'contain' }}
+                      />
+                    ) : (
+                      'Loading...'
+                    )}
+                  </td>
                   <td>{proposal.trash_fee}</td>
                   <td>{proposal.cinder_reward}</td>
                   <td>{Number(proposal.votes_for).toFixed(2)}</td>

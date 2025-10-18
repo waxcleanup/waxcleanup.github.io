@@ -186,10 +186,18 @@ const BurnCenter = () => {
         typeof data.template_name === 'object' && data.template_name !== null
           ? data.template_name.value
           : data.template_name;
+
+      const gateway = process.env.REACT_APP_IPFS_GATEWAY || 'https://maestrobeatz.servegame.com/ipfs';
+      const normalizeIPFS = (value) => {
+        if (!value) return '';
+        if (value.startsWith('http')) return value;
+        return `${gateway}/${value.replace(/^ipfs:\/\//, '').replace(/^\/ipfs\//, '')}`;
+      };
+
       setSelectedTemplateName(safeTemplateName || 'Unnamed Template');
       setSelectedTemplateMedia({
-        img: data.img ? `https://ipfs.io/ipfs/${data.img}` : '',
-        video: data.video ? `https://ipfs.io/ipfs/${data.video}` : '',
+        img: normalizeIPFS(data.img),
+        video: normalizeIPFS(data.video),
       });
     } catch (error) {
       console.error('Error loading template details:', error);
@@ -326,7 +334,7 @@ const BurnCenter = () => {
         <div className="modal-overlay">
           <div className="modal-content">
             <BurnRoom 
-              accountName={session.actor} 
+              accountName={String(session.actor?.toString?.() || '')} 
               session={session} 
               onClose={toggleBurnRoom} 
             />

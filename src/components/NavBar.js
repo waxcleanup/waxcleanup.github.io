@@ -4,13 +4,13 @@ import { NavLink } from 'react-router-dom';
 import { useSession } from '../hooks/SessionContext';
 import { useSkin } from '../hooks/SkinContext';
 import MusicPlayerMini from './MusicPlayerMini';
-import SkinSelector      from './SkinSelector';
-import logo              from '../assets/cleanupcentr.png';  // ← import your logo image
+import SkinSelector from './SkinSelector';
+import logo from '../assets/cleanupcentr.png';
 import './NavBar.css';
 
 export default function NavBar() {
   const { session, handleLogin, handleLogout } = useSession();
-  const { skins, activeSkin, setActiveSkin }    = useSkin();
+  const { skins, activeSkin, setActiveSkin } = useSkin();
 
   // Don’t render the nav bar or player if not authenticated
   if (!session) return null;
@@ -23,7 +23,7 @@ export default function NavBar() {
             src={logo}
             alt="CleanupCentr"
             className="nav-logo-img"
-            style={{ height: '24px' }}  // smaller logo height
+            style={{ height: '24px' }}
           />
           <span className="nav-logo-text">CleanupCentr</span>
         </div>
@@ -34,9 +34,9 @@ export default function NavBar() {
           <li><NavLink to="/collections" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>Collections</NavLink></li>
           <li><NavLink to="/dashboard" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>Dashboard</NavLink></li>
           <li><NavLink to="/markets" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>Markets</NavLink></li>
+          <li><NavLink to="/debug" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>Debug</NavLink></li> {/* ✅ Added debug */}
         </ul>
 
-        {/* Skin selector dropdown */}
         <div className="nav-skins">
           <SkinSelector
             skins={skins}
@@ -45,7 +45,6 @@ export default function NavBar() {
           />
         </div>
 
-        {/* Auth buttons */}
         <div className="nav-auth">
           {!session ? (
             <button onClick={() => handleLogin('anchor')} className="nav-button">Login</button>
@@ -55,10 +54,10 @@ export default function NavBar() {
         </div>
       </nav>
 
-      {/* mini-player below the nav links */}
       <div className="nav-music-player">
         <MusicPlayerMini />
       </div>
     </header>
   );
 }
+

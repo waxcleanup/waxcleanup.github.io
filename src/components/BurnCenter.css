@@ -330,54 +330,9 @@ tbody tr:nth-child(odd),
   .incinerator-grid { grid-template-columns: repeat(2,1fr); }
   .fuel-button, .energy-button, .repair-button, .burn-button, .assign-button, .stake-button, .unstake-button, .load-button, .max-load-button, .close-button { padding:8px; font-size:12px; }
 }
-.confirm-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.7);
-  z-index: 2000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.confirm-box {
-  background: #1f1f1f;
-  border: 2px solid #ff5722;
-  padding: 20px;
-  border-radius: 10px;
+.loading-message {
   text-align: center;
-  color: #fff;
-  max-width: 400px;
-}
-
-.warning-text {
-  color: #ff9800;
-  margin: 10px 0;
-}
-
-.confirm-buttons {
-  display: flex;
-  justify-content: space-around;
-  margin-top: 20px;
-}
-
-.confirm-yes {
-  background-color: #e53935;
-  color: white;
-  padding: 8px 20px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-.confirm-no {
-  background-color: #555;
-  color: white;
-  padding: 8px 20px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
+  margin-top: 10px;
+  font-size: 1.1rem;
+  color: #ffd700;
 }

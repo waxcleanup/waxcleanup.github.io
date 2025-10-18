@@ -5,6 +5,12 @@ const API_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:3003';
 const rpc = new JsonRpc(process.env.REACT_APP_RPC || 'https://wax.pink.gg'); // Mainnet WAX URL
 // Helper function to introduce a delay
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+// strip out any existing gateway prefix, leaving only the CID/path
+const IPFS_GATEWAY = process.env.REACT_APP_IPFS_GATEWAY
+  || 'https://ipfs.io/ipfs';
+const stripGateway = (url = '') =>
+  url.replace(/^https?:\/\/[^/]+\/ipfs\//, '');
+
 /**
  * Fetches collections with pagination and optional search term.
  */
@@ -51,21 +57,31 @@ export const fetchTemplates = async (collectionName, schemaName) => {
   }
 };
 
-/**
- * Fetches detailed information for a specific template by template ID and collection name.
- */
 export const fetchTemplateDetails = async (collectionName, templateId) => {
   try {
-    const response = await axios.get(`${API_URL}/collections/${collectionName}/templates/${templateId}`);
+    const response = await axios.get(
+      `${API_URL}/collections/${collectionName}/templates/${templateId}`
+    );
+    const data = response.data;
+
+    // sanitize image/video fields
+    const rawImg   = data.img   ? stripGateway(data.img)   : '';
+    const rawVideo = data.video ? stripGateway(data.video) : '';
+
     return {
-      ...response.data
+      ...data,
+      template_name: data.template_name ?? 'Unnamed Template',
+      img:   rawImg   ? `${IPFS_GATEWAY}/${rawImg}`   : '',
+      video: rawVideo ? `${IPFS_GATEWAY}/${rawVideo}` : '',
     };
   } catch (error) {
-    console.error(`Error fetching template details for template ID ${templateId} in collection ${collectionName}:`, error);
+    console.error(
+      `Error fetching template details for template ID ${templateId} in collection ${collectionName}:`,
+      error
+    );
     throw error;
   }
 };
-
 /**
  * Syncs schemas and templates for a selected collection.
  */
