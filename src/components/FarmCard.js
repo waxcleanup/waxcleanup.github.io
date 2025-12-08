@@ -1,9 +1,11 @@
 // src/components/FarmCard.js
 import React from 'react';
 import './FarmCard.css';
+import FarmPlotsGrid from './FarmPlotsGrid';
 
 /**
- * FarmCard displays a single farm with optional farm-level and battery-level staking/un-staking controls.
+ * FarmCard displays a single farm with optional farm-level and battery-level
+ * staking/un-staking controls.
  */
 export default function FarmCard({
   farm,
@@ -14,7 +16,8 @@ export default function FarmCard({
   onStakeCell,
   onUnstakeCell,
   allowFarmStake = false,
-  allowCellStake = false
+  allowCellStake = false,
+  onPlantSlot,          // 🔹 NEW: optional planting handler from parent
 }) {
   const {
     asset_id,
@@ -26,61 +29,88 @@ export default function FarmCard({
     image,
     name,
     cell_asset_id,
-    staked
+    staked,
   } = farm;
 
   const formattedDate = new Date(created_at).toLocaleDateString();
   const stakeStatus = staked ? 'Staked' : 'Unstaked';
-  const isPending = key => pendingAction === key;
+  const isPending = (key) => pendingAction === key;
 
   return (
     <div className="farm-card compact">
       {/* Image */}
-      <img
-        src={image}
-        alt={name || 'Farm'}
-        className="farm-card-image"
-      />
+      <img src={image} alt={name || 'Farm'} className="farm-card-image" />
 
       {/* Info */}
       <div className="farm-info">
-        <h3 className="farm-title">🌾 {name || `Farm #${asset_id.slice(-5)}`}</h3>
-        <p><strong>Status:</strong> {stakeStatus}</p>
-        <p><strong>Created:</strong> {formattedDate}</p>
-        <p><strong>Energy:</strong> ⚡ {farm_energy}</p>
-        <p><strong>Reward Pool:</strong> {reward_pool} CINDER</p>
+        <h3 className="farm-title">
+          🌾 {name || `Farm #${asset_id.slice(-5)}`}
+        </h3>
+        <p>
+          <strong>Status:</strong> {stakeStatus}
+        </p>
+        <p>
+          <strong>Created:</strong> {formattedDate}
+        </p>
+        <p>
+          <strong>Energy:</strong> ⚡ {farm_energy}
+        </p>
+        <p>
+          <strong>Reward Pool:</strong> {reward_pool} CINDER
+        </p>
       </div>
 
       {/* Actions */}
       <div className="farm-actions">
         {/* Farm-level stake/un-stake */}
-        {allowFarmStake && (
-          staked
-            ? <button
-                onClick={() => onUnstakeFarm(farm)}
-                disabled={isPending(`farm-${asset_id}`)}
-              >Unstake Farm</button>
-            : <button
-                onClick={() => onStakeFarm(farm)}
-                disabled={isPending(`farm-${asset_id}`)}
-              >Stake Farm</button>
-        )}
+        {allowFarmStake &&
+          (staked ? (
+            <button
+              onClick={() => onUnstakeFarm(farm)}
+              disabled={isPending(`farm-${asset_id}`)}
+            >
+              Unstake Farm
+            </button>
+          ) : (
+            <button
+              onClick={() => onStakeFarm(farm)}
+              disabled={isPending(`farm-${asset_id}`)}
+            >
+              Stake Farm
+            </button>
+          ))}
 
         {/* Battery stake/un-stake (only on staked farms) */}
-        {allowCellStake && staked && (
-          cell_asset_id
-            ? <button
-                className="unstake-btn"
-                onClick={() => onUnstakeCell(asset_id)}
-                disabled={isPending(`cell-un-${asset_id}`)}
-              >Unstake Battery</button>
-            : <button
-                className="stake-btn"
-                onClick={() => onStakeCell(asset_id)}
-                disabled={isPending(`cell-${asset_id}`)}
-              >Stake Battery</button>
-        )}
+        {allowCellStake &&
+          staked &&
+          (cell_asset_id ? (
+            <button
+              className="unstake-btn"
+              onClick={() => onUnstakeCell(asset_id)}
+              disabled={isPending(`cell-un-${asset_id}`)}
+            >
+              Unstake Battery
+            </button>
+          ) : (
+            <button
+              className="stake-btn"
+              onClick={() => onStakeCell(asset_id)}
+              disabled={isPending(`cell-${asset_id}`)}
+            >
+              Stake Battery
+            </button>
+          ))}
+      </div>
+
+      {/* Plots grid */}
+      <div className="farm-plots-section">
+        <h4 className="farm-plots-title">Plots</h4>
+        <FarmPlotsGrid
+          farmId={asset_id}
+          onPlantSlot={onPlantSlot}   // 🔹 pass planting handler down
+        />
       </div>
     </div>
   );
 }
+

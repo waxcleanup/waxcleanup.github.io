@@ -13,64 +13,80 @@ function ProposalModal({
 }) {
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Initialize local state or fallback to default values
   const [localTrashFee, setLocalTrashFee] = useState(initialTrashFee || '1000');
   const [localCinderReward, setLocalCinderReward] = useState(initialCinderReward || '');
 
-  // Synchronize props if they change
+  // Sync ONLY local state when props change
   useEffect(() => {
     setLocalTrashFee(initialTrashFee || '1000');
     setLocalCinderReward(initialCinderReward || '');
+    setErrorMessage('');
   }, [initialTrashFee, initialCinderReward]);
 
-  // Dynamic validation for asset decimals
   const isValidAsset = (value, decimals) => {
+    if (value === '') return true; // allow empty while typing
     const regex = new RegExp(`^(\\d+(\\.\\d{1,${decimals}})?)$`);
     return regex.test(value);
   };
 
-  // Update Trash Fee with validation
+  // TRASH: up to 3 decimals, enforce max while typing
   const handleTrashFeeChange = (e) => {
     const value = e.target.value;
 
-    // Prevent values below 1000 or above 100000
-    if (value && parseFloat(value) < 1000) {
-      setErrorMessage('Trash Fee cannot be less than 1,000 TRASH.');
-      return;
-    }
-
-    if (value && parseFloat(value) > 100000) {
-      setErrorMessage('Trash Fee cannot exceed 100,000 TRASH.');
-      return;
-    }
-
-    // Validate format and update state
-    if (isValidAsset(value, 3) || value === '') {
-      setLocalTrashFee(value);
-      setTrashFee(value); // Update parent state
+    if (value === '') {
+      setLocalTrashFee('');
+      if (setTrashFee) setTrashFee('');
       setErrorMessage('');
-    } else {
-      setErrorMessage('Invalid format for Trash Fee. Use up to 3 decimals.');
+      return;
     }
+
+    if (!isValidAsset(value, 3)) {
+      setErrorMessage('Invalid format for Trash Fee. Use up to 3 decimals.');
+      setLocalTrashFee(value);
+      return;
+    }
+
+    const num = parseFloat(value);
+
+    if (num > 100000) {
+      setErrorMessage('Trash Fee cannot exceed 100,000 TRASH.');
+      setLocalTrashFee(value);
+      return;
+    }
+
+    setLocalTrashFee(value);
+    if (setTrashFee) setTrashFee(value);
+    setErrorMessage('');
   };
 
-  // Update Cinder Reward with validation
+  // CINDER: up to 6 decimals, <= 5
   const handleCinderRewardChange = (e) => {
     const value = e.target.value;
 
-    // Prevent values above 5.000000
-    if (value && parseFloat(value) > 5) {
-      setErrorMessage('Cinder Reward must not exceed 5.000000 CINDER.');
+    if (value === '') {
+      setLocalCinderReward('');
+      if (setCinderReward) setCinderReward('');
+      setErrorMessage('');
       return;
     }
 
-    if (isValidAsset(value, 6) || value === '') {
-      setLocalCinderReward(value);
-      setCinderReward(value); // Update parent state
-      setErrorMessage('');
-    } else {
+    if (!isValidAsset(value, 6)) {
       setErrorMessage('Invalid format for Cinder Reward. Use up to 6 decimals.');
+      setLocalCinderReward(value);
+      return;
     }
+
+    const num = parseFloat(value);
+
+    if (num > 5) {
+      setErrorMessage('Cinder Reward must not exceed 5.000000 CINDER.');
+      setLocalCinderReward(value);
+      return;
+    }
+
+    setLocalCinderReward(value);
+    if (setCinderReward) setCinderReward(value);
+    setErrorMessage('');
   };
 
   const onSubmit = () => {
@@ -82,7 +98,7 @@ function ProposalModal({
     const trashFeeValue = parseFloat(localTrashFee);
     const cinderRewardValue = parseFloat(localCinderReward);
 
-    // Validate Trash Fee
+    // full min/max for TRASH
     if (trashFeeValue < 1000) {
       setErrorMessage('Trash Fee must be at least 1,000 TRASH.');
       return;
@@ -93,7 +109,7 @@ function ProposalModal({
       return;
     }
 
-    // Validate Cinder Reward
+    // CINDER max
     if (cinderRewardValue > 5) {
       setErrorMessage('Cinder Reward must not exceed 5.000000 CINDER.');
       return;
@@ -102,10 +118,9 @@ function ProposalModal({
     const formattedTrashFee = trashFeeValue.toFixed(3);
     const formattedCinderReward = cinderRewardValue.toFixed(6);
 
-    setTrashFee(`${formattedTrashFee} TRASH`);
-    setCinderReward(`${formattedCinderReward} CINDER`);
+    if (setTrashFee) setTrashFee(`${formattedTrashFee} TRASH`);
+    if (setCinderReward) setCinderReward(`${formattedCinderReward} CINDER`);
 
-    // Properly invoke handleProposalSubmit
     if (handleProposalSubmit) {
       handleProposalSubmit({
         trashFee: `${formattedTrashFee} TRASH`,
@@ -118,14 +133,52 @@ function ProposalModal({
     }
   };
 
+  // button disabled logic
+  const trashNum = parseFloat(localTrashFee);
+  const cinderNum = parseFloat(localCinderReward);
+
+  const trashInRange =
+    localTrashFee !== '' &&
+    !Number.isNaN(trashNum) &&
+    trashNum >= 1000 &&
+    trashNum <= 100000;
+
+  const cinderInRange =
+    localCinderReward !== '' &&
+    !Number.isNaN(cinderNum) &&
+    cinderNum <= 5;
+
+  const isSubmitDisabled =
+    !localTrashFee ||
+    !localCinderReward ||
+    !!errorMessage ||
+    !trashInRange ||
+    !cinderInRange;
+
+  const handleClose = () => {
+    // reset local state so next open is clean
+    setErrorMessage('');
+    setLocalTrashFee(initialTrashFee || '1000');
+    setLocalCinderReward(initialCinderReward || '');
+    if (onClose) onClose();
+  };
+
   return (
     <div className="modal-overlay">
       <div className="modal">
         <h3>Create a Proposal</h3>
-        <p>Template ID: <strong>{templateId}</strong></p>
-        <p className="proposal-fee-note">Note: A fee of 1,000 TRASH is required to create this proposal.</p>
-        <p className="proposal-note">The TRASH fee must be at least 1,000 TRASH and not exceed 100,000 TRASH.</p>
-        <p className="proposal-note">The CINDER reward must not exceed 5.000000 CINDER.</p>
+        <p>
+          Template ID: <strong>{templateId}</strong>
+        </p>
+        <p className="proposal-fee-note">
+          Note: A fee of 1,000 TRASH is required to create this proposal.
+        </p>
+        <p className="proposal-note">
+          The TRASH fee must be at least 1,000 TRASH and not exceed 100,000 TRASH.
+        </p>
+        <p className="proposal-note">
+          The CINDER reward must not exceed 5.000000 CINDER.
+        </p>
 
         <div className="modal-field">
           <label>Proposal Type:</label>
@@ -157,15 +210,18 @@ function ProposalModal({
         <button
           onClick={onSubmit}
           className="submit"
-          disabled={!localTrashFee || !localCinderReward || !!errorMessage}
+          disabled={isSubmitDisabled}
         >
           Submit Proposal
         </button>
 
-        <button onClick={onClose} className="close">Close</button>
+        <button onClick={handleClose} className="close">
+          Close
+        </button>
       </div>
     </div>
   );
 }
 
 export default ProposalModal;
+

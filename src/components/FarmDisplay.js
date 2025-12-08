@@ -15,7 +15,8 @@ export default function FarmDisplay({
   onStakeFarm,
   onUnstakeFarm,
   onStakeCell,
-  onUnstakeCell
+  onUnstakeCell,
+  onPlantSlot,    // 🔹 NEW: optional planting handler from Farming.js
 }) {
   // Build a lookup of global farm metadata by asset_id
   const globalMap = (allFarms || []).reduce((map, f) => {
@@ -31,15 +32,15 @@ export default function FarmDisplay({
       asset_id: f.asset_id,
       template_id: f.template_id,
       staked: true,
-      cell_asset_id: f.cell_asset_id || null
+      cell_asset_id: f.cell_asset_id || null,
     })),
     ...(farmInfo?.unstaked || []).map(f => ({
       ...globalMap[f.asset_id],
       asset_id: f.asset_id,
       template_id: f.template_id,
       staked: false,
-      cell_asset_id: null
-    }))
+      cell_asset_id: null,
+    })),
   ];
 
   return (
@@ -60,6 +61,7 @@ export default function FarmDisplay({
               onUnstakeFarm={() => onUnstakeFarm(farm)}
               allowFarmStake={true}
               allowCellStake={false}
+              onPlantSlot={onPlantSlot}   // 🔹 pass through to FarmCard
             />
           ))
         ) : (
@@ -81,6 +83,7 @@ export default function FarmDisplay({
               onUnstakeCell={() => onUnstakeCell(farm.asset_id)}
               allowFarmStake={false}
               allowCellStake={true}
+              onPlantSlot={onPlantSlot}   // 🔹 also available here if needed
             />
           ))
         ) : (
@@ -90,3 +93,4 @@ export default function FarmDisplay({
     </div>
   );
 }
+

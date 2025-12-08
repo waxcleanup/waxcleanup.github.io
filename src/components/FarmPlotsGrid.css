@@ -1,0 +1,134 @@
+.farm-plots-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.plot-card {
+  background: #020617;
+  border-radius: 10px;
+  border: 1px solid #1f2937;
+  padding: 0.6rem 0.75rem;
+}
+
+.plot-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.plot-image {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.plot-header-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.plot-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #e5e7eb;
+}
+
+.plot-meta {
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+.plot-slots {
+  display: grid;
+  gap: 0.2rem;
+}
+
+/* basic layouts, tweak as needed */
+.plot-slots-1 {
+  grid-template-columns: repeat(1, 1fr);
+}
+.plot-slots-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+.plot-slots-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+.plot-slots-4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+/* fallback for higher capacities */
+.plot-slots-5,
+.plot-slots-6,
+.plot-slots-7,
+.plot-slots-8 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.plot-slot {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: 1px solid #111827;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+}
+
+/* States */
+.plot-slot-empty {
+  background: #020617;
+  border-color: #111827;
+}
+
+.plot-slot-growing {
+  background: #0f172a;
+  border-color: #22c55e;
+}
+
+.plot-slot-ready {
+  background: #facc15;
+  border-color: #fbbf24;
+  color: #111827;
+}
+
+/* Status text */
+.plots-grid-status {
+  font-size: 0.8rem;
+  color: #9ca3af;
+  margin-top: 0.25rem;
+}
+
+.plots-grid-status.error {
+  color: #f97373;
+}
+
+.plot-slot {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: 1px solid #111827;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  cursor: pointer;      /* <- add this */
+}
+/* in FarmPlotsGrid.css */
+.plot-slot-svg {
+  width: 100%;
+  height: 100%;
+}
+.tomato-growth-svg {
+  width: 100%;
+  height: 100%;
+}
+.tomato-growth-wrapper {
+  width: 100%;
+  height: 100%;
+}
+

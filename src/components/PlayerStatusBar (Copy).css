@@ -1,0 +1,78 @@
+/* ---------------- Player Status Bar ---------------- */
+
+.player-status-bar {
+  margin: 10px 0 12px;
+  padding: 8px 12px;
+  background: #0b1120;
+  border-radius: 10px;
+  border: 1px solid #1e2533;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+
+  font-size: 0.8rem;
+  color: #e5e7eb;
+}
+
+/* Each item */
+.player-status-item {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.player-status-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #9ca3af;
+}
+
+.player-status-value {
+  margin-top: 2px;
+  font-weight: 600;
+  color: #f9fafb;
+  white-space: nowrap;
+}
+
+/* Divider */
+.player-status-divider {
+  width: 1px;
+  height: 22px;
+  background: rgba(75, 85, 99, 0.85);
+}
+
+/* Loading + error */
+.player-status-loading,
+.player-status-error {
+  margin: 10px 0 12px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 0.8rem;
+}
+
+.player-status-loading {
+  background: #020617;
+  border: 1px solid #1d4ed8;
+  color: #bfdbfe;
+}
+
+.player-status-error {
+  background: #1f2937;
+  border: 1px solid #b91c1c;
+  color: #fecaca;
+}
+
+/* Mobile */
+@media (max-width: 640px) {
+  .player-status-bar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .player-status-divider {
+    display: none;
+  }
+}

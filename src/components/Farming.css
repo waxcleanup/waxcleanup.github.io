@@ -36,28 +36,49 @@
   font-family: 'Roboto', sans-serif;
 }
 
+/* ------------ Compact Weather Card (dark & readable) ------------ */
 .weather-card {
   position: relative;
   z-index: 2;
-  max-width: 200px;
-  margin: 2rem auto;
-  padding: 3rem 1.5rem;
+  max-width: 240px;
+  margin: 130px auto 18px;      
+  padding: 12px 16px;
   border-radius: 12px;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.2);
-  text-align: center;
-  opacity: 0;
-  animation: fadeInUp 0.8s ease forwards;
+
+  background: #fffdfa;         
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+
+  color: #000;
+  text-align: left;
+  animation: fadeInUp 0.6s ease forwards;
 }
 
-.weather-divider {
-  height: 2px;
-  background-color: #eee;
-  margin: 1rem 0 1.5rem;
+.card-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #000;
+  text-transform: capitalize;
 }
 
-.card-title { font-size:1.4rem; font-weight:500; color:#333; margin-bottom:.75rem; }
-.temp-row   { font-size:1.6rem; font-weight:500; color:#444; margin-bottom:.75rem; }
-.weather-row{ margin: .5rem 0; font-size:1.1rem; color:#555; }
+.temp-row {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #000;
+  margin-bottom: 8px;
+}
+
+.weather-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: #000;
+}
+
+.weather-row strong {
+  font-weight: 600;
+  color: #000;
+}
 
 .farming-status {
   text-align:center;

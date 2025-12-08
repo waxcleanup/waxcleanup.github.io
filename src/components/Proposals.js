@@ -1,22 +1,28 @@
+// src/components/Proposals.js
 import React, { useEffect, useState, useCallback } from 'react';
+import './Proposals.css';
 
 const Proposals = ({ proposals, handleVote }) => {
   const [timeLeft, setTimeLeft] = useState({});
   const [blockchainTime, setBlockchainTime] = useState(Date.now());
-  const gateway = process.env.REACT_APP_IPFS_GATEWAY || 'https://maestrobeatz.servegame.com/ipfs';
+  const gateway =
+    process.env.REACT_APP_IPFS_GATEWAY || 'https://maestrobeatz.servegame.com/ipfs';
 
-  const calculateRemainingTime = useCallback((createdAt) => {
-    const createdTime = new Date(createdAt).getTime();
-    const deadline = createdTime + 24 * 60 * 60 * 1000;
-    const timeRemaining = deadline - blockchainTime;
+  const calculateRemainingTime = useCallback(
+    (createdAt) => {
+      const createdTime = new Date(createdAt).getTime();
+      const deadline = createdTime + 24 * 60 * 60 * 1000;
+      const timeRemaining = deadline - blockchainTime;
 
-    if (timeRemaining <= 0) return 'Voting closed';
+      if (timeRemaining <= 0) return 'Voting closed';
 
-    const hours = Math.floor((timeRemaining / (1000 * 60 * 60)) % 24);
-    const minutes = Math.floor((timeRemaining / (1000 * 60)) % 60);
-    const seconds = Math.floor((timeRemaining / 1000) % 60);
-    return `${hours}h ${minutes}m ${seconds}s`;
-  }, [blockchainTime]);
+      const hours = Math.floor((timeRemaining / (1000 * 60 * 60)) % 24);
+      const minutes = Math.floor((timeRemaining / (1000 * 60)) % 60);
+      const seconds = Math.floor((timeRemaining / 1000) % 60);
+      return `${hours}h ${minutes}m ${seconds}s`;
+    },
+    [blockchainTime]
+  );
 
   useEffect(() => {
     const fetchTime = async () => {
@@ -32,6 +38,8 @@ const Proposals = ({ proposals, handleVote }) => {
   }, []);
 
   useEffect(() => {
+    if (!proposals || !proposals.length) return;
+
     const interval = setInterval(() => {
       const updatedTimeLeft = proposals.reduce((acc, proposal) => {
         acc[proposal.prop_id] = calculateRemainingTime(proposal.created_at);
@@ -39,6 +47,7 @@ const Proposals = ({ proposals, handleVote }) => {
       }, {});
       setTimeLeft(updatedTimeLeft);
     }, 1000);
+
     return () => clearInterval(interval);
   }, [proposals, calculateRemainingTime]);
 
@@ -51,10 +60,20 @@ const Proposals = ({ proposals, handleVote }) => {
     return `${gateway}/${clean}`;
   };
 
+  // 🔥 Only show proposals that are still open (timer not "Voting closed")
+  const visibleProposals = (proposals || []).filter((proposal) => {
+    const remaining = timeLeft[proposal.prop_id];
+
+    // While timer is still loading / unknown, keep it visible
+    if (!remaining || remaining === 'Loading...') return true;
+
+    return remaining !== 'Voting closed';
+  });
+
   return (
     <div className="proposals-section">
       <h2>Proposals</h2>
-      {proposals.length > 0 ? (
+      {visibleProposals.length > 0 ? (
         <table className="proposals-table">
           <thead>
             <tr>
@@ -73,9 +92,9 @@ const Proposals = ({ proposals, handleVote }) => {
             </tr>
           </thead>
           <tbody>
-            {proposals.map((proposal) => {
+            {visibleProposals.map((proposal) => {
               const remainingTime = timeLeft[proposal.prop_id] || 'Loading...';
-              const votingClosed = remainingTime === 'Voting closed';
+              const votingClosed = remainingTime === 'Voting closed'; // should now only happen briefly, if at all
               const videoUrl = normalizeIPFS(proposal.video);
               const imgUrl = normalizeIPFS(proposal.img);
 
@@ -114,7 +133,7 @@ const Proposals = ({ proposals, handleVote }) => {
                   <td>{Number(proposal.votes_for).toFixed(2)}</td>
                   <td>{Number(proposal.votes_against).toFixed(2)}</td>
                   <td>{remainingTime}</td>
-                  <td>
+                  <td className="actions">
                     {votingClosed ? (
                       <span className="voting-closed">Voting Closed</span>
                     ) : (
@@ -140,10 +159,11 @@ const Proposals = ({ proposals, handleVote }) => {
           </tbody>
         </table>
       ) : (
-        <p className="no-proposals-message">No proposals found</p>
+        <p className="no-proposals-message">No active proposals</p>
       )}
     </div>
   );
 };
 
 export default Proposals;
+

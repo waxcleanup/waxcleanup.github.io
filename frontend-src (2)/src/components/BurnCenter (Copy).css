@@ -1,0 +1,338 @@
+/* =======================
+   BURN CENTER MASTER CSS
+   Refactored: DRY & composable
+   ======================= */
+
+/* Theme variables */
+:root {
+  --bg-color: #1a1a1a;
+  --fg-color: #e0e0e0;
+  --accent-color: #ff4500;
+  --highlight-color: #00ff80;
+  --header-color: #00bfff;
+  --border-radius: 8px;
+  --btn-radius: 5px;
+  --transition-speed: 0.3s ease;
+}
+
+/* ------------------------------------
+   Progress Bars
+   ------------------------------------ */
+.progress-bar-container {
+  position: relative;
+  width: 100%;
+  background-color: #444;
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  height: 24px;
+  margin-bottom: 10px;
+}
+.progress-bar-fill {
+  width: 0%;             /* controlled inline via React */
+  height: 100%;
+  background-color: #555; /* fallback if no variant class */
+  transition: width 0.3s ease;
+}
+/* Darker variants for better contrast with white text */
+.fuel-bar        { background-color: #1565c0; }
+.energy-bar      { background-color: #f57f17; }
+.durability-bar  { background-color: #757575; }
+.durability-bar.low { background-color: #c62828; }
+
+/* Centered overlay text */
+.progress-bar-text {
+  position: absolute;
+  top:      50%;
+  left:     50%;
+  transform: translate(-50%, -50%);
+  font-size:   12px;
+  font-weight: bold;
+  color:       #fff;
+  white-space: nowrap;
+  text-shadow: 0 0 3px rgba(0, 0, 0, 0.8);
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .incinerator-grid { grid-template-columns: repeat(2,1fr); }
+  .fuel-button, .energy-button, .repair-button,
+  .burn-button, .assign-button, .stake-button,
+  .unstake-button, .load-button, .max-load-button,
+  .close-button {
+    padding: 8px;
+    font-size: 12px;
+  }
+}
+
+/* ------------------------------------
+   Form Inputs
+   ------------------------------------ */
+input[type="text"],
+select {
+  border-radius: var(--btn-radius);
+  border:        1px solid #555;
+  padding:       5px;
+  font-size:     15px;
+  background-color: #333;
+  color:            var(--fg-color);
+}
+
+/* ------------------------------------
+   Button Base & Variants
+   ------------------------------------ */
+.fuel-button,
+.energy-button,
+.repair-button,
+.burn-button,
+.assign-button,
+.stake-button,
+.unstake-button,
+.load-button,
+.max-load-button,
+.vote-button,
+.pagination button,
+.modal-buttons button,
+.close-button {
+  border-radius: var(--btn-radius);
+  border:        none;
+  padding:       0.75em;
+  font-size:     15px;
+  font-weight:   bold;
+  cursor:        pointer;
+  transition:    background-color var(--transition-speed), transform var(--transition-speed);
+  background-color: #333;
+  color:            var(--fg-color);
+}
+.fuel-button:hover,
+.energy-button:hover,
+.repair-button:hover,
+.burn-button:hover,
+.assign-button:hover,
+.stake-button:hover,
+.unstake-button:hover,
+.load-button:hover,
+.max-load-button:hover,
+.vote-button:hover,
+.pagination button:hover,
+.modal-buttons button:hover,
+.close-button:hover {
+  filter: brightness(1.1);
+}
+.fuel-button:disabled,
+.energy-button:disabled,
+.repair-button:disabled,
+.burn-button:disabled,
+.assign-button:disabled,
+.stake-button:disabled,
+.unstake-button:disabled,
+.load-button:disabled,
+.max-load-button:disabled,
+.vote-button:disabled,
+.pagination button:disabled,
+.modal-buttons button:disabled {
+  background-color: #555;
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+/* Variant colors */
+.fuel-button        { background-color: #29b6f6; color: #fff; }
+.energy-button      { background-color: #fbc02d; color: #222; }
+.repair-button      { background-color: var(--accent-color); color: #fff; }
+.burn-button        { background-color: var(--accent-color); color: #fff; }
+.assign-button      { background-color: #28a745; color: #fff; }
+.stake-button       { background-color: #007bff; color: #fff; }
+.unstake-button     { background-color: #ff5722; color: #fff; }
+.load-button        { background-color: #29b6f6; color: #fff; }
+.max-load-button    { background-color: #ffc107; color: #333; }
+.vote-for           { background-color: var(--highlight-color); color: var(--bg-color); }
+.vote-against       { background-color: #dc3545; color: #fff; }
+.pagination button  { background-color: #3b3b3b; color: var(--highlight-color); border: 1px solid var(--highlight-color); }
+
+/* ------------------------------------
+   Shrink Burn Button
+   ------------------------------------ */
+.burn-button {
+  padding: 0.5em 1.2em;
+  font-size: 14px;
+  max-width: 160px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .incinerator-grid { grid-template-columns: repeat(2,1fr); }
+  .fuel-button, .energy-button, .repair-button,
+  .burn-button, .assign-button, .stake-button,
+  .unstake-button, .load-button, .max-load-button,
+  .close-button {
+    padding: 6px;
+    font-size: 12px;
+  }
+}
+
+/* ------------------------------------
+   Table Styling (Unified)
+   ------------------------------------ */
+/* Applies to collections and incinerator-table */
+table,
+.incinerator-table {
+  border-collapse: collapse;
+  margin: 0 auto;
+}
+th, td,
+.incinerator-table th,
+.incinerator-table td {
+  padding: 8px;
+  border: 1px solid #333;
+  text-align: center;
+  color: var(--fg-color);
+  font-size: 14px;
+}
+th,
+.incinerator-table th {
+  background-color: #2e2e2e;
+}
+tbody tr:nth-child(even),
+.incinerator-table tbody tr:nth-child(even) {
+  background-color: #252525;
+}
+tbody tr:nth-child(odd),
+.incinerator-table tbody tr:nth-child(odd) {
+  background-color: #1f1f1f;
+}
+/* Collections specific width */
+.collections-container table { width: 60%; }
+
+/* ------------------------------------
+   Pagination Layout
+   ------------------------------------ */
+.pagination {
+  display: flex;
+  justify-content: center;
+  margin-top: 15px;
+}
+.pagination span { color: var(--fg-color); margin: 0 10px; }
+
+/* ------------------------------------
+   BurnRoom Container
+   ------------------------------------ */
+.burn-room {
+  background-color: var(--bg-color);
+  border-radius:    var(--border-radius);
+  max-width:        1200px;
+  margin:           0 auto;
+  text-align:       center;
+  position:         relative;
+  border:           3px solid rgba(255, 69, 0, 0.8);
+  box-shadow:       0 0 15px rgba(255,69,0,0.8), 0 0 30px rgba(255,69,0,0.5);
+  transition:       transform var(--transition-speed);
+}
+.burn-room:hover {
+  box-shadow: 0 0 25px rgba(255,69,0,1), 0 0 40px rgba(255,69,0,0.7);
+}
+.burn-room-title {
+  font-size:      28px;
+  color:          var(--accent-color);
+  margin-bottom:  20px;
+  text-shadow:    0 0 10px rgba(255,69,0,0.8);
+}
+
+/* ------------------------------------
+   NFT Grid & Slots
+   ------------------------------------ */
+.nft-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 15px;
+}
+.nft-card {
+  background-color: #333;
+  padding: 12px;
+  border-radius: var(--border-radius);
+  box-shadow: 0 3px 6px rgba(0,0,0,0.4);
+  text-align: center;
+  position: relative;
+}
+.nft-card.selected { outline: 2px solid var(--accent-color); transform: scale(1.02); }
+.nft-image { max-width: 65%; border-radius: 4px; margin-bottom: 8px; }
+.nft-info { color: var(--fg-color); }
+.nft-name { font-weight: bold; font-size:16px; margin-bottom:4px; }
+.nft-reward { color:#ffc107; margin-bottom:4px; }
+.trash-fee { color:#ffcc00; margin-bottom:4px; }
+.nft-asset-id { font-size:12px; color:#aaa; margin-bottom:8px; }
+.no-nfts-message { text-align:center; font-size:1.2em; color:#f44336; margin-top:20px; }
+.nft-slots {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 10px;
+}
+.nft-slot {
+  background-color: #333;
+  border-radius: var(--border-radius);
+  padding: 15px;
+  width: 150px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+}
+.nft-slot img { max-width: 90%; max-height: 100px; border-radius: var(--border-radius); }
+.nft-slot p { font-size:14px; }
+
+/* ------------------------------------
+   Incinerator Grid & Details
+   ------------------------------------ */
+.incinerator-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px,1fr));
+  gap: 1px;
+  justify-items: center;
+}
+.incinerator-card {
+  background-color: #333;
+  padding: 11px;
+  border-radius: calc(var(--border-radius)*1.5);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.incinerator-image { max-width:110px; border-radius:5px; }
+.incinerator-name, .asset-id { font-size:14px; }
+.organized-buttons { display:flex; flex-direction:column; gap:10px; margin-top:15px; }
+.remove-incinerator-button:hover { background-color:#d32f2f; }
+
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .incinerator-grid { grid-template-columns: repeat(2,1fr); }
+  .fuel-button, .energy-button, .repair-button,
+  .burn-button, .assign-button, .stake-button,
+  .unstake-button, .load-button, .max-load-button,
+  .close-button {
+    padding: 8px;
+    font-size: 12px;
+  }
+}
+
+/* ------------------------------------
+   Modal
+   ------------------------------------ */
+.modal-overlay { position:fixed; top:0; left:0; width:100%; height:100%; background-color:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; z-index:1000; }
+.modal-content { background-color:rgba(30,30,30,0.95); border-radius:var(--border-radius); padding:15px; width:90%; max-width:600px; max-height:90%; overflow-y:auto; color:#fff; text-align:center; position:relative; border:3px solid rgba(255,69,0,0.8); }
+.modal-buttons { display:flex; gap:10px; margin-top:20px; }
+.modal-buttons button { flex:1; }
+
+/* Responsive adjustments */
+@media (max-width:480px) {
+  .incinerator-grid { grid-template-columns: repeat(2,1fr); }
+  .fuel-button, .energy-button, .repair-button, .burn-button, .assign-button, .stake-button, .unstake-button, .load-button, .max-load-button, .close-button { padding:8px; font-size:12px; }
+}
+.loading-message {
+  text-align: center;
+  margin-top: 10px;
+  font-size: 1.1rem;
+  color: #ffd700;
+}

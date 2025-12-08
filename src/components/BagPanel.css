@@ -1,0 +1,208 @@
+/* src/components/BagPanel.css */
+
+/* Panel wrapper */
+.bag-panel {
+  margin-top: 16px;
+  padding: 12px 14px;
+  background: #0b1120;
+  border-radius: 10px;
+  border: 1px solid #1e2533;
+}
+
+/* Header */
+.bag-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.bag-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #e5e7eb;
+}
+
+.bag-count {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  background: #111827;
+  padding: 2px 6px;
+  border-radius: 20px;
+}
+
+/* Group container: NOW COLUMNS */
+.bag-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 10px;
+  align-items: flex-start;
+}
+
+/* Each group card */
+.bag-group {
+  background: #0f172a;
+  border: 1px solid #1e2533;
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+
+/* Group header */
+.bag-group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.bag-group-title {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #e2e8f0;
+}
+
+.bag-group-count {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  background: #111827;
+  padding: 1px 5px;
+  border-radius: 12px;
+}
+
+/* Item grid inside each group */
+.bag-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 6px;
+}
+
+/* Item card */
+.bag-item-card {
+  background: #090e1a;
+  border-radius: 6px;
+  border: 1px solid #1a2333;
+  padding: 6px 6px 7px;
+  transition: 0.15s ease;
+}
+
+.bag-item-card:hover {
+  border-color: #1d4ed8;
+  transform: translateY(-1px);
+}
+
+/* Image */
+.bag-item-image {
+  width: 100%;
+  height: 68px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+/* Text */
+.bag-item-body {
+  margin-top: 4px;
+}
+
+.bag-item-name {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.bag-item-meta {
+  margin-top: 3px;
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.bag-item-tag {
+  font-size: 0.65rem;
+  padding: 1px 4px;
+  border-radius: 10px;
+  background: #111827;
+  border: 1px solid #1e2533;
+  color: #94a3b8;
+}
+
+/* Optional: subtle colored borders by category */
+.bag-item-seeds { border-color: rgba(34, 197, 94, 0.4); }
+.bag-item-compost { border-color: rgba(96, 165, 250, 0.4); }
+.bag-item-tools { border-color: rgba(251, 191, 36, 0.4); }
+.bag-item-cores { border-color: rgba(56, 189, 248, 0.4); }
+
+/* Mobile tweak */
+@media (max-width: 640px) {
+  .bag-groups {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+
+  .bag-item-image {
+    height: 60px;
+  }
+}
+/* --- Action buttons on bag items --- */
+
+.bag-item-btn {
+  margin-top: 6px;
+  width: 100%;
+  padding: 4px 6px;
+
+  border-radius: 999px;
+  border: none;
+  outline: none;
+
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  color: #020617;
+  background: #e5e7eb;
+}
+
+/* Compost = cool eco glow */
+.bag-item-btn-compost {
+  background: radial-gradient(circle at 0% 0%, #22c55e, #0ea5e9);
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
+}
+
+/* Packs / Seed packs = warm loot glow */
+.bag-item-btn-pack {
+  background: radial-gradient(circle at 0% 0%, #f97316, #facc15);
+  box-shadow: 0 0 8px rgba(251, 146, 60, 0.4);
+}
+
+.bag-item-btn:hover:not(:disabled) {
+  transform: translateY(-1px) scale(1.02);
+  filter: brightness(1.05);
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+}
+
+.bag-item-btn:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+  filter: brightness(0.97);
+  box-shadow: 0 0 4px rgba(30, 64, 175, 0.6);
+}
+
+/* Disabled state */
+.bag-item-btn:disabled {
+  cursor: default;
+  opacity: 0.55;
+  box-shadow: none;
+  filter: grayscale(0.2);
+}
+@media (max-width: 640px) {
+  .bag-item-btn {
+    padding: 3px 5px;
+    font-size: 0.65rem;
+  }
+}
+
+

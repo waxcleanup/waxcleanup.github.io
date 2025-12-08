@@ -1,0 +1,211 @@
+.loadout-container {
+  display: flex;
+  gap: 1.5rem;
+  margin: 1rem 0 1.5rem;
+  padding: 1rem 1.25rem;
+  background: #111827;
+  border-radius: 12px;
+  border: 1px solid #1f2933;
+}
+
+.loadout-section {
+  flex: 1;
+}
+
+.loadout-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #e5e7eb;
+  margin-bottom: 0.5rem;
+}
+
+.cell-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.cell-image {
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.cell-info {
+  display: flex;
+  flex-direction: column;
+  color: #e5e7eb;
+}
+
+.cell-name {
+  font-weight: 600;
+  margin-bottom: 0.15rem;
+}
+
+.cell-energy {
+  font-size: 0.9rem;
+  color: #9ca3af;
+}
+
+.tool-slots {
+  display: flex;
+  gap: 1rem;
+}
+
+.tool-slot {
+  flex: 1;
+  padding: 0.75rem;
+  background: #020617;
+  border-radius: 10px;
+  border: 1px solid #1f2933;
+  text-align: center;
+}
+
+.tool-slot-label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #9ca3af;
+  margin-bottom: 0.35rem;
+}
+
+.tool-image {
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  object-fit: cover;
+  margin-bottom: 0.35rem;
+}
+
+.tool-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #e5e7eb;
+}
+
+.tool-rarity {
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
+
+.tool-empty {
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin-top: 0.5rem;
+}
+/* Button on the cell card */
+.recharge-button {
+  margin-top: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid #ffa500;
+  background: #1b1b24;
+  color: #ffa500;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.recharge-button:hover {
+  background: #ffa500;
+  color: #0b0b12;
+}
+
+/* Modal backdrop */
+.recharge-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+/* Modal */
+.recharge-modal {
+  background: #151520;
+  border-radius: 16px;
+  padding: 20px 24px;
+  width: 360px;
+  max-width: 90vw;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.6);
+  border: 1px solid #27273a;
+}
+
+.recharge-title {
+  margin: 0 0 6px;
+  font-size: 18px;
+}
+
+.recharge-text,
+.recharge-rate,
+.recharge-current,
+.recharge-preview {
+  font-size: 13px;
+  margin: 4px 0;
+}
+
+.recharge-rate strong {
+  color: #ffd76a;
+}
+
+.recharge-label {
+  display: block;
+  margin-top: 10px;
+  font-size: 13px;
+}
+
+.recharge-input {
+  margin-top: 4px;
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid #33354a;
+  background: #0c0c15;
+  color: #eaeaea;
+}
+
+.recharge-error {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #ff6b6b;
+}
+
+.recharge-success {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #4cd964;
+}
+
+.recharge-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.recharge-cancel,
+.recharge-confirm {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: none;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.recharge-cancel {
+  background: #27273a;
+  color: #e0e0ff;
+}
+
+.recharge-confirm {
+  background: #ffa500;
+  color: #0b0b12;
+}
+
+.recharge-confirm:disabled {
+  opacity: 0.6;
+  cursor: default;
+}

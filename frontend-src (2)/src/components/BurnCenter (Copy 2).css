@@ -1,0 +1,570 @@
+/* =======================
+   BURN CENTER MASTER CSS
+   Refactored: DRY & composable
+   ======================= */
+
+/* Theme variables */
+:root {
+  --bg-color: #1a1a1a;
+  --fg-color: #e0e0e0;
+  --accent-color: #ff4500;
+  --highlight-color: #00ff80;
+  --header-color: #00bfff;
+  --border-radius: 8px;
+  --btn-radius: 5px;
+  --transition-speed: 0.3s ease;
+}
+
+/* ------------------------------------
+   Progress Bars
+   ------------------------------------ */
+.progress-bar-container {
+  position: relative;
+  width: 100%;
+  background-color: #444;
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  height: 24px;
+  margin-bottom: 10px;
+}
+.progress-bar-fill {
+  width: 0%;             /* controlled inline via React */
+  height: 100%;
+  background-color: #555; /* fallback if no variant class */
+  transition: width 0.3s ease;
+}
+/* Darker variants for better contrast with white text */
+.fuel-bar        { background-color: #1565c0; }
+.energy-bar      { background-color: #f57f17; }
+.durability-bar  { background-color: #757575; }
+.durability-bar.low { background-color: #c62828; }
+
+/* Centered overlay text */
+.progress-bar-text {
+  position: absolute;
+  top:      50%;
+  left:     50%;
+  transform: translate(-50%, -50%);
+  font-size:   12px;
+  font-weight: bold;
+  color:       #fff;
+  white-space: nowrap;
+  text-shadow: 0 0 3px rgba(0, 0, 0, 0.8);
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .incinerator-grid { grid-template-columns: repeat(2,1fr); }
+  .fuel-button, .energy-button, .repair-button,
+  .burn-button, .assign-button, .stake-button,
+  .unstake-button, .load-button, .max-load-button,
+  .close-button {
+    padding: 8px;
+    font-size: 12px;
+  }
+}
+
+/* ------------------------------------
+   Form Inputs
+   ------------------------------------ */
+input[type="text"],
+select {
+  border-radius: var(--btn-radius);
+  border:        1px solid #555;
+  padding:       5px;
+  font-size:     15px;
+  background-color: #333;
+  color:            var(--fg-color);
+}
+
+/* ------------------------------------
+   Button Base & Variants
+   ------------------------------------ */
+.fuel-button,
+.energy-button,
+.repair-button,
+.burn-button,
+.assign-button,
+.stake-button,
+.unstake-button,
+.load-button,
+.max-load-button,
+.vote-button,
+.pagination button,
+.modal-buttons button,
+.close-button {
+  border-radius: var(--btn-radius);
+  border:        none;
+  padding:       0.75em;
+  font-size:     15px;
+  font-weight:   bold;
+  cursor:        pointer;
+  transition:    background-color var(--transition-speed), transform var(--transition-speed);
+  background-color: #333;
+  color:            var(--fg-color);
+}
+.fuel-button:hover,
+.energy-button:hover,
+.repair-button:hover,
+.burn-button:hover,
+.assign-button:hover,
+.stake-button:hover,
+.unstake-button:hover,
+.load-button:hover,
+.max-load-button:hover,
+.vote-button:hover,
+.pagination button:hover,
+.modal-buttons button:hover,
+.close-button:hover {
+  filter: brightness(1.1);
+}
+.fuel-button:disabled,
+.energy-button:disabled,
+.repair-button:disabled,
+.burn-button:disabled,
+.assign-button:disabled,
+.stake-button:disabled,
+.unstake-button:disabled,
+.load-button:disabled,
+.max-load-button:disabled,
+.vote-button:disabled,
+.pagination button:disabled,
+.modal-buttons button:disabled {
+  background-color: #555;
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+/* Variant colors */
+.fuel-button        { background-color: #29b6f6; color: #fff; }
+.energy-button      { background-color: #fbc02d; color: #222; }
+.repair-button      { background-color: var(--accent-color); color: #fff; }
+.burn-button        { background-color: var(--accent-color); color: #fff; }
+.assign-button      { background-color: #28a745; color: #fff; }
+.stake-button       { background-color: #007bff; color: #fff; }
+.unstake-button     { background-color: #ff5722; color: #fff; }
+.load-button        { background-color: #29b6f6; color: #fff; }
+.max-load-button    { background-color: #ffc107; color: #333; }
+.vote-for           { background-color: var(--highlight-color); color: var(--bg-color); }
+.vote-against       { background-color: #dc3545; color: #fff; }
+.pagination button  { background-color: #3b3b3b; color: var(--highlight-color); border: 1px solid var(--highlight-color); }
+
+/* ------------------------------------
+   Shrink Burn Button
+   ------------------------------------ */
+.burn-button {
+  padding: 0.5em 1.2em;
+  font-size: 14px;
+  max-width: 160px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .incinerator-grid { grid-template-columns: repeat(2,1fr); }
+  .fuel-button, .energy-button, .repair-button,
+  .burn-button, .assign-button, .stake-button,
+  .unstake-button, .load-button, .max-load-button,
+  .close-button {
+    padding: 6px;
+    font-size: 12px;
+  }
+}
+
+/* ------------------------------------
+   Table Styling (Unified)
+   ------------------------------------ */
+/* Applies to collections and incinerator-table */
+table,
+.incinerator-table {
+  border-collapse: collapse;
+  margin: 0 auto;
+}
+th, td,
+.incinerator-table th,
+.incinerator-table td {
+  padding: 8px;
+  border: 1px solid #333;
+  text-align: center;
+  color: var(--fg-color);
+  font-size: 14px;
+}
+th,
+.incinerator-table th {
+  background-color: #2e2e2e;
+}
+tbody tr:nth-child(even),
+.incinerator-table tbody tr:nth-child(even) {
+  background-color: #252525;
+}
+tbody tr:nth-child(odd),
+.incinerator-table tbody tr:nth-child(odd) {
+  background-color: #1f1f1f;
+}
+/* Collections specific width */
+.collections-container table { width: 60%; }
+
+/* ------------------------------------
+   Pagination Layout
+   ------------------------------------ */
+.pagination {
+  display: flex;
+  justify-content: center;
+  margin-top: 15px;
+}
+.pagination span { color: var(--fg-color); margin: 0 10px; }
+
+/* ------------------------------------
+   BurnRoom Container
+   ------------------------------------ */
+.burn-room {
+  background-color: var(--bg-color);
+  border-radius:    var(--border-radius);
+  max-width:        1200px;
+  margin:           0 auto;
+  text-align:       center;
+  position:         relative;
+  border:           3px solid rgba(255, 69, 0, 0.8);
+  box-shadow:       0 0 15px rgba(255,69,0,0.8), 0 0 30px rgba(255,69,0,0.5);
+  transition:       transform var(--transition-speed);
+}
+.burn-room:hover {
+  box-shadow: 0 0 25px rgba(255,69,0,1), 0 0 40px rgba(255,69,0,0.7);
+}
+.burn-room-title {
+  font-size:      28px;
+  color:          var(--accent-color);
+  margin-bottom:  20px;
+  text-shadow:    0 0 10px rgba(255,69,0,0.8);
+}
+
+/* ------------------------------------
+   NFT Grid & Slots
+   ------------------------------------ */
+.nft-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 15px;
+}
+.nft-card {
+  background-color: #333;
+  padding: 12px;
+  border-radius: var(--border-radius);
+  box-shadow: 0 3px 6px rgba(0,0,0,0.4);
+  text-align: center;
+  position: relative;
+}
+.nft-card.selected { outline: 2px solid var(--accent-color); transform: scale(1.02); }
+.nft-image { max-width: 65%; border-radius: 4px; margin-bottom: 8px; }
+.nft-info { color: var(--fg-color); }
+.nft-name { font-weight: bold; font-size:16px; margin-bottom:4px; }
+.nft-reward { color:#ffc107; margin-bottom:4px; }
+.trash-fee { color:#ffcc00; margin-bottom:4px; }
+.nft-asset-id { font-size:12px; color:#aaa; margin-bottom:8px; }
+.no-nfts-message { text-align:center; font-size:1.2em; color:#f44336; margin-top:20px; }
+.nft-slots {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 10px;
+}
+.nft-slot {
+  background-color: #333;
+  border-radius: var(--border-radius);
+  padding: 15px;
+  width: 150px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+}
+.nft-slot img { max-width: 90%; max-height: 100px; border-radius: var(--border-radius); }
+.nft-slot p { font-size:14px; }
+
+/* ------------------------------------
+   Incinerator Grid & Details
+   ------------------------------------ */
+/* Centered Incinerator Grid Layout */
+/* Center and expand the incinerator section */
+.incinerator-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); /* wider cards */
+  gap: 25px;                     /* more breathing room */
+  justify-content: center;       /* center entire grid block */
+  justify-items: center;         /* center individual cards */
+  align-items: start;
+  width: 100%;
+  max-width: 1100px;             /* match BurnRoom modal */
+  margin: 30px auto;             /* separate from NFTs above */
+  padding: 10px 0;
+  transition: all 0.3s ease;
+}
+
+
+.incinerator-card {
+  background-color: #333;
+  padding: 11px;
+  border-radius: calc(var(--border-radius)*1.5);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.incinerator-image { max-width:110px; border-radius:5px; }
+.incinerator-name, .asset-id { font-size:14px; }
+.organized-buttons { display:flex; flex-direction:column; gap:10px; margin-top:15px; }
+.remove-incinerator-button:hover { background-color:#d32f2f; }
+
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .incinerator-grid { grid-template-columns: repeat(2,1fr); }
+  .fuel-button, .energy-button, .repair-button,
+  .burn-button, .assign-button, .stake-button,
+  .unstake-button, .load-button, .max-load-button,
+  .close-button {
+    padding: 8px;
+    font-size: 12px;
+  }
+}
+
+/* ------------------------------------
+   Modal
+   ------------------------------------ */
+.modal-overlay { position:fixed; top:0; left:0; width:100%; height:100%; background-color:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; z-index:1000; }
+.modal-content { background-color:rgba(30,30,30,0.95); border-radius:var(--border-radius); padding:15px; width:90%; max-width:600px; max-height:90%; overflow-y:auto; color:#fff; text-align:center; position:relative; border:3px solid rgba(255,69,0,0.8); }
+.modal-buttons { display:flex; gap:10px; margin-top:20px; }
+.modal-buttons button { flex:1; }
+
+/* Responsive adjustments */
+@media (max-width:480px) {
+  .incinerator-grid { grid-template-columns: repeat(2,1fr); }
+  .fuel-button, .energy-button, .repair-button, .burn-button, .assign-button, .stake-button, .unstake-button, .load-button, .max-load-button, .close-button { padding:8px; font-size:12px; }
+}
+.loading-message {
+  text-align: center;
+  margin-top: 10px;
+  font-size: 1.1rem;
+  color: #ffd700;
+}
+
+/* =======================
+   MOBILE / SMALL VIEW FIXES
+   (append to end of file)
+   ======================= */
+
+/* Dynamic viewport to avoid Android/iOS chrome issues */
+:root { --dvh: 100vh; }
+@supports (height: 100dvh) {
+  :root { --dvh: 100dvh; }
+}
+
+/* -------- Burn Room container -------- */
+.burn-room {
+  max-width: min(100%, 1200px);
+  margin-inline: auto;
+}
+@media (max-width: 420px) {
+  /* soften big glow on tiny screens so it doesn't clip content */
+  .burn-room {
+    box-shadow: 0 0 14px rgba(255,69,0,.55), 0 0 22px rgba(255,69,0,.35);
+    border-width: 2px;
+  }
+  .burn-room-title {
+    font-size: clamp(18px, 5.5vw, 24px);
+    margin-bottom: 12px;
+  }
+}
+
+/* -------- Modal sizing & scrolling -------- */
+.modal-overlay {
+  padding: 8px; /* breathing room on tiny screens */
+}
+.modal-content {
+  /* make width and height truly responsive */
+  width: min(100vw - 16px, 640px);
+  max-height: calc(var(--dvh) - 16px);
+  overflow: hidden;        /* header sticks, body scrolls */
+  display: flex;
+  flex-direction: column;
+}
+.modal-content .modal-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: linear-gradient(180deg, rgba(20,20,20,.95), rgba(20,20,20,.75));
+  backdrop-filter: blur(6px);
+  margin: -15px -15px 10px;      /* compensate parent padding */
+  padding: 12px 15px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+.modal-content .modal-body {
+  overflow-y: auto;
+  padding-right: 4px; /* prevent scrollbar overlay on text */
+}
+@media (max-width: 420px) {
+  .modal-buttons { flex-direction: column; }
+  .modal-buttons button { width: 100%; }
+}
+
+/* -------- NFT grid & card tweaks -------- */
+.nft-grid {
+  grid-template-columns: repeat(auto-fill, minmax(clamp(120px, 40vw, 160px), 1fr));
+  gap: clamp(8px, 3vw, 15px);
+}
+.nft-card { padding: clamp(8px, 2.5vw, 12px); }
+.nft-image { max-width: 100%; height: auto; }
+
+/* Slot row wraps instead of pushing horizontally */
+.nft-slots {
+  flex-wrap: wrap;
+  gap: clamp(8px, 3vw, 15px);
+}
+.nft-slot {
+  width: clamp(116px, 32vw, 150px); /* was fixed 150px */
+  padding: clamp(10px, 3vw, 15px);
+}
+.nft-slot img { max-height: clamp(80px, 22vw, 100px); }
+
+/* -------- Incinerator grid -------- */
+.incinerator-grid {
+  grid-template-columns: repeat(auto-fill, minmax(clamp(130px, 42vw, 180px), 1fr));
+  gap: clamp(8px, 2vw, 12px);
+}
+.incinerator-card {
+  gap: clamp(8px, 2vw, 10px);
+  padding: clamp(8px, 2.5vw, 11px);
+}
+.incinerator-image { max-width: clamp(100px, 30vw, 120px); height: auto; }
+
+/* -------- Progress bars: keep text readable on small screens -------- */
+.progress-bar-container { height: clamp(18px, 5vw, 24px); }
+.progress-bar-text { font-size: clamp(11px, 3.2vw, 12px); }
+
+/* -------- Buttons: make tappable & stack on tiny widths -------- */
+.modal-buttons,
+.organized-buttons {
+  gap: clamp(8px, 2.5vw, 12px);
+}
+@media (max-width: 420px) {
+  .organized-buttons { flex-direction: column; }
+  .fuel-button, .energy-button, .repair-button,
+  .burn-button, .assign-button, .stake-button,
+  .unstake-button, .load-button, .max-load-button,
+  .close-button {
+    width: 100%;
+    padding: 10px;          /* larger tap target */
+    font-size: 13px;
+  }
+}
+
+/* -------- Tables: avoid 60% width on small screens -------- */
+@media (max-width: 700px) {
+  .collections-container table {
+    width: 100%;
+  }
+  th, td { font-size: 13px; padding: 6px; }
+}
+
+/* -------- “Fetching …” / status rows should wrap -------- */
+.loading-message,
+.fetching-row,
+.status-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: clamp(12px, 3.5vw, 16px);
+}
+
+/* -------- General safety: prevent overflow text -------- */
+.nft-name,
+.nft-reward,
+.trash-fee,
+.nft-asset-id,
+.incinerator-name,
+.asset-id {
+  overflow-wrap: anywhere;
+}
+/* Lock the page when modal is open */
+body.modal-open {
+  overflow: hidden;
+}
+
+/* Overlay fills screen */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+}
+
+/* Modal window: fixed height container (no scrolling here) */
+.modal-content {
+  width: min(100vw - 16px, 640px);
+  max-height: calc(var(--dvh) - 16px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* keep! scrolling happens in .modal-body */
+}
+
+/* Optional sticky header */
+.modal-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: linear-gradient(180deg, rgba(20,20,20,.95), rgba(20,20,20,.75));
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  margin: -15px -15px 10px; /* match your existing padding */
+  padding: 12px 15px;
+}
+
+/* The scrollable area */
+.modal-body {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;   /* iOS smooth scroll */
+  overscroll-behavior: contain;        /* prevent background bounce */
+  touch-action: pan-y;                 /* allow vertical pan on touch */
+  padding-right: 4px;                  /* avoid text under scrollbar */
+  max-height: 100%;                    /* fill remaining height */
+}
+
+/* === BurnRoom: wider on desktop, same on mobile === */
+.modal-content.burn-room {
+  /* mobile-first: keep current compact size */
+  width: min(100vw - 16px, 640px);
+  max-width: none; /* allow larger widths at breakpoints */
+}
+
+/* Tablet */
+@media (min-width: 768px) {
+  .modal-content.burn-room {
+    width: min(95vw, 980px);
+    padding: 22px;
+  }
+}
+
+/* Desktop */
+@media (min-width: 1200px) {
+  .modal-content.burn-room {
+    width: min(92vw, 1400px);
+    padding: 26px;
+  }
+  /* Optional: give the inner container more room too */
+  .burn-room { max-width: 1300px; }
+}
+
+/* (Optional) scale grids a bit on large screens so the space is used nicely */
+@media (min-width: 1200px) {
+  .burn-room .nft-grid {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 18px;
+  }
+  .burn-room .incinerator-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 14px;
+  }
+}
+

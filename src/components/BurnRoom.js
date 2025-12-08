@@ -38,6 +38,17 @@ const BurnRoom = ({ accountName, onClose }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const imgCache = useRef(new Map());
 
+  // Lock background scroll while modal is open + close on ESC
+  useEffect(() => {
+    document.body.classList.add('modal-open');
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.classList.remove('modal-open');
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [onClose]);
+
   // --- Helper: Fetch repair timers ---
   const fetchRepairTimers = useCallback(async incs => {
     const map = {};
@@ -142,7 +153,17 @@ const BurnRoom = ({ accountName, onClose }) => {
     }
   };
 
+  // 🔥 Only change: prevent assigning the same incinerator to more than one slot
   const onIncineratorSelect = inc => {
+    const alreadyAssigned = slots.some(
+      slot => slot && slot.asset_id === inc.asset_id
+    );
+    if (alreadyAssigned) {
+      alert('This incinerator is already assigned to another slot.');
+      setShowIncineratorModal(false);
+      return;
+    }
+
     setSlots(prev => prev.map((s, i) => (i === selectedSlotIndex ? inc : s)));
     setStakedIncinerators(prev => prev.filter(i => i.asset_id !== inc.asset_id));
     setShowIncineratorModal(false);
@@ -154,6 +175,7 @@ const BurnRoom = ({ accountName, onClose }) => {
     setRepairError('');
     setShowRepairModal(true);
   };
+
   const handleRepairConfirm = async () => {
     const maxNeeded = repairTarget ? 500 - repairTarget.durability : 0;
     const pts = parseInt(repairPoints, 10);
@@ -165,6 +187,7 @@ const BurnRoom = ({ accountName, onClose }) => {
     await fetchIncineratorData();
     setShowRepairModal(false);
   };
+
   const handleRepairCancel = () => setShowRepairModal(false);
 
   const handleFinalizeRepair = async id => {
@@ -189,95 +212,110 @@ const BurnRoom = ({ accountName, onClose }) => {
     await unstakeIncinerator(accountName, inc);
     await fetchIncineratorData();
   };
+
   const handleUnstakedStake = async inc => {
     await stakeIncinerator(accountName, inc);
     await fetchIncineratorData();
   };
 
+  // Close modal when clicking the dimmed overlay, but not the panel
+  const onOverlayClick = (e) => {
+    if (e.target === e.currentTarget) onClose();
+  };
+
   // --- JSX ---
   return (
-    <div className="burn-room">
-      <button className="close-button" onClick={onClose}>&times;</button>
-      <h2>Burn Room</h2>
+    <div className="modal-overlay" onClick={onOverlayClick}>
+      <div className="modal-content burn-room" onClick={e => e.stopPropagation()}>
+        {/* Sticky header (non-scrolling) */}
+        <div className="modal-header">
+          <h2 className="burn-room-title">Burn Room</h2>
+          <button className="close-button" onClick={onClose} aria-label="Close Burn Room">&times;</button>
+        </div>
 
-      <NFTGrid
-        burnableNFTs={burnableNFTs}
-        selectedNFT={selectedNFT}
-        onNFTClick={setSelectedNFT}
-        onAssignNFT={(nft, i) => setNftSlots(prev => prev.map((s, idx) => (idx === i ? nft : s)))}
-        nftSlots={nftSlots}
-        loading={loadingNFTs}
-      />
-      {messageVisible && <div className="burn-message">{burnMessage}</div>}
-      <NFTSlots nftSlots={nftSlots} slots={slots} onBurn={handleBurnNFT} />
+        {/* Scrollable area */}
+        <div className="modal-body">
+          <NFTGrid
+            burnableNFTs={burnableNFTs}
+            selectedNFT={selectedNFT}
+            onNFTClick={setSelectedNFT}
+            onAssignNFT={(nft, i) => setNftSlots(prev => prev.map((s, idx) => (idx === i ? nft : s)))}
+            nftSlots={nftSlots}
+            loading={loadingNFTs}
+          />
 
-      <h3>Incinerator Slots</h3>
-      <div className="incinerator-grid">
-        {slots.map((slot, i) => (
-          <div
-            key={i}
-            className={`incinerator-card ${slot ? '' : 'empty-incinerator'}`}
-            onClick={() => { setSelectedSlotIndex(i); setShowIncineratorModal(true); }}
-          >
-            {slot ? (
-              <>                
-                <IncineratorDetails
-                  incinerator={slot}
-                  fetchIncineratorData={fetchIncineratorData}
-                  showButtons
-                  onRepair={() => handleRepairClick(slot)}
-                  onRemove={() => {
-                    // remove from slot and return to staked list
-                    setSlots(prev => prev.map((s, idx) => (idx === i ? null : s)));
-                    setStakedIncinerators(prev => [...prev, slot]);
-                  }}
-                />
-                {repairTimers[slot.asset_id] > 0 && (
-                  <p className="repair-timer">Repair in progress: {formatSeconds(repairTimers[slot.asset_id])} remaining</p>
+          {messageVisible && <div className="burn-message">{burnMessage}</div>}
+
+          <NFTSlots nftSlots={nftSlots} slots={slots} onBurn={handleBurnNFT} />
+
+          <h3>Incinerator Slots</h3>
+          <div className="incinerator-grid">
+            {slots.map((slot, i) => (
+              <div
+                key={i}
+                className={`incinerator-card ${slot ? '' : 'empty-incinerator'}`}
+                onClick={() => { setSelectedSlotIndex(i); setShowIncineratorModal(true); }}
+              >
+                {slot ? (
+                  <>
+                    <IncineratorDetails
+                      incinerator={slot}
+                      fetchIncineratorData={fetchIncineratorData}
+                      showButtons
+                      onRepair={() => handleRepairClick(slot)}
+                      onRemove={() => {
+                        setSlots(prev => prev.map((s, idx) => (idx === i ? null : s)));
+                        setStakedIncinerators(prev => [...prev, slot]);
+                      }}
+                    />
+                    {repairTimers[slot.asset_id] > 0 && (
+                      <p className="repair-timer">Repair in progress: {formatSeconds(repairTimers[slot.asset_id])} remaining</p>
+                    )}
+                    {repairTimers[slot.asset_id] === 0 && (
+                      <button className="finalize-button" onClick={() => handleFinalizeRepair(slot.asset_id)} disabled={isProcessing}>
+                        {isProcessing ? 'Processing...' : 'Finalize Repair'}
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <p>Slot {i + 1} - Empty</p>
                 )}
-                {repairTimers[slot.asset_id] === 0 && (
-                  <button className="finalize-button" onClick={() => handleFinalizeRepair(slot.asset_id)} disabled={isProcessing}>
-                    {isProcessing ? 'Processing...' : 'Finalize Repair'}
-                  </button>
-                )}
-              </>
-            ) : (
-              <p>Slot {i + 1} - Empty</p>
-            )}
+              </div>
+            ))}
           </div>
-        ))}
+
+          {showIncineratorModal && (
+            <IncineratorModal
+              accountName={accountName}
+              stakedIncinerators={stakedIncinerators}
+              unstakedIncinerators={unstakedIncinerators}
+              assignedSlots={slots}              //* you can ignore this prop if not used *//
+              onIncineratorSelect={onIncineratorSelect}
+              onUnstakedStake={handleUnstakedStake}
+              onUnstake={handleUnstake}
+              loadFuel={async () => await fetchIncineratorData()}
+              loadEnergy={async () => await fetchIncineratorData()}
+              fetchData={fetchIncineratorData}
+              repairTimers={repairTimers}
+              onFinalizeRepair={handleFinalizeRepair}
+              onClose={() => setShowIncineratorModal(false)}
+            />
+          )}
+
+          {showRepairModal && (
+            <RepairModal
+              repairPoints={repairPoints}
+              setRepairPoints={setRepairPoints}
+              repairError={repairError}
+              setRepairError={setRepairError}
+              onMaxClick={() => setRepairPoints((500 - (repairTarget?.durability || 0)).toString())}
+              onCancel={handleRepairCancel}
+              onConfirm={handleRepairConfirm}
+              maxPoints={repairTarget ? 500 - repairTarget.durability : 0}
+            />
+          )}
+        </div>
       </div>
-
-      {showIncineratorModal && (
-        <IncineratorModal
-          accountName={accountName}
-          stakedIncinerators={stakedIncinerators}
-          unstakedIncinerators={unstakedIncinerators}
-          assignedSlots={slots}
-          onIncineratorSelect={onIncineratorSelect}
-          onUnstakedStake={handleUnstakedStake}
-          onUnstake={handleUnstake}
-          loadFuel={async () => await fetchIncineratorData()}
-          loadEnergy={async () => await fetchIncineratorData()}
-          fetchData={fetchIncineratorData}
-          repairTimers={repairTimers}
-          onFinalizeRepair={handleFinalizeRepair}
-          onClose={() => setShowIncineratorModal(false)}
-        />
-      )}
-
-      {showRepairModal && (
-        <RepairModal
-          repairPoints={repairPoints}
-          setRepairPoints={setRepairPoints}
-          repairError={repairError}
-          setRepairError={setRepairError}
-          onMaxClick={() => setRepairPoints((500 - (repairTarget?.durability || 0)).toString())}
-          onCancel={handleRepairCancel}
-          onConfirm={handleRepairConfirm}
-          maxPoints={repairTarget ? 500 - repairTarget.durability : 0}
-        />
-      )}
     </div>
   );
 };
@@ -288,3 +326,4 @@ BurnRoom.propTypes = {
 };
 
 export default BurnRoom;
+

@@ -80,3 +80,13 @@
 .stake-cell-section .stake-btn {
   flex-shrink: 0;
 }
+.farm-plots-section {
+  margin-top: 0.75rem;
+}
+
+.farm-plots-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #e5e7eb;
+  margin-bottom: 0.25rem;
+}

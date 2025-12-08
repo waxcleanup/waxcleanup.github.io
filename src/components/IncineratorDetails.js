@@ -2,6 +2,23 @@ import React, { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { loadFuel, loadEnergy } from '../services/transactionActions';
 
+// Helper: normalize IPFS CIDs → full URL
+const ipfsToUrl = (value) => {
+  if (!value) return null;
+
+  // If it's already a full URL, just return it
+  if (value.startsWith('http://') || value.startsWith('https://')) {
+    return value;
+  }
+
+  const gateway = process.env.REACT_APP_IPFS_GATEWAY || 'https://ipfs.io/ipfs';
+
+  // Strip common prefixes like ipfs:// or ipfs/
+  const cleaned = value.replace(/^ipfs:\/\//, '').replace(/^ipfs\//, '');
+
+  return `${gateway}/${cleaned}`;
+};
+
 const IncineratorDetails = ({
   incinerator,
   onRepair,
@@ -23,10 +40,11 @@ const IncineratorDetails = ({
     fuel = 0,
     energy = 0,
     durability = 0,
-    img = 'default-placeholder.png',
+    img,          // may be a CID or full URL
+    imgCid,       // in case backend only sends imgCid
     owner = '',
     fuelCap = 100000,
-    energyCap = 10
+    energyCap = 10,
   } = incinerator || {};
 
   const assetId = incinerator?.asset_id || incinerator?.id || 'N/A';
@@ -35,10 +53,21 @@ const IncineratorDetails = ({
   const maxEnergyCapacity = energyCap;
   const maxDurability = 500;
 
-  const remainingFuelCapacity = useMemo(() => maxFuelCapacity - fuel, [fuel, maxFuelCapacity]);
+  const remainingFuelCapacity = useMemo(
+    () => maxFuelCapacity - fuel,
+    [fuel, maxFuelCapacity]
+  );
+
+  // Decide which field to use and normalize it to a usable URL
+  const imgUrl = useMemo(() => {
+    const raw = img || imgCid || null;
+    if (!raw) return null;
+    return ipfsToUrl(raw);
+  }, [img, imgCid]);
 
   const pollIncineratorData = async (interval = 2000, duration = 10000) => {
     const startTime = Date.now();
+
     const poll = async () => {
       try {
         await fetchIncineratorData();
@@ -46,6 +75,7 @@ const IncineratorDetails = ({
         console.error('[ERROR] Polling incinerator data failed:', error);
       }
     };
+
     const intervalId = setInterval(() => {
       if (Date.now() - startTime >= duration) {
         clearInterval(intervalId);
@@ -53,7 +83,13 @@ const IncineratorDetails = ({
         poll();
       }
     }, interval);
-    setTimeout(() => fetchIncineratorData(), duration);
+
+    // Final refresh at the end of the polling window
+    setTimeout(() => {
+      fetchIncineratorData().catch((err) =>
+        console.error('[ERROR] Final poll failed:', err)
+      );
+    }, duration);
   };
 
   const handleTransaction = async () => {
@@ -71,13 +107,17 @@ const IncineratorDetails = ({
         await loadEnergy(owner, assetId);
         alert('Energy fully loaded!');
       }
-      pollIncineratorData();
+
+      await pollIncineratorData();
     } catch (error) {
       console.error('[ERROR] Transaction failed:', error);
       alert(error.message || 'Transaction failed. Please try again.');
     } finally {
       setLoading(false);
       setShowModal(false);
+      setAmount(0);
+      setTransactionType('');
+      setErrorMessage('');
     }
   };
 
@@ -106,6 +146,7 @@ const IncineratorDetails = ({
   const handleEnergyClick = (e) => {
     e.stopPropagation();
     setTransactionType('energy');
+    setErrorMessage('');
     setShowModal(true);
   };
 
@@ -119,9 +160,9 @@ const IncineratorDetails = ({
 
   return (
     <div className="incinerator-details">
-      {imgLoaded ? (
+      {imgLoaded && imgUrl ? (
         <img
-          src={`${process.env.REACT_APP_IPFS_GATEWAY}/${img}`}
+          src={imgUrl}
           alt={name}
           className="incinerator-image"
           onError={handleImageError}
@@ -130,8 +171,12 @@ const IncineratorDetails = ({
         <div className="incinerator-placeholder">Image failed to load</div>
       )}
 
-      <p className="incinerator-name"><strong>Name:</strong> {name}</p>
-      <p className="asset-id"><strong>Asset ID:</strong> {assetId}</p>
+      <p className="incinerator-name">
+        <strong>Name:</strong> {name}
+      </p>
+      <p className="asset-id">
+        <strong>Asset ID:</strong> {assetId}
+      </p>
 
       <div className="progress-bar-container">
         <div
@@ -142,6 +187,7 @@ const IncineratorDetails = ({
           Fuel: {fuel}/{maxFuelCapacity}
         </span>
       </div>
+
       <div className="progress-bar-container">
         <div
           className="progress-bar-fill energy-bar"
@@ -151,9 +197,12 @@ const IncineratorDetails = ({
           Energy: {energy}/{maxEnergyCapacity}
         </span>
       </div>
+
       <div className="progress-bar-container">
         <div
-          className={`progress-bar-fill durability-bar ${durability <= 100 ? 'low' : ''}`}
+          className={`progress-bar-fill durability-bar ${
+            durability <= 100 ? 'low' : ''
+          }`}
           style={{ width: `${(durability / maxDurability) * 100}%` }}
         />
         <span className="progress-bar-text">
@@ -166,16 +215,26 @@ const IncineratorDetails = ({
           {onRemove && (
             <button
               className="remove-incinerator-button"
-              onClick={(e) => { e.stopPropagation(); onRemove(); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onRemove();
+              }}
             >
               Remove
             </button>
           )}
-          <button className="fuel-button" onClick={handleFuelClick}>Load Fuel</button>
-          <button className="energy-button" onClick={handleEnergyClick}>Load Energy</button>
+          <button className="fuel-button" onClick={handleFuelClick}>
+            Load Fuel
+          </button>
+          <button className="energy-button" onClick={handleEnergyClick}>
+            Load Energy
+          </button>
           <button
             className="repair-button"
-            onClick={(e) => { e.stopPropagation(); onRepair(incinerator); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onRepair(incinerator);
+            }}
           >
             Repair Durability
           </button>
@@ -183,9 +242,19 @@ const IncineratorDetails = ({
       )}
 
       {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="modal-overlay"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (!loading) setShowModal(false);
+          }}
+        >
+          <div
+            className="modal-content"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h4>Confirm Transaction</h4>
+
             {transactionType === 'fuel' ? (
               <>
                 <p>Enter the amount of fuel to load:</p>
@@ -198,16 +267,27 @@ const IncineratorDetails = ({
                   max={remainingFuelCapacity}
                   disabled={loading}
                 />
-                {errorMessage && <p className="error-message">{errorMessage}</p>}
+                {errorMessage && (
+                  <p className="error-message">{errorMessage}</p>
+                )}
               </>
             ) : (
               <p>Loading energy will cost 2 CINDER tokens. Proceed?</p>
             )}
+
             <div className="modal-buttons">
               <button onClick={handleTransaction} disabled={loading}>
                 {loading ? 'Processing...' : 'Confirm'}
               </button>
-              <button onClick={() => setShowModal(false)} disabled={loading}>Cancel</button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!loading) setShowModal(false);
+                }}
+                disabled={loading}
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>
@@ -224,10 +304,11 @@ IncineratorDetails.propTypes = {
     fuel: PropTypes.number,
     energy: PropTypes.number,
     durability: PropTypes.number,
-    img: PropTypes.string,
+    img: PropTypes.string,    // CID or full URL
+    imgCid: PropTypes.string, // backup, if backend only sends this
     owner: PropTypes.string,
     fuelCap: PropTypes.number,
-    energyCap: PropTypes.number
+    energyCap: PropTypes.number,
   }),
   onRepair: PropTypes.func.isRequired,
   onRemove: PropTypes.func,
@@ -236,3 +317,4 @@ IncineratorDetails.propTypes = {
 };
 
 export default IncineratorDetails;
+
