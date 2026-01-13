@@ -1,5 +1,5 @@
 // src/components/IncineratorModal.js
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
 import IncineratorDetails from './IncineratorDetails';
 import RepairModal from './RepairModal';
@@ -20,6 +20,7 @@ const IncineratorModal = ({
   accountName,
   stakedIncinerators = [],
   unstakedIncinerators = [],
+  assignedSlots = [], // ✅ used to hide already-slotted incinerators
   onIncineratorSelect,
   onUnstakedStake,
   onUnstake,
@@ -40,6 +41,31 @@ const IncineratorModal = ({
   const [repairTarget, setRepairTarget] = useState(null);
   const [repairPoints, setRepairPoints] = useState('');
   const [repairError, setRepairError] = useState('');
+
+  // ✅ Build a fast lookup of currently assigned incinerator IDs (hide them)
+  const assignedIds = useMemo(() => {
+    const set = new Set();
+    (assignedSlots || []).forEach((s) => {
+      if (!s) return;
+      const id = String(s.asset_id || s.id || '');
+      if (id) set.add(id);
+    });
+    return set;
+  }, [assignedSlots]);
+
+  // ✅ DEDUPE staked list by id (prevents seeing the same incinerator twice)
+  const stakedDeduped = useMemo(() => {
+    const seen = new Set();
+    const out = [];
+    for (const inc of (stakedIncinerators || [])) {
+      const id = String(inc?.asset_id || inc?.id || '');
+      if (!id) continue;
+      if (seen.has(id)) continue;
+      seen.add(id);
+      out.push(inc);
+    }
+    return out;
+  }, [stakedIncinerators]);
 
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
@@ -118,7 +144,7 @@ const IncineratorModal = ({
       const targetId = inc.asset_id || inc.id;
       await pollUntilInList(
         targetId,
-        id => stakedIncinerators.some(i => i.asset_id === id || i.id === id)
+        id => (stakedIncinerators || []).some(i => i.asset_id === id || i.id === id)
       );
       setMessage('Staked!');
     } catch (err) {
@@ -140,7 +166,7 @@ const IncineratorModal = ({
       const targetId = inc.asset_id || inc.id;
       await pollUntilInList(
         targetId,
-        id => unstakedIncinerators.some(i => i.asset_id === id || i.id === id)
+        id => (unstakedIncinerators || []).some(i => i.asset_id === id || i.id === id)
       );
       setMessage('Unstaked!');
     } catch (err) {
@@ -164,7 +190,6 @@ const IncineratorModal = ({
 
   return (
     <div className="modal-overlay secondary" onClick={onOverlayClick}>
-      {/* IMPORTANT: extra class for responsive sizing */}
       <div className="modal-content incinerator-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2 className="burn-room-title">Select Incinerator</h2>
@@ -191,54 +216,65 @@ const IncineratorModal = ({
                 <h4 className="incinerator-section-title" style={{ color: '#00ff80' }}>
                   Staked Incinerators
                 </h4>
+
                 <div className="incinerator-grid">
-                  {stakedIncinerators.map(inc => {
-                    const id = inc.asset_id || inc.id;
-                    const seconds = repairTimers[id];
-                    const showFinalize = seconds !== undefined && seconds <= 0;
-                    return (
-                      <div
-                        key={id}
-                        className="incinerator-card"
-                        onClick={() => onIncineratorSelect(inc)}
-                      >
-                        <IncineratorDetails
-                          incinerator={inc}
-                          fetchIncineratorData={fetchData}
-                          showButtons
-                          onRepair={() => handleRepairClick(inc)}
-                          onFuelLoad={() => loadFuel(inc)}
-                          onEnergyLoad={() => loadEnergy(inc)}
-                        />
-                        {seconds > 0 && (
-                          <p className="repair-timer">
-                            Repair in progress: {formatSeconds(seconds)} remaining
-                          </p>
-                        )}
-                        {showFinalize && (
-                          <button
-                            className="finalize-button"
-                            disabled={isLoading}
-                            onClick={e => {
-                              e.stopPropagation();
-                              onFinalizeRepair(id);
-                            }}
-                          >
-                            Finalize Repair
-                          </button>
-                        )}
-                        {inc.durability === 500 && (
-                          <button
-                            className="unstake-button"
-                            disabled={isLoading}
-                            onClick={e => handleUnstakeClick(e, inc)}
-                          >
-                            Unstake
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
+                  {stakedDeduped
+                    // ✅ HIDE already-slotted incinerators completely
+                    .filter((inc) => {
+                      const id = String(inc.asset_id || inc.id || '');
+                      return id && !assignedIds.has(id);
+                    })
+                    .map(inc => {
+                      const id = inc.asset_id || inc.id;
+                      const seconds = repairTimers[id];
+                      const showFinalize = seconds !== undefined && seconds <= 0;
+
+                      return (
+                        <div
+                          key={id}
+                          className="incinerator-card"
+                          onClick={() => onIncineratorSelect(inc)}
+                        >
+                          <IncineratorDetails
+                            incinerator={inc}
+                            fetchIncineratorData={fetchData}
+                            showButtons
+                            onRepair={() => handleRepairClick(inc)}
+                            onFuelLoad={() => loadFuel(inc)}
+                            onEnergyLoad={() => loadEnergy(inc)}
+                          />
+
+                          {seconds > 0 && (
+                            <p className="repair-timer">
+                              Repair in progress: {formatSeconds(seconds)} remaining
+                            </p>
+                          )}
+
+                          {showFinalize && (
+                            <button
+                              className="finalize-button"
+                              disabled={isLoading}
+                              onClick={e => {
+                                e.stopPropagation();
+                                onFinalizeRepair(id);
+                              }}
+                            >
+                              Finalize Repair
+                            </button>
+                          )}
+
+                          {inc.durability === 500 && (
+                            <button
+                              className="unstake-button"
+                              disabled={isLoading}
+                              onClick={e => handleUnstakeClick(e, inc)}
+                            >
+                              Unstake
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
                 </div>
               </div>
 
@@ -294,6 +330,7 @@ IncineratorModal.propTypes = {
   accountName: PropTypes.string.isRequired,
   stakedIncinerators: PropTypes.array.isRequired,
   unstakedIncinerators: PropTypes.array.isRequired,
+  assignedSlots: PropTypes.array, // ✅ NEW
   onIncineratorSelect: PropTypes.func.isRequired,
   onUnstakedStake: PropTypes.func.isRequired,
   onUnstake: PropTypes.func.isRequired,

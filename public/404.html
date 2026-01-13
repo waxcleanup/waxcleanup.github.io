@@ -1,9 +1,21 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
   <head>
-    <meta http-equiv="refresh" content="0; url=/" />
+    <meta charset="utf-8" />
+    <title>Redirecting…</title>
+    <meta name="robots" content="noindex" />
+    <script>
+      // Save the route the user tried to visit (including query/hash)
+      sessionStorage.setItem(
+        'redirectPath',
+        window.location.pathname + window.location.search + window.location.hash
+      );
+
+      // Redirect back to SPA entry point
+      window.location.replace('/');
+    </script>
   </head>
   <body>
-    <p>Redirecting...</p>
+    <p>Redirecting…</p>
   </body>
 </html>

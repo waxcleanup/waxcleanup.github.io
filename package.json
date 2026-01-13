@@ -14,6 +14,7 @@
     "@wharfkit/web-renderer": "^1.4.1",
     "atomicassets": "^1.5.1",
     "axios": "^1.7.7",
+    "crypto-js": "^4.2.0",
     "eosjs": "^20.0.3",
     "postcss": "^8.4.31",
     "react": "^18.3.1",
@@ -36,6 +37,7 @@
   },
   "devDependencies": {
     "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
+    "baseline-browser-mapping": "^2.9.14",
     "gh-pages": "^6.2.0"
   },
   "eslintConfig": {

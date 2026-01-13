@@ -1,14 +1,58 @@
 // src/components/FarmPlotsGrid.js
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import axios from 'axios';
 import './FarmPlotsGrid.css';
+
 import FarmSlotModal from './FarmSlotModal';
+import TomatoGrowthSVG from './TomatoGrowthSVG';
+
 import useSession from '../hooks/useSession';
 import { waterPlot, harvestPlot } from '../services/plotActions';
 import { plantSlot } from '../services/plantActions';
-import TomatoGrowthSVG from './TomatoGrowthSVG';
+import { unstakePlot } from '../services/plotStakeActions';
 
-export default function FarmPlotsGrid({ farmId }) {
+const IPFS_GATEWAY = (
+  process.env.REACT_APP_IPFS_GATEWAY || 'https://ipfs.io/ipfs'
+).replace(/\/$/, '');
+
+function toIpfsUrl(image) {
+  if (!image) return null;
+  const s = String(image).trim();
+  if (/^https?:\/\//i.test(s)) return s;
+  if (s.startsWith('ipfs://')) return `${IPFS_GATEWAY}/${s.replace('ipfs://', '')}`;
+  if (s.includes('/ipfs/')) return `${IPFS_GATEWAY}/${s.split('/ipfs/')[1]}`;
+  return `${IPFS_GATEWAY}/${s}`;
+}
+
+// ✅ EOSIO timestamps often come without "Z" and MUST be treated as UTC.
+function parseEosioTimeMs(v) {
+  if (!v) return null;
+  const s = String(v).trim();
+  if (!s) return null;
+  const iso = s.endsWith('Z') ? s : `${s}Z`;
+  const ms = Date.parse(iso);
+  return Number.isFinite(ms) ? ms : null;
+}
+
+function fmtMMSS(ms) {
+  const totalSec = Math.max(0, Math.floor(ms / 1000));
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+/**
+ * ✅ Water cooldown comes from CHAIN seedmeta:
+ * backend returns: slot.seconds_per_tick
+ * Water cooldown = 1 tick (seconds_per_tick)
+ */
+function getWaterCooldownMs(slot) {
+  const spt = Number(slot?.seconds_per_tick || 0);
+  if (spt > 0) return spt * 1000;
+  return null;
+}
+
+export default function FarmPlotsGrid({ farmId, onChanged, refreshNonce }) {
   const { session } = useSession();
   const wallet = session?.actor;
 
@@ -16,190 +60,197 @@ export default function FarmPlotsGrid({ farmId }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Selected slot for details / actions
   const [selectedSlot, setSelectedSlot] = useState(null);
+  const selectedSlotRef = useRef(null);
 
-  // TX state
   const [slotPending, setSlotPending] = useState(null);
   const [txError, setTxError] = useState(null);
-
-  // Seed inventory from /api/player/:account/status (seedinv table)
   const [seedStatus, setSeedStatus] = useState(null);
 
-  // ---------------------------------------------------------------------------
-  // Fetch plots for this farm
-  // ---------------------------------------------------------------------------
-  const fetchPlots = async () => {
-    if (!farmId) return;
+  // ---------------------------
+  // Blockchain time (same pattern as Proposals.js)
+  // ---------------------------
+  const [blockchainTime, setBlockchainTime] = useState(Date.now());
+
+  const fetchChainTime = useCallback(async () => {
+    try {
+      const response = await fetch(`${process.env.REACT_APP_RPC}/v1/chain/get_info`);
+      const data = await response.json();
+      const headBlockTime = parseEosioTimeMs(data.head_block_time);
+      if (headBlockTime != null) setBlockchainTime(headBlockTime);
+    } catch {
+      // keep last known
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchChainTime();
+    const interval = setInterval(fetchChainTime, 10000);
+    return () => clearInterval(interval);
+  }, [fetchChainTime]);
+
+  useEffect(() => {
+    const i = setInterval(() => {
+      setBlockchainTime((t) => t + 1000);
+    }, 1000);
+    return () => clearInterval(i);
+  }, []);
+
+  // --------------------------------------------------
+  // Fetch plots
+  // --------------------------------------------------
+  const fetchPlots = useCallback(async () => {
+    if (!farmId) return [];
 
     setLoading(true);
     try {
       const res = await axios.get(
         `${process.env.REACT_APP_API_BASE_URL}/api/farms/${farmId}/plots`
       );
+
       const newPlots = res.data.plots || [];
       setPlots(newPlots);
       setError(null);
-
-      // keep modal slot in sync if it is open
-      if (selectedSlot) {
-        const updatedPlot = newPlots.find(
-          (p) =>
-            String(p.plot_asset_id) ===
-            String(selectedSlot.plot.plot_asset_id)
-        );
-        if (updatedPlot) {
-          const updatedSlot = updatedPlot.slots.find(
-            (s) => s.index === selectedSlot.slot.index
-          );
-          if (updatedSlot) {
-            setSelectedSlot({
-              ...selectedSlot,
-              plot: updatedPlot,
-              slot: updatedSlot,
-            });
-          }
-        }
-      }
+      return newPlots;
     } catch (err) {
-      console.error('Error loading farm plots:', err);
+      console.error(err);
       setError('Could not load plots for this farm.');
+      return [];
     } finally {
       setLoading(false);
     }
-  };
+  }, [farmId]);
 
   useEffect(() => {
     fetchPlots();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [farmId]);
+  }, [farmId, refreshNonce]);
 
-  // ---------------------------------------------------------------------------
-  // Fetch seed inventory for current wallet
-  // ---------------------------------------------------------------------------
-  const fetchSeedStatus = async (account) => {
-    if (!account) {
-      setSeedStatus(null);
-      return;
-    }
-
+  // --------------------------------------------------
+  // Seed inventory
+  // --------------------------------------------------
+  const fetchSeedStatus = useCallback(async (account) => {
+    if (!account) return setSeedStatus(null);
     try {
       const res = await axios.get(
         `${process.env.REACT_APP_API_BASE_URL}/api/player/${account}/status`
       );
       setSeedStatus(res.data.seeds || null);
-    } catch (err) {
-      console.error('Error loading seed status:', err);
+    } catch {
       setSeedStatus(null);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    if (!wallet) {
-      setSeedStatus(null);
-      return;
-    }
-    fetchSeedStatus(wallet);
-  }, [wallet]);
+    if (wallet) fetchSeedStatus(wallet);
+  }, [wallet, fetchSeedStatus]);
 
-  // ---------------------------------------------------------------------------
+  // ✅ Pick a usable seed batch (first batch with qty > 0)
+  const getPlantBatch = useCallback(() => {
+    const batches = seedStatus?.batches || [];
+    return batches.find((b) => Number(b.qty) > 0) || null;
+  }, [seedStatus]);
+
+  // --------------------------------------------------
   // Actions
-  // ---------------------------------------------------------------------------
+  // --------------------------------------------------
   const handleWater = async (plot, slot) => {
-    if (!wallet) {
-      setTxError('Please connect your wallet to water plots.');
-      return;
-    }
-
+    setTxError(null);
     const key = `water-${plot.plot_asset_id}-${slot.index}`;
     setSlotPending(key);
-    setTxError(null);
-
     try {
       await waterPlot(wallet, plot.plot_asset_id, slot.index);
       await fetchPlots();
-    } catch (err) {
-      console.error('Water failed:', err);
-      setTxError(err.message || 'Water action failed.');
+    } catch (e) {
+      setTxError(e?.message || 'Water failed');
     } finally {
       setSlotPending(null);
     }
   };
 
   const handleHarvest = async (plot, slot) => {
-    if (!wallet) {
-      setTxError('Please connect your wallet to harvest.');
-      return;
-    }
-
+    setTxError(null);
     const key = `harvest-${plot.plot_asset_id}-${slot.index}`;
     setSlotPending(key);
-    setTxError(null);
-
     try {
       await harvestPlot(wallet, plot.plot_asset_id, slot.index);
       await fetchPlots();
-      // optionally refresh seeds here too if harvest can grant seeds
-      // await fetchSeedStatus(wallet);
-    } catch (err) {
-      console.error('Harvest failed:', err);
-      setTxError(err.message || 'Harvest action failed.');
+    } catch (e) {
+      setTxError(e?.message || 'Harvest failed');
     } finally {
       setSlotPending(null);
     }
   };
 
-  // 🌱 Plant using first available seed batch from seedinv
   const handlePlant = async ({ plotAssetId, slotIndex }) => {
-    if (!wallet) {
-      setTxError('Please connect your wallet to plant.');
-      return;
-    }
+    setTxError(null);
 
-    const batches = seedStatus?.batches || [];
-    const batch = batches.find((b) => Number(b.qty || 0) > 0);
-
+    const batch = getPlantBatch();
     if (!batch) {
       setTxError('No seeds available to plant.');
       return;
     }
 
-    const seedTemplateId = Number(batch.seed_tpl_id);     // uint32_t
-    const seedBatchId = Number(batch.seed_asset_id);      // uint64_t
-
-    if (!Number.isFinite(seedTemplateId) || !Number.isFinite(seedBatchId)) {
-      console.error('Invalid seed batch data:', batch);
-      setTxError('Invalid seed data; cannot plant.');
-      return;
-    }
-
     const key = `plant-${plotAssetId}-${slotIndex}`;
     setSlotPending(key);
-    setTxError(null);
 
     try {
       await plantSlot({
         actor: wallet,
         plotAssetId: Number(plotAssetId),
         slotIndex: Number(slotIndex),
-        seedTemplateId,
-        seedBatchId,
+        seedTemplateId: Number(batch.seed_tpl_id),
+        seedBatchId: Number(batch.seed_asset_id),
       });
 
-      // refresh plots + seed inventory after planting
       await fetchPlots();
       await fetchSeedStatus(wallet);
-    } catch (err) {
-      console.error('Plant failed:', err);
-      setTxError(err.message || 'Planting failed.');
+    } catch (e) {
+      setTxError(e?.message || 'Plant failed');
     } finally {
       setSlotPending(null);
     }
   };
 
-  // ---------------------------------------------------------------------------
-  // Render
-  // ---------------------------------------------------------------------------
+  const handleUnstakePlot = async (plotAssetId) => {
+    setTxError(null);
+    const key = `unstake-plot-${plotAssetId}`;
+    setSlotPending(key);
+    try {
+      await unstakePlot(wallet, String(farmId), String(plotAssetId));
+      await fetchPlots();
+      onChanged?.({ type: 'plot_unstaked', farmId, plotAssetId });
+    } catch (e) {
+      setTxError(e?.message || 'Unstake failed');
+    } finally {
+      setSlotPending(null);
+    }
+  };
+
+  // --------------------------------------------------
+  // Water timer label
+  // --------------------------------------------------
+  const getWaterLabel = useCallback(
+    (slot) => {
+      if (!slot) return null;
+      if (slot.state !== 'GROWING') return null;
+
+      const lastActionMs = parseEosioTimeMs(slot.last_action);
+      const cooldownMs = getWaterCooldownMs(slot);
+
+      if (lastActionMs != null && cooldownMs != null) {
+        const deadline = lastActionMs + cooldownMs;
+        const remaining = deadline - blockchainTime;
+
+        if (remaining <= 0) return 'READY';
+        return fmtMMSS(remaining);
+      }
+
+      return null;
+    },
+    [blockchainTime]
+  );
+
   if (loading && !plots.length) {
     return <div className="plots-grid-status">Loading plots…</div>;
   }
@@ -208,92 +259,224 @@ export default function FarmPlotsGrid({ farmId }) {
     return <div className="plots-grid-status error">{error}</div>;
   }
 
-  if (!plots.length) {
-    return (
-      <div className="plots-grid-status">
-        No plots staked to this farm yet.
-      </div>
-    );
-  }
-
   return (
     <>
       {txError && <div className="plots-grid-status error">{txError}</div>}
 
       <div className="farm-plots-grid">
-        {plots.map((plot) => (
-          <div key={plot.plot_asset_id} className="plot-card">
-            <div className="plot-header">
-              {plot.image && (
-                <img
-                  src={plot.image}
-                  alt={plot.name}
-                  className="plot-image"
-                />
-              )}
-              <div className="plot-header-text">
-                <div className="plot-name">{plot.name}</div>
-                <div className="plot-meta">
-                  Plot #{String(plot.plot_asset_id).slice(-4)} · Slots:{' '}
-                  {plot.capacity}
-                </div>
-              </div>
-            </div>
+        {plots.map((plot) => {
+          const isOwner =
+            !!wallet && !!plot.owner && String(plot.owner) === String(wallet);
 
-            <div className={`plot-slots plot-slots-${plot.capacity}`}>
-              {plot.slots.map((slot) => {
-                const tick = slot.tick || 0;
-                const tickGoal = slot.tick_goal || 21;
-                const state = slot.state;
+          // ✅ FIX 1: correct active-crop detection (do NOT treat seed_tpl_id: 0 as active)
+          const hasActiveCrop = (plot.slots || []).some((s) => {
+            const state = String(s?.state || '').toUpperCase();
+
+            // EMPTY is never an active crop
+            if (state === 'EMPTY') return false;
+
+            // These states mean there is an active crop
+            if (state === 'GROWING' || state === 'READY') return true;
+
+            // Fallback: seed_tpl_id must be > 0 to count as planted
+            const tpl = Number(s?.seed_tpl_id || 0);
+            return tpl > 0;
+          });
+
+          const unstakeBlockedByCrop = hasActiveCrop;
+
+          return (
+            <div key={plot.plot_asset_id} className="plot-card">
+              <div className="plot-header">
+                {plot.image && (
+                  <img
+                    src={toIpfsUrl(plot.image)}
+                    alt={plot.name}
+                    className="plot-image"
+                  />
+                )}
+
+                <div className="plot-header-text">
+                  <div className="plot-name">{plot.name}</div>
+                  <div className="plot-meta">
+                    Plot #{String(plot.plot_asset_id).slice(-4)} · Slots: {plot.capacity}
+                    {plot.owner ? ` · Owner: ${plot.owner}` : ''}
+
+                    {hasActiveCrop && (
+                      <span className="active-crop-badge" title="This plot has an active crop">
+                        ACTIVE CROP
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <button
+                  className="unstake-plot-btn"
+                  onClick={() => handleUnstakePlot(plot.plot_asset_id)}
+                  disabled={
+                    !isOwner ||
+                    unstakeBlockedByCrop ||
+                    slotPending === `unstake-plot-${plot.plot_asset_id}`
+                  }
+                  title={
+                    !isOwner
+                      ? 'Only the plot owner can unstake'
+                      : unstakeBlockedByCrop
+                        ? 'Unstake disabled: harvest/remove crop first'
+                        : ''
+                  }
+                >
+                  Unstake
+                </button>
+              </div>
+
+              <div className={`plot-slots plot-slots-${plot.capacity}`}>
+                {plot.slots.map((slot) => {
+                  const tick = slot.tick || 0;
+                  const tickGoal = slot.tick_goal || 21;
+
+                  return (
+                    <div
+                      key={slot.index}
+                      className={`plot-slot plot-slot-${String(slot.state || '').toLowerCase()}`}
+                      onClick={() => {
+                        const payload = { farmId, plot, slot };
+                        selectedSlotRef.current = payload;
+                        setSelectedSlot(payload);
+                      }}
+                      title="Click to view progress"
+                    >
+                      {(slot.state === 'GROWING' || slot.state === 'READY') && (
+                        <TomatoGrowthSVG
+                          tick={tick}
+                          tickGoal={tickGoal}
+                          weather="sunny"
+                          rarity="common"
+                          className="plot-slot-svg"
+                        />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* ✅ Footer actions for 1-slot plots:
+                  - EMPTY: PLANT
+                  - GROWING: WATER when ready
+                  - READY: HARVEST
+              */}
+              {plot.capacity === 1 && plot.slots?.[0] && (() => {
+                const slot = plot.slots[0];
+
+                const isEmpty = slot.state === 'EMPTY';
+                const isGrowing = slot.state === 'GROWING';
+                const isReady = slot.state === 'READY';
+
+                const batch = getPlantBatch();
+                const canPlant = isEmpty && !!batch;
+
+                const waterLabel = getWaterLabel(slot); // "READY" or "m:ss" or null
+                const waterReady = isGrowing && waterLabel === 'READY';
+
+                const waterKey = `water-${plot.plot_asset_id}-${slot.index}`;
+                const harvestKey = `harvest-${plot.plot_asset_id}-${slot.index}`;
+                const plantKey = `plant-${plot.plot_asset_id}-${slot.index}`;
 
                 return (
-                  <div
-                    key={slot.index}
-                    className={`plot-slot plot-slot-${state.toLowerCase()}`}
-                    title={
-                      state === 'EMPTY'
-                        ? 'Empty plot slot'
-                        : `${state} (${tick}/${tickGoal})`
-                    }
-                    onClick={() =>
-                      setSelectedSlot({
-                        farmId,
-                        plot,
-                        slot,
-                      })
-                    }
-                  >
-                    {state === 'GROWING' || state === 'READY' ? (
-                      <TomatoGrowthSVG
-                        tick={tick}
-                        tickGoal={tickGoal}
-                        weather="sunny"
-                        rarity="common"
-                        className="plot-slot-svg"
-                      />
-                    ) : (
-                      ''
+                  <div className="plot-footer">
+                    <div className="plot-seed">
+                      {slot.seed_name ? slot.seed_name : isEmpty ? 'Empty slot' : '—'}
+                    </div>
+
+                    {isEmpty && (
+                      <button
+                        type="button"
+                        className={`plot-water-pill ${canPlant ? 'ready' : ''}`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (!isOwner || !wallet) return;
+                          if (!canPlant) return;
+                          handlePlant({ plotAssetId: plot.plot_asset_id, slotIndex: slot.index });
+                        }}
+                        disabled={
+                          !isOwner ||
+                          !wallet ||
+                          !canPlant ||
+                          slotPending === plantKey
+                        }
+                        title={
+                          !isOwner
+                            ? 'Only the plot owner can plant'
+                            : !batch
+                              ? 'No seeds available'
+                              : 'Click to plant a seed'
+                        }
+                      >
+                        {slotPending === plantKey ? '🌱 PLANTING…' : '🌱 PLANT'}
+                      </button>
+                    )}
+
+                    {isGrowing && (
+                      <button
+                        type="button"
+                        className={`plot-water-pill ${waterReady ? 'ready' : ''}`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (!isOwner) return;
+                          if (!waterReady) return;
+                          handleWater(plot, slot);
+                        }}
+                        disabled={
+                          !isOwner ||
+                          !wallet ||
+                          !waterReady ||
+                          slotPending === waterKey
+                        }
+                        title={
+                          !isOwner
+                            ? 'Only the plot owner can water'
+                            : waterReady
+                              ? 'Click to water'
+                              : 'Not ready yet'
+                        }
+                      >
+                        {slotPending === waterKey ? '💧 WATERING…' : `💧 WATER: ${waterLabel || '—'}`}
+                      </button>
+                    )}
+
+                    {isReady && (
+                      <button
+                        type="button"
+                        className="plot-water-pill ready"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (!isOwner) return;
+                          handleHarvest(plot, slot);
+                        }}
+                        disabled={!isOwner || !wallet || slotPending === harvestKey}
+                        title={!isOwner ? 'Only the plot owner can harvest' : 'Click to harvest'}
+                      >
+                        {slotPending === harvestKey ? '🌾 HARVESTING…' : '🌾 HARVEST: READY'}
+                      </button>
                     )}
                   </div>
                 );
-              })}
+              })()}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
+      {/* ✅ Modal is now progress-only (no action buttons) */}
       {selectedSlot && (
         <FarmSlotModal
           farmId={selectedSlot.farmId}
           plot={selectedSlot.plot}
           slot={selectedSlot.slot}
           onClose={() => setSelectedSlot(null)}
-          onWater={() => handleWater(selectedSlot.plot, selectedSlot.slot)}
-          onHarvest={() =>
-            handleHarvest(selectedSlot.plot, selectedSlot.slot)
-          }
-          slotPending={slotPending}
-          onPlant={handlePlant}
         />
       )}
     </>

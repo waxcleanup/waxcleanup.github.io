@@ -1,145 +1,273 @@
 /* =======================
    BURN CENTER MASTER CSS
    Clean, DRY & responsive
+   (🔥 Burn Center Theme - Red/Orange + dropdown readability fix)
+   + RPG Enhancement Layer
+   + FIXED: User Balances container truly centered (no duplicates / no overrides)
+   ✅ UPDATED: Proposals table can expand + readable + no forced squeeze
+   ✅ UPDATED: Burnable NFT card text hierarchy (Mint/Rule/Cap cleaned up)
    ======================= */
 
 /* ---------- Theme ---------- */
-:root {
-  --bg-color: #1a1a1a;
-  --fg-color: #e0e0e0;
-  --accent-color: #ff4500;
-  --highlight-color: #00ff80;
-  --header-color: #00bfff;
-  --border-radius: 8px;
-  --btn-radius: 5px;
-  --speed: 0.3s ease;
+:root{
+  /* 🔥 Burn Palette (core) */
+  --bg: #0c0b0a;
+  --bg2: #120f0c;
+
+  --panel: #1a120e;
+  --panel2: #24160f;
+
+  --border: #4a2415;
+  --border2: #ff6a1a;
+
+  --text: #f5f1ee;
+  --muted: #c9a28b;
+
+  --accent: #ff4500;      /* core burn orange */
+  --accent-hot: #ff6a1a;  /* hot glow */
+  --accent-dark: #b52d00; /* deep burn */
+
+  --good: #00ff80;
+  --warn: #ffc107;
+  --bad:  #ff3b3b;
+
+  --radius: 12px;
+  --radius-sm: 8px;
+
+  --shadow: 0 8px 26px rgba(0,0,0,.55);
+  --shadow-soft: 0 6px 18px rgba(0,0,0,.45);
+
+  --speed: 0.18s ease;
   --dvh: 100vh; /* fallback */
+
+  /* ✅ Backward-compatible vars (so your existing CSS keeps working) */
+  --bg-color: var(--bg);
+  --fg-color: var(--text);
+  --accent-color: var(--accent);
+  --highlight-color: var(--good);
+  --header-color: #ffb07a; /* warmer header */
+  --border-radius: var(--radius-sm);
+  --btn-radius: 6px;
 }
 @supports (height: 100dvh) { :root { --dvh: 100dvh; } }
 
 /* ---------- Global helpers ---------- */
 body.modal-open { overflow: hidden; }
-input[type="text"], select {
+
+/* ✅ Inputs + selects: darker burn panels + readable text */
+input[type="text"], select{
   border-radius: var(--btn-radius);
-  border: 1px solid #555;
-  padding: 5px;
+  border: 2px solid rgba(255,69,0,.25);
+  padding: 8px 10px;
   font-size: 15px;
-  background: #333;
+  background: linear-gradient(180deg, var(--panel2), var(--panel));
   color: var(--fg-color);
+  outline: none;
+  box-shadow: inset 0 0 0 1px rgba(255,106,26,.10);
+  transition: border-color var(--speed), box-shadow var(--speed), filter var(--speed);
+}
+input[type="text"]:focus, select:focus{
+  border-color: rgba(255,106,26,.75);
+  box-shadow:
+    inset 0 0 0 1px rgba(255,106,26,.18),
+    0 0 0 3px rgba(255,69,0,.20);
+}
+
+/* ✅ Critical dropdown option readability fix (prevents white-on-white) */
+select option{
+  background-color: #1a120e;
+  color: #f5f1ee;
+}
+select option:checked{
+  background-color: #ff4500;
+  color: #0c0b0a;
 }
 
 /* ---------- Buttons (base + variants) ---------- */
 button,
 .fuel-button, .energy-button, .repair-button, .burn-button, .assign-button,
 .stake-button, .unstake-button, .load-button, .max-load-button,
-.vote-button, .pagination button, .modal-buttons button, .close-button {
+.vote-button, .pagination button, .modal-buttons button, .close-button{
   border-radius: var(--btn-radius);
-  border: none;
+  border: 1px solid rgba(255,69,0,.12);
   padding: .75em;
   font-size: 15px;
   font-weight: 700;
   cursor: pointer;
   color: var(--fg-color);
-  background: #333;
-  transition: background-color var(--speed), transform var(--speed), filter var(--speed);
+  background: linear-gradient(180deg, rgba(255,106,26,.10), rgba(0,0,0,.18));
+  transition: background-color var(--speed), transform var(--speed), filter var(--speed), box-shadow var(--speed);
+  box-shadow: inset 0 0 0 1px rgba(255,106,26,.06);
 }
 button:hover,
 .fuel-button:hover, .energy-button:hover, .repair-button:hover, .burn-button:hover, .assign-button:hover,
 .stake-button:hover, .unstake-button:hover, .load-button:hover, .max-load-button:hover,
-.vote-button:hover, .pagination button:hover, .modal-buttons button:hover, .close-button:hover {
-  filter: brightness(1.1);
+.vote-button:hover, .pagination button:hover, .modal-buttons button:hover, .close-button:hover{
+  filter: brightness(1.08);
 }
 button:disabled,
 .fuel-button:disabled, .energy-button:disabled, .repair-button:disabled, .burn-button:disabled, .assign-button:disabled,
 .stake-button:disabled, .unstake-button:disabled, .load-button:disabled, .max-load-button:disabled,
-.vote-button:disabled, .pagination button:disabled, .modal-buttons button:disabled {
-  background: #555; cursor: not-allowed; opacity: .65;
+.vote-button:disabled, .pagination button:disabled, .modal-buttons button:disabled{
+  background: rgba(255,255,255,.06);
+  border-color: rgba(255,255,255,.08);
+  cursor: not-allowed;
+  opacity: .65;
+  box-shadow: none;
 }
 
 /* Variants */
-.fuel-button{background:#29b6f6;color:#fff}
-.energy-button{background:#fbc02d;color:#222}
-.repair-button,.burn-button{background:var(--accent-color);color:#fff}
-.assign-button{background:#28a745;color:#fff}
-.stake-button{background:#007bff;color:#fff}
-.unstake-button{background:#ff5722;color:#fff}
-.load-button{background:#29b6f6;color:#fff}
-.max-load-button{background:#ffc107;color:#333}
-.vote-for{background:var(--highlight-color);color:var(--bg-color)}
-.vote-against{background:#dc3545;color:#fff}
-.pagination button{background:#3b3b3b;color:var(--highlight-color);border:1px solid var(--highlight-color)}
-.burn-button{padding:.5em 1.2em;font-size:14px;max-width:160px}
+.fuel-button{
+  background:#ff6a1a; color:#fff;
+  border-color: rgba(255,106,26,.65);
+  box-shadow: 0 0 14px rgba(255,106,26,.22);
+}
+.energy-button{
+  background:#ffb300; color:#1a120e;
+  border-color: rgba(255,179,0,.70);
+  box-shadow: 0 0 14px rgba(255,179,0,.18);
+}
+
+/* 🔥 Core burn actions */
+.repair-button, .burn-button{
+  background: linear-gradient(180deg, rgba(255,106,26,.55), rgba(181,45,0,.92));
+  color:#fff;
+  border-color: rgba(255,106,26,.75);
+  text-shadow: 0 1px 3px rgba(0,0,0,.6);
+  box-shadow: 0 0 18px rgba(255,69,0,.35);
+}
+.repair-button:hover, .burn-button:hover{
+  filter: brightness(1.12);
+  box-shadow: 0 0 22px rgba(255,69,0,.55);
+}
+
+.assign-button{ background:#28a745; color:#fff }
+.stake-button{ background:#9c2b00; color:#fff; border-color: rgba(255,106,26,.35) }
+.unstake-button{ background:#ff5722; color:#fff }
+.load-button{ background:#ff6a1a; color:#fff }
+.max-load-button{ background:#ffc107; color:#1a120e }
+.vote-for{ background: var(--highlight-color); color: var(--bg-color) }
+.vote-against{ background:#dc3545; color:#fff }
+.pagination button{
+  background: rgba(255,69,0,.10);
+  color: #ffb07a;
+  border: 1px solid rgba(255,106,26,.35);
+}
+.burn-button{ padding:.5em 1.2em; font-size:14px; max-width:160px }
 
 /* ---------- Tables (collections & generic) ---------- */
-table, .incinerator-table { border-collapse: collapse; margin: 0 auto; width: 100%; }
-th, td, .incinerator-table th, .incinerator-table td {
-  padding: 8px; border: 1px solid #333; text-align: center; color: var(--fg-color); font-size: 14px;
+table, .incinerator-table{ border-collapse: collapse; margin: 0 auto; width: 100%; }
+th, td, .incinerator-table th, .incinerator-table td{
+  padding: 8px;
+  border: 1px solid rgba(255,69,0,.10);
+  text-align: center;
+  color: var(--fg-color);
+  font-size: 14px;
 }
-th, .incinerator-table th { background: #2e2e2e; }
-tbody tr:nth-child(even), .incinerator-table tbody tr:nth-child(even){ background:#252525 }
-tbody tr:nth-child(odd), .incinerator-table tbody tr:nth-child(odd){ background:#1f1f1f }
-.collections-container table { width: 60%; }
-.pagination { display:flex; justify-content:center; margin-top:15px }
-.pagination span { color: var(--fg-color); margin: 0 10px }
+th, .incinerator-table th{
+  background: linear-gradient(180deg, rgba(255,106,26,.12), rgba(0,0,0,.15));
+  color: #ffd2b8;
+}
+tbody tr:nth-child(even), .incinerator-table tbody tr:nth-child(even){ background: rgba(255,69,0,.04) }
+tbody tr:nth-child(odd), .incinerator-table tbody tr:nth-child(odd){ background: rgba(255,255,255,.02) }
+.collections-container table{ width: 60%; }
+.pagination{ display:flex; justify-content:center; margin-top:15px }
+.pagination span{ color: var(--fg-color); margin: 0 10px }
 
 /* ---------- Progress bars ---------- */
-.progress-bar-container {
-  position: relative; width: 100%; height: 24px; margin-bottom: 10px;
-  background:#444; border-radius: var(--border-radius); overflow: hidden;
+.progress-bar-container{
+  position: relative;
+  width: 100%;
+  height: 24px;
+  margin-bottom: 10px;
+  background: rgba(255,255,255,.06);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  border: 1px solid rgba(255,69,0,.10);
 }
-.progress-bar-fill { width:0%; height:100%; background:#555; transition: width .3s ease; }
-.fuel-bar{background:#1565c0} .energy-bar{background:#f57f17}
-.durability-bar{background:#757575} .durability-bar.low{background:#c62828}
+.progress-bar-fill{ width:0%; height:100%; background:#555; transition: width .3s ease; }
+.fuel-bar{ background:#ff6a1a }
+.energy-bar{ background:#ffb300 }
+.durability-bar{ background:#757575 }
+.durability-bar.low{ background:#c62828 }
 .progress-bar-text{
-  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-  font: bold 12px/1 sans-serif; color:#fff; text-shadow:0 0 3px rgba(0,0,0,.8); white-space:nowrap;
+  position:absolute; inset:0;
+  display:flex; align-items:center; justify-content:center;
+  font: bold 12px/1 sans-serif;
+  color:#fff;
+  text-shadow:0 0 3px rgba(0,0,0,.8);
+  white-space:nowrap;
 }
 
 /* ---------- Modal shell ---------- */
 .modal-overlay{
   position: fixed; inset:0; padding:8px; z-index:1000;
   display:flex; align-items:center; justify-content:center;
-  background: rgba(0,0,0,.6);
+  background: rgba(0,0,0,.70);
 }
 .modal-content{
-  background: rgba(30,30,30,.95);
-  color:#fff; text-align:center;
+  background: linear-gradient(180deg, rgba(26,18,14,.98), rgba(12,11,10,.98));
+  color:#fff;
+  text-align:center;
   border-radius: var(--border-radius);
-  border: 3px solid rgba(255,69,0,.8);
-  display:flex; flex-direction:column; overflow:hidden;
+  border: 3px solid rgba(255,69,0,.55);
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
   width: min(100vw - 16px, 640px);
   max-height: calc(var(--dvh) - 16px);
   padding: 15px;
+  box-shadow:
+    inset 0 0 0 1px rgba(255,106,26,.15),
+    0 0 18px rgba(255,69,0,.18),
+    var(--shadow);
 }
 .modal-header{
   position: sticky; top:0; z-index:1;
   margin: -15px -15px 10px;
   padding: 12px 15px;
-  background: linear-gradient(180deg, rgba(20,20,20,.95), rgba(20,20,20,.75));
-  border-bottom: 1px solid rgba(255,255,255,.08);
+  background: linear-gradient(180deg, rgba(36,22,15,.95), rgba(12,11,10,.75));
+  border-bottom: 1px solid rgba(255,106,26,.18);
   backdrop-filter: blur(6px);
 }
 .modal-body{
-  overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;
-  touch-action: pan-y; padding-right:4px; max-height:100%;
-  display:flex; flex-direction:column; align-items:center; /* center inner sections */
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
+  touch-action: pan-y;
+  padding-right:4px;
+  max-height:100%;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
 }
 .modal-buttons{ display:flex; gap:10px; margin-top:20px }
 .modal-buttons button{ flex:1 }
 
 /* ---------- Burn Room container ---------- */
 .burn-room{
-  background: var(--bg-color);
+  background: radial-gradient(120% 90% at 50% 0%, rgba(255,106,26,.10), transparent 45%),
+              linear-gradient(180deg, rgba(26,18,14,1), rgba(12,11,10,1));
   border-radius: var(--border-radius);
-  margin: 0 auto; text-align: center; position: relative;
-  border: 3px solid rgba(255,69,0,.8);
-  box-shadow: 0 0 15px rgba(255,69,0,.8), 0 0 30px rgba(255,69,0,.5);
-  transition: box-shadow var(--speed);
+  margin: 0 auto;
+  text-align: center;
+  position: relative;
+  border: 3px solid rgba(255,69,0,.60);
+  box-shadow:
+    0 0 16px rgba(255,69,0,.35),
+    0 0 34px rgba(255,69,0,.18);
+  transition: box-shadow var(--speed), transform var(--speed);
   max-width: min(100%, 1200px);
 }
-.burn-room:hover{ box-shadow: 0 0 25px rgba(255,69,0,1), 0 0 40px rgba(255,69,0,.7) }
+.burn-room:hover{
+  box-shadow:
+    0 0 24px rgba(255,69,0,.55),
+    0 0 44px rgba(255,69,0,.24);
+}
 .burn-room-title{
-  font-size: 28px; color: var(--accent-color); margin-bottom: 20px;
+  font-size: 28px;
+  color: var(--accent-color);
+  margin-bottom: 20px;
   text-shadow: 0 0 10px rgba(255,69,0,.8);
 }
 
@@ -158,35 +286,148 @@ tbody tr:nth-child(odd), .incinerator-table tbody tr:nth-child(odd){ background:
   display:grid;
   grid-template-columns: repeat(auto-fill, minmax(clamp(120px, 40vw, 160px), 1fr));
   gap: clamp(8px, 3vw, 15px);
-  width:100%; max-width:1100px; margin:12px auto;
+  width:100%;
+  max-width:1100px;
+  margin:12px auto;
 }
 .nft-card{
-  background:#333; padding: clamp(8px, 2.5vw, 12px);
+  background: linear-gradient(180deg, rgba(255,106,26,.08), rgba(0,0,0,.20));
+  padding: clamp(8px, 2.5vw, 12px);
   border-radius: var(--border-radius);
   box-shadow: 0 3px 6px rgba(0,0,0,.4);
-  text-align:center; position:relative;
+  text-align:center;
+  position:relative;
+  border: 1px solid rgba(255,69,0,.12);
 }
 .nft-card.selected{ outline:2px solid var(--accent-color); transform: scale(1.02) }
-.nft-image{ max-width:100%; height:auto; border-radius:4px; margin-bottom:8px }
-.nft-info{ color:var(--fg-color) }
-.nft-name{ font-weight:700; font-size:16px; margin-bottom:4px }
+.nft-image{
+  max-width:100%;
+  height:auto;
+  border-radius:4px;
+  margin-bottom:10px;
+  box-shadow: 0 6px 14px rgba(0,0,0,.35);
+  border: 1px solid rgba(255,106,26,.10);
+}
+
+/* Base info */
+.nft-info{
+  color:var(--fg-color);
+  padding: 4px 2px;
+}
+.nft-name{
+  font-weight:800;
+  font-size:16px;
+  margin-bottom:8px;
+  letter-spacing: .02em;
+  text-shadow: 0 0 10px rgba(255,69,0,.18);
+}
+
+/* ✅ NEW: meta row (Mint + Rule badge) */
+.nft-meta{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:10px;
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: rgba(245,241,238,.86);
+}
+.nft-meta .mint{
+  color: rgba(245,241,238,.86);
+}
+
+/* ✅ NEW: rule badge */
+.rule-badge{
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  border: 1px solid rgba(255,106,26,.22);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.22);
+}
+.rule-badge.schema{
+  background: rgba(255,179,0,.12);
+  color: #ffcc66;
+  border-color: rgba(255,179,0,.30);
+}
+.rule-badge.template{
+  background: rgba(79,210,255,.10);
+  color: #6fe0ff;
+  border-color: rgba(79,210,255,.25);
+}
+
+/* ✅ NEW: economics group */
+.nft-economics{
+  margin: 10px 0 8px;
+  padding: 10px 10px;
+  border-radius: 12px;
+  background: rgba(0,0,0,.18);
+  border: 1px solid rgba(255,106,26,.10);
+}
+.nft-economics p{
+  display:flex;
+  justify-content:space-between;
+  gap: 10px;
+  margin: 4px 0;
+  font-size: 13.5px;
+}
+.nft-economics .label{
+  color: rgba(245,241,238,.66);
+  font-weight: 700;
+}
+.nft-economics .value{
+  color:#ffd36a;
+  font-weight: 900;
+  text-shadow: 0 0 10px rgba(255,179,0,.14);
+}
+
+/* ✅ NEW: cap row (subtle, no Prop ID) */
+.nft-cap{
+  margin: 6px 0 8px;
+  font-size: 12.5px;
+  color: rgba(245,241,238,.70);
+}
+.nft-cap strong{
+  color: #ffe2a3;
+}
+
+/* Keep existing legacy classes (in case other components use them) */
 .nft-reward{ color:#ffc107; margin-bottom:4px }
 .trash-fee{ color:#ffcc00; margin-bottom:4px }
-.nft-asset-id{ font-size:12px; color:#aaa; margin-bottom:8px }
+
+/* asset id (quiet) */
+.nft-asset-id{
+  font-size:12px;
+  color: rgba(245,241,238,.45);
+  margin: 8px 0 10px;
+}
+
 .no-nfts-message{ text-align:center; font-size:1.2em; color:#f44336; margin-top:20px }
 
 /* NFT Slots row */
 .nft-slots{
-  display:flex; flex-wrap:wrap; justify-content:center;
-  gap: clamp(8px, 3vw, 15px); margin-top:10px;
-  width:100%; max-width:1100px; margin-inline:auto;
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  gap: clamp(8px, 3vw, 15px);
+  margin-top:10px;
+  width:100%;
+  max-width:1100px;
+  margin-inline:auto;
 }
 .nft-slot{
-  background:#333; border-radius: var(--border-radius);
+  background: linear-gradient(180deg, rgba(255,106,26,.08), rgba(0,0,0,.22));
+  border-radius: var(--border-radius);
   padding: clamp(10px, 3vw, 15px);
   width: clamp(116px, 32vw, 150px);
-  display:flex; flex-direction:column; align-items:center; justify-content:space-between;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:space-between;
   box-shadow: 0 4px 8px rgba(0,0,0,.5);
+  border: 1px solid rgba(255,69,0,.12);
 }
 .nft-slot img{ max-width:90%; max-height: clamp(80px, 22vw, 100px); border-radius: var(--border-radius) }
 .nft-slot p{ font-size:14px }
@@ -194,21 +435,36 @@ tbody tr:nth-child(odd), .incinerator-table tbody tr:nth-child(odd){ background:
 /* ---------- Incinerator Grid ---------- */
 .incinerator-grid{
   display:grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); /* desktop */
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 25px;
-  justify-content:center;   /* center whole grid */
-  justify-items:center;     /* center cards */
+  justify-content:center;
+  justify-items:center;
   align-items:start;
-  width:100%; max-width:1100px; margin:30px auto; padding:10px 0;
+  width:100%;
+  max-width:1100px;
+  margin:30px auto;
+  padding:10px 0;
 }
 .incinerator-card{
-  background:#2a2a2a; padding: clamp(14px, 2.5vw, 20px);
-  border-radius: 10px; min-width: 180px; max-width: 240px; text-align:center;
-  box-shadow: 0 0 15px rgba(255,69,0,.4);
-  transition: transform .2s ease, box-shadow .3s ease;
-  display:flex; flex-direction:column; align-items:center; gap:10px;
+  background: linear-gradient(180deg, rgba(255,106,26,.10), rgba(0,0,0,.26));
+  padding: clamp(14px, 2.5vw, 20px);
+  border-radius: 10px;
+  min-width: 180px;
+  max-width: 240px;
+  text-align:center;
+  box-shadow: 0 0 15px rgba(255,69,0,.25);
+  transition: transform .2s ease, box-shadow .3s ease, filter .2s ease;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:10px;
+  border: 1px solid rgba(255,69,0,.18);
 }
-.incinerator-card:hover{ transform: translateY(-5px); box-shadow: 0 0 25px rgba(255,69,0,.8) }
+.incinerator-card:hover{
+  transform: translateY(-5px);
+  filter: brightness(1.06);
+  box-shadow: 0 0 25px rgba(255,69,0,.45);
+}
 .incinerator-image{ max-width: clamp(100px, 30vw, 120px); height:auto; border-radius:5px }
 .incinerator-name, .asset-id{ font-size:14px }
 .organized-buttons{ display:flex; flex-direction:column; gap:10px; margin-top:15px }
@@ -216,33 +472,57 @@ tbody tr:nth-child(odd), .incinerator-table tbody tr:nth-child(odd){ background:
 
 /* ---------- Status / loading ---------- */
 .loading-message, .fetching-row, .status-row{
-  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;
   font-size: clamp(12px, 3.5vw, 16px);
   color:#ffd700;
 }
 
 /* ---------- Responsive tweaks ---------- */
 @media (max-width: 1024px){
-  .incinerator-grid{ grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:20px; max-width:90% }
+  .incinerator-grid{
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap:20px;
+    max-width:90%;
+  }
 }
 @media (max-width: 700px){
   .collections-container table{ width:100% }
   th, td{ font-size:13px; padding:6px }
 }
 @media (max-width: 600px){
-  .incinerator-grid{ grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:15px; max-width:100% }
+  .incinerator-grid{
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap:15px;
+    max-width:100%;
+  }
   .incinerator-card{ min-width:150px; max-width:180px }
 }
 @media (max-width: 420px){
-  .burn-room{ box-shadow:0 0 14px rgba(255,69,0,.55), 0 0 22px rgba(255,69,0,.35); border-width:2px }
-  .burn-room-title{ font-size: clamp(18px, 5.5vw, 24px); margin-bottom:12px }
+  .burn-room{
+    box-shadow:0 0 14px rgba(255,69,0,.35), 0 0 22px rgba(255,69,0,.18);
+    border-width:2px;
+  }
+  .burn-room-title{
+    font-size: clamp(18px, 5.5vw, 24px);
+    margin-bottom:12px;
+  }
   .modal-buttons{ flex-direction:column }
   .modal-buttons button{ width:100% }
   .organized-buttons{ flex-direction:column }
   .fuel-button, .energy-button, .repair-button, .burn-button, .assign-button,
   .stake-button, .unstake-button, .load-button, .max-load-button, .close-button{
-    width:100%; padding:10px; font-size:13px;
+    width:100%;
+    padding:10px;
+    font-size:13px;
   }
+
+  /* tighter NFT meta/economics on very small screens */
+  .nft-economics{ padding: 8px 8px; }
+  .nft-economics p{ font-size: 12.5px; }
+  .nft-meta{ font-size: 12px; gap: 8px; }
 }
 
 /* ---------- Small element polish ---------- */
@@ -250,67 +530,277 @@ tbody tr:nth-child(odd), .incinerator-table tbody tr:nth-child(odd){ background:
 .progress-bar-text{ font-size: clamp(11px, 3.2vw, 12px) }
 .nft-name, .nft-reward, .trash-fee, .nft-asset-id, .incinerator-name, .asset-id{ overflow-wrap:anywhere }
 
-
 /* === Incinerator Modal: wider on desktop, centered grid === */
-
-/* Start mobile-compact, like Burn Room */
-.modal-content.incinerator-modal {
+.modal-content.incinerator-modal{
   width: min(100vw - 16px, 640px);
   max-height: calc(var(--dvh) - 16px);
   padding: 15px;
 }
-
-/* Tablet */
 @media (min-width: 768px){
-  .modal-content.incinerator-modal {
+  .modal-content.incinerator-modal{
     width: min(95vw, 980px);
     padding: 22px;
   }
 }
-
-/* Desktop */
 @media (min-width: 1200px){
-  .modal-content.incinerator-modal {
+  .modal-content.incinerator-modal{
     width: min(92vw, 1400px);
     padding: 26px;
   }
 }
-
-/* Section titles inside the modal */
-.incinerator-section-title {
+.incinerator-section-title{
   color: var(--highlight-color);
   margin: 10px 0 6px;
   font-weight: 700;
 }
-
-/* Centered, responsive card grid */
-.incinerator-modal .cards-grid {
+.incinerator-modal .cards-grid{
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 22px;
-  justify-content: center;   /* center the whole grid block */
-  justify-items: center;     /* center individual cards */
+  justify-content: center;
+  justify-items: center;
   width: 100%;
-  max-width: 1100px;         /* keeps nice readable line length */
+  max-width: 1100px;
   margin: 12px auto 24px;
 }
-
-/* Reuse your incinerator-card styles; add minor fit tweaks here */
-.incinerator-modal .incinerator-card {
+.incinerator-modal .incinerator-card{
   min-width: 200px;
   max-width: 260px;
 }
-
-/* On smaller screens, let the grid tighten gracefully */
 @media (max-width: 600px){
-  .incinerator-modal .cards-grid {
+  .incinerator-modal .cards-grid{
     grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
     gap: 14px;
     max-width: 100%;
   }
-  .incinerator-modal .incinerator-card {
+  .incinerator-modal .incinerator-card{
     min-width: 160px;
     max-width: 190px;
   }
+}
+
+/* =======================
+   RPG ENHANCEMENT LAYER
+   Adds “game UI” visuals
+   ======================= */
+
+/* Ambient ember background */
+.BurnCenter{
+  background:
+    radial-gradient(1200px 600px at 50% -10%, rgba(255,106,26,.14), transparent 60%),
+    radial-gradient(900px 520px at 10% 30%, rgba(255,69,0,.10), transparent 55%),
+    radial-gradient(900px 520px at 90% 30%, rgba(255,69,0,.08), transparent 55%),
+    linear-gradient(180deg, #070606, #0c0b0a);
+  min-height: var(--dvh);
+}
+
+/* Header feels “game title” */
+.app-header{
+  background: linear-gradient(180deg, rgba(255,106,26,.16), rgba(0,0,0,.10));
+  border-bottom: 1px solid rgba(255,106,26,.18);
+  box-shadow: 0 10px 26px rgba(0,0,0,.55);
+}
+.app-title{
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  text-shadow:
+    0 0 10px rgba(255,69,0,.55),
+    0 0 22px rgba(255,106,26,.30);
+}
+
+/* RPG-style “panel” wrapper look for containers */
+.collections-container,
+.proposals-wrapper{
+  background: linear-gradient(180deg, rgba(255,106,26,.08), rgba(0,0,0,.22));
+  border: 1px solid rgba(255,69,0,.18);
+  border-radius: 14px;
+  box-shadow:
+    inset 0 0 0 1px rgba(255,106,26,.08),
+    0 10px 28px rgba(0,0,0,.45);
+  padding: 14px;
+  margin: 18px auto;
+  max-width: 1100px;
+}
+
+/* ✅ UPDATED: proposals can grow wider than 1100px without breaking other panels */
+.proposals-wrapper{
+  max-width: min(96vw, 1500px);
+  width: 96vw;
+}
+
+/* ✅ UPDATED: better table behavior inside proposals */
+.proposals-wrapper .proposals-section{
+  width: 100%;
+  overflow-x: auto;         /* horizontal scroll only if needed */
+  overflow-y: visible;
+}
+
+/* ✅ UPDATED: keep proposals readable, not squeezed */
+.proposals-wrapper table{
+  min-width: 1100px;        /* room for your columns */
+  table-layout: auto;       /* let columns size naturally */
+}
+
+/* ✅ UPDATED: allow wrapping in proposals cells (stops crazy tight squeeze) */
+.proposals-wrapper .proposals-table td,
+.proposals-wrapper .proposals-table th{
+  white-space: nowrap;      /* keep numbers on one line */
+}
+
+/* Selection row looks like a “quest bar” */
+.selection-container{
+  background: linear-gradient(180deg, rgba(255,69,0,.08), rgba(0,0,0,.20));
+  border: 1px solid rgba(255,106,26,.16);
+  border-radius: 14px;
+  padding: 14px;
+  box-shadow: inset 0 0 0 1px rgba(255,106,26,.06);
+}
+
+/* Buttons feel like “abilities” */
+button{ position: relative; }
+button:hover:not(:disabled){ transform: translateY(-1px); }
+button:active:not(:disabled){ transform: translateY(0px) scale(.98); }
+
+/* Ember glow pulse (subtle) */
+@keyframes emberPulse{
+  0%{ box-shadow: 0 0 10px rgba(255,69,0,.25); }
+  50%{ box-shadow: 0 0 18px rgba(255,69,0,.45); }
+  100%{ box-shadow: 0 0 10px rgba(255,69,0,.25); }
+}
+.repair-button, .burn-button{ animation: emberPulse 2.2s ease-in-out infinite; }
+
+/* Table feels more “RPG inventory” */
+table{ border-radius: 12px; overflow: hidden; }
+tbody tr:hover{ background: rgba(255,69,0,.08); }
+
+/* Dropdowns: ensure always readable + RPG feel */
+select{
+  background: linear-gradient(180deg, rgba(255,106,26,.12), rgba(0,0,0,.25));
+  color: #fff;
+}
+
+/* =========================
+   USER BALANCES (FIXED)
+   - Container centered
+   - Text centered
+   - No duplicates / no overrides
+   ========================= */
+
+.balances-section{
+  /* center the card itself */
+  margin: 18px auto;
+  width: min(92vw, 640px);
+
+  /* UI panel look */
+  background: linear-gradient(180deg, rgba(255,106,26,.08), rgba(0,0,0,.22));
+  border: 1px solid rgba(255,69,0,.18);
+  border-radius: 14px;
+  box-shadow:
+    inset 0 0 0 1px rgba(255,106,26,.08),
+    0 10px 28px rgba(0,0,0,.45);
+
+  padding: 16px 18px;
+
+  /* center inner content */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.balances-section h3{
+  margin: 0 0 12px;
+  color: var(--highlight-color);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.balances-section p{
+  margin: 4px 0;
+  font-size: 15px;
+  color: var(--text);
+  text-shadow: 0 0 6px rgba(255,69,0,.35);
+}
+
+.balances-section p::before{
+  content: "▸ ";
+  color: var(--accent);
+  font-weight: 900;
+}
+
+.nft-slot-meta { width: 100%; }
+
+.nft-subrow{
+  display:flex;
+  justify-content:center;
+  gap:10px;
+  margin: 6px 0 10px;
+  flex-wrap:wrap;
+}
+
+
+.remove-nft-button{
+  margin-top: 8px;
+  padding: .55em .8em;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255, 87, 34, .22);
+  color: #fff;
+  font-weight: 700;
+}
+.remove-nft-button:hover{
+  filter: brightness(1.1);
+}
+/* burn room updates
+
+/* Make modal-body a column so the scroll area can flex */
+.modal-body{
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* critical for flex children to scroll */
+}
+
+/* NFT grid scroll area */
+.burnroom-nft-scroll{
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: 10px;
+}
+
+/* Sticky burn deck */
+.burnroom-sticky-deck{
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  width: 100%;
+  margin-top: 10px;
+
+  background: linear-gradient(180deg, rgba(12,11,10,.55), rgba(12,11,10,.92));
+  border-top: 1px solid rgba(255,106,26,.18);
+  box-shadow: 0 -10px 26px rgba(0,0,0,.55);
+  padding: 10px 8px;
+  backdrop-filter: blur(6px);
+}
+
+.burnroom-deck-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.burnroom-deck-title{
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: #ffd2b8;
+}
+
+.burnroom-inc-title{
+  margin-top: 10px;
+  margin-bottom: 6px;
 }
 

@@ -1,7 +1,11 @@
 import axios from 'axios';  
 import { JsonRpc } from 'eosjs';
 
-const API_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:3003';
+// Prefer BACKEND_API_BASE_URL, but keep old API_BASE_URL for backward compatibility
+const API_URL =
+  process.env.REACT_APP_BACKEND_API_BASE_URL ||
+  process.env.REACT_APP_API_BASE_URL ||
+  'http://localhost:3003';
 const rpc = new JsonRpc(process.env.REACT_APP_RPC || 'https://wax.pink.gg'); // Mainnet WAX URL
 // Helper function to introduce a delay
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -128,16 +132,27 @@ export const fetchTemplateDetails = async (collectionName, templateId) => {
 };
 /**
  * Syncs schemas and templates for a selected collection.
+ * This endpoint is now admin-protected on the backend.
+ * If the call is forbidden (403), we gracefully skip sync and continue using DB data.
  */
 export const syncCollectionData = async (collectionName) => {
   try {
     const response = await axios.post(`${API_URL}/collections/${collectionName}/sync-schemas-templates`);
     return response.data;
   } catch (error) {
+    const status = error?.response?.status;
+
+    // ✅ IMPORTANT: Don't break the UI if sync is locked (expected for normal users)
+    if (status === 403) {
+      console.warn(`🔒 Sync blocked (403) for ${collectionName} — using DB data only.`);
+      return { skipped: true, reason: 'forbidden' };
+    }
+
     console.error(`Error syncing collection data for ${collectionName}:`, error);
     throw error;
   }
 };
+
 
 /**
  * Fetches user balances for WAX, TRASH, and CINDER directly from the blockchain.
@@ -192,11 +207,16 @@ export const fetchProposals = async (page = 1, limit = 100) => {
 
 /**
  * Fetches only open (verified) proposals from the backend.
+ * IMPORTANT: pass account so backend can compute has_my_stake / my_staked_str / my_vote_for
  */
-export const fetchOpenProposals = async () => {
+export const fetchOpenProposals = async (accountName) => {
   try {
-    const response = await axios.get(`${API_URL}/cleanup/proposals/open`);
-    console.log('Fetched proposals from API:', response.data); // Log response data
+    const params = {};
+    if (accountName) params.account = String(accountName);
+
+    const response = await axios.get(`${API_URL}/cleanup/proposals/open`, { params });
+
+    console.log('[fetchOpenProposals] account=', accountName, response.data);
     return response.data;
   } catch (error) {
     console.error('Error fetching open proposals:', error);
@@ -204,33 +224,31 @@ export const fetchOpenProposals = async () => {
   }
 };
 
+
 /**
  * Fetches approved collections from the backend.
  */
 export const fetchApprovedCollections = async () => {
   try {
-    let allApprovedCollections = [];
-    let page = 1;
-    const limit = 1000; // Set the limit for each API request
-    let hasMore = true;
-
-    while (hasMore) {
-      const response = await axios.get(`${API_URL}/cleanup/approved-collections?page=${page}&limit=${limit}`);
-      const collections = response.data.map(collection => ({
-        id: collection.id,
-        collection: collection.collection,
-        schema: collection.schema,
-        template_id: collection.template_id,
-      }));
-
-      allApprovedCollections = [...allApprovedCollections, ...collections];
-      hasMore = collections.length === limit; // Check if the current page has the maximum number of items
-      page++;
-    }
-
-    return allApprovedCollections;
+    // ✅ New backend returns the full merged list (approvednfts + tplcaps) without paging.
+    // Keep the export name for compatibility across the UI.
+    const response = await axios.get(`${API_URL}/cleanup/approved-collections`);
+    return Array.isArray(response.data) ? response.data : [];
   } catch (error) {
     console.error('Error fetching approved collections:', error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch approved schema-burn rules (schemaburns + schemcaps merged on backend).
+ */
+export const fetchSchemaBurns = async () => {
+  try {
+    const response = await axios.get(`${API_URL}/cleanup/schema-burns`);
+    return Array.isArray(response.data) ? response.data : [];
+  } catch (error) {
+    console.error('Error fetching schema burns:', error);
     throw error;
   }
 };

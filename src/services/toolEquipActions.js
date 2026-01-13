@@ -91,3 +91,32 @@ export async function unequipTool({ actor, slot }) {
   return result;
 }
 
+// NEW: Stake/Add Tool using NFT transfer memo AddTool:<assetId>
+export async function addTool({ actor, asset_id }) {
+  if (!actor) throw new Error("Missing actor");
+  if (!asset_id) throw new Error("Missing asset ID");
+
+  const ATOMIC = process.env.REACT_APP_ATOMICASSETS_ACCOUNT || "atomicassets";
+  const CONTRACT = RHYTHM_CONTRACT;
+
+  const tx = {
+    actions: [
+      {
+        account: ATOMIC,
+        name: "transfer",
+        authorization: [{ actor, permission: "active" }],
+        data: {
+          from: actor,
+          to: CONTRACT,
+          asset_ids: [String(asset_id)],
+          memo: `AddTool:${asset_id}`, // listener routes this to addtool()
+        },
+      },
+    ],
+  };
+
+  console.log("[DEBUG] addTool tx:", tx);
+
+  const result = await InitTransaction(tx);
+  return result;
+}

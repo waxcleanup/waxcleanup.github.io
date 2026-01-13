@@ -1,63 +1,67 @@
 // src/components/Farming.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import './Farming.css';
+
 import useSession from '../hooks/useSession';
 import Weather from './Weather';
 import FarmDisplay from './FarmDisplay';
 import SelectCellModal from './SelectCellModal';
-import { stakeFarm, unstakeFarm } from '../services/farmActions';
-import { stakeFarmCell, unstakeFarmCell } from '../services/farmCellActions';
 import CharacterLoadout from './CharacterLoadout';
 import BagPanel from './BagPanel';
-import { rechargeUserEnergy } from '../services/userEnergyActions';
 import PlayerStatusBar from './PlayerStatusBar';
+import UnequippedTools from './UnequippedTools';
+
+import { stakeFarm, unstakeFarm, rechargeFarm } from '../services/farmActions';
+import { stakeFarmCell, unstakeFarmCell } from '../services/farmCellActions';
+import { rechargeUserEnergy } from '../services/userEnergyActions';
 import { claimSeedRewards } from '../services/rewardActions';
 import { plantSlot } from '../services/plantActions';
-import { equipTool, unequipTool } from '../services/toolEquipActions';
+import { unequipTool } from '../services/toolEquipActions';
 
 export default function Farming() {
   const { session } = useSession();
   const wallet = session?.actor;
 
+  const API = process.env.REACT_APP_API_BASE_URL;
+
   const [weather, setWeather] = useState(null);
   const [loadingWeather, setLoadingWeather] = useState(false);
 
-  const [farmInfo, setFarmInfo] = useState({
-    staked: [],
-    unstaked: [],
-    cells: [],
-  });
+  const [farmInfo, setFarmInfo] = useState({ staked: [], unstaked: [], cells: [] });
   const [allFarms, setAllFarms] = useState([]);
   const [pendingAction, setPendingAction] = useState(null);
   const [showCellModal, setShowCellModal] = useState(false);
   const [selectedFarmId, setSelectedFarmId] = useState(null);
   const [farmError, setFarmError] = useState(null);
 
-  // Inventory (user energy cell + equipped tools)
   const [inventory, setInventory] = useState(null);
-  const [inventoryError, setInventoryError] = useState(null);
-  const [recharging, setRecharging] = useState(false);
 
-  // Tool pending actions (equip / unequip UI state)
+  // ✅ Split into warning vs hard error
+  const [inventoryWarning, setInventoryWarning] = useState(null);
+  const [inventoryError, setInventoryError] = useState(null);
+
+  const [recharging, setRecharging] = useState(false);
   const [toolPending, setToolPending] = useState(null);
 
-  // Player status (seeds, compost, rewards)
   const [playerStatus, setPlayerStatus] = useState(null);
   const [playerStatusError, setPlayerStatusError] = useState(null);
   const [loadingPlayerStatus, setLoadingPlayerStatus] = useState(false);
   const [claimingRewards, setClaimingRewards] = useState(false);
 
-  // ---------------------------------------------------------------------------
-  // Fetch global farms + weather
-  // ---------------------------------------------------------------------------
+  // ✅ force BagPanel to refetch after stake/unstake operations
+  const [bagRefreshNonce, setBagRefreshNonce] = useState(0);
+
+  // --------------------------------------------------
+  // Global: Weather + All Farms
+  // --------------------------------------------------
   useEffect(() => {
     const fetchData = async () => {
       setLoadingWeather(true);
       try {
         const [weatherRes, farmsRes] = await Promise.all([
-          axios.get(`${process.env.REACT_APP_API_BASE_URL}/weather/current`),
-          axios.get(`${process.env.REACT_APP_API_BASE_URL}/api/farms`),
+          axios.get(`${API}/weather/current`),
+          axios.get(`${API}/api/farms`),
         ]);
         setWeather(weatherRes.data);
         setAllFarms(farmsRes.data.farms || []);
@@ -67,61 +71,140 @@ export default function Farming() {
         setLoadingWeather(false);
       }
     };
-    fetchData();
-  }, []);
+    if (API) fetchData();
+  }, [API]);
 
-  // ---------------------------------------------------------------------------
-  // Fetch user farms + cells
-  // ---------------------------------------------------------------------------
-  useEffect(() => {
+  // --------------------------------------------------
+  // Farms (user + global)
+  // --------------------------------------------------
+  const refreshFarms = useCallback(async () => {
     if (!wallet) return;
-
-    const fetchUserData = async () => {
-      try {
-        const farmRes = await axios.get(
-          `${process.env.REACT_APP_API_BASE_URL}/nfts/farm/${wallet}`
-        );
-        setFarmInfo({
-          staked: farmRes.data.staked || [],
-          unstaked: farmRes.data.unstaked || [],
-          cells: farmRes.data.cells || [],
-        });
-        setFarmError(null);
-      } catch (err) {
-        console.error('Error loading user farms:', err);
-        setFarmError('Could not load your farms');
-      }
-    };
-
-    fetchUserData();
-  }, [wallet]);
-
-  // ---------------------------------------------------------------------------
-  // Fetch user inventory (tools + user energy cell)
-  // ---------------------------------------------------------------------------
-  const loadInventory = async (account) => {
-    if (!account) return;
-
     try {
-      const res = await axios.get(
-        `${process.env.REACT_APP_API_BASE_URL}/inventory/${account}`
-      );
-      setInventory(res.data);
-      setInventoryError(null);
+      const [farmsRes, userRes] = await Promise.all([
+        axios.get(`${API}/api/farms`),
+        axios.get(`${API}/nfts/farm/${wallet}`),
+      ]);
+
+      setAllFarms(farmsRes.data.farms || []);
+      setFarmInfo({
+        staked: userRes.data.staked || [],
+        unstaked: userRes.data.unstaked || [],
+        cells: userRes.data.cells || [],
+      });
+      setFarmError(null);
     } catch (err) {
-      console.error('Error loading inventory:', err);
-      setInventoryError('Could not load your inventory');
+      console.error('Error refreshing farms:', err);
+      setFarmError('Could not load your farms');
     }
-  };
+  }, [API, wallet]);
+
+  const pollRefreshFarms = useCallback(
+    async ({ tries = 6, delayMs = 800 } = {}) => {
+      for (let i = 0; i < tries; i++) {
+        // eslint-disable-next-line no-await-in-loop
+        await refreshFarms();
+        // eslint-disable-next-line no-await-in-loop
+        await new Promise((r) => setTimeout(r, delayMs));
+      }
+    },
+    [refreshFarms]
+  );
 
   useEffect(() => {
     if (!wallet) return;
-    loadInventory(wallet);
-  }, [wallet]);
+    refreshFarms();
+  }, [wallet, refreshFarms]);
 
-  // ---------------------------------------------------------------------------
-  // Fetch player status (seeds, compost, rewards)
-  // ---------------------------------------------------------------------------
+  // --------------------------------------------------
+  // Inventory
+  // ✅ Key Fix:
+  //   - /userenergy success = energy UI updates even if /inventory fails
+  //   - Only "hard error" if BOTH fail
+  //   - /inventory failure becomes a WARNING not fatal
+  // --------------------------------------------------
+  const loadInventory = useCallback(
+    async (account, { tries = 1, delayMs = 600 } = {}) => {
+      if (!account) return;
+
+      setInventoryError(null);
+      setInventoryWarning(null);
+
+      let lastErr = null;
+
+      for (let attempt = 0; attempt < tries; attempt++) {
+        try {
+          const results = await Promise.allSettled([
+            axios.get(`${API}/inventory/${account}`),
+            axios.get(`${API}/userenergy/${account}`),
+          ]);
+
+          const invOk = results[0].status === 'fulfilled';
+          const ueOk = results[1].status === 'fulfilled';
+
+          const inv = invOk ? results[0].value.data : {};
+          const ue = ueOk ? results[1].value.data : {};
+
+          // ❌ If both failed -> HARD ERROR (retryable)
+          if (!invOk && !ueOk) {
+            throw new Error('BOTH_FAILED');
+          }
+
+          // ✅ Merge shape: /userenergy is authoritative for cells
+          const merged = {
+            ...inv,
+            account: inv.account || ue.account || account,
+            cells: {
+              ...(inv.cells || {}),
+              energy: Number(ue.energy ?? inv?.cells?.energy ?? 0),
+              max: Number(ue.max ?? inv?.cells?.max ?? 0),
+              cell_count: Number(ue.count ?? inv?.cells?.cell_count ?? 0),
+              total_staked: Number(ue.total_staked ?? inv?.cells?.total_staked ?? 0),
+              staked: Array.isArray(ue.staked) ? ue.staked : (inv?.cells?.staked || []),
+              unstaked: Array.isArray(inv?.cells?.unstaked) ? inv.cells.unstaked : [],
+            },
+          };
+
+          setInventory(merged);
+
+          // ✅ Warn if inventory failed but energy succeeded
+          if (!invOk && ueOk) {
+            setInventoryWarning(
+              'Inventory is still loading (AtomicAssets can be slow). Energy is up to date.'
+            );
+          } else {
+            setInventoryWarning(null);
+          }
+
+          setInventoryError(null);
+          return; // ✅ success
+        } catch (e) {
+          lastErr = e;
+          // eslint-disable-next-line no-await-in-loop
+          await new Promise((r) => setTimeout(r, delayMs));
+        }
+      }
+
+      console.error('Error loading inventory:', lastErr);
+
+      // ✅ Only show HARD error if BOTH failed
+      if (String(lastErr?.message || '').includes('BOTH_FAILED')) {
+        setInventoryError('Could not load your inventory (and energy). Please try again.');
+      } else {
+        // fallback safety
+        setInventoryWarning('Some data is still loading. Energy should be up to date.');
+      }
+    },
+    [API]
+  );
+
+  useEffect(() => {
+    if (!wallet) return;
+    loadInventory(wallet, { tries: 2, delayMs: 600 });
+  }, [wallet, loadInventory]);
+
+  // --------------------------------------------------
+  // Player Status
+  // --------------------------------------------------
   useEffect(() => {
     if (!wallet) {
       setPlayerStatus(null);
@@ -132,9 +215,7 @@ export default function Farming() {
     const fetchPlayerStatus = async () => {
       setLoadingPlayerStatus(true);
       try {
-        const res = await axios.get(
-          `${process.env.REACT_APP_API_BASE_URL}/api/player/${wallet}/status`
-        );
+        const res = await axios.get(`${API}/api/player/${wallet}/status`);
         setPlayerStatus(res.data);
         setPlayerStatusError(null);
       } catch (err) {
@@ -146,11 +227,11 @@ export default function Farming() {
     };
 
     fetchPlayerStatus();
-  }, [wallet]);
+  }, [API, wallet]);
 
-  // ---------------------------------------------------------------------------
-  // Cell modal handling
-  // ---------------------------------------------------------------------------
+  // --------------------------------------------------
+  // Battery modal
+  // --------------------------------------------------
   const openCellModal = (farmId) => {
     setSelectedFarmId(farmId);
     setShowCellModal(true);
@@ -160,20 +241,9 @@ export default function Farming() {
     setPendingAction(`cell-${cellAssetId}`);
     try {
       await stakeFarmCell(wallet, selectedFarmId, cellAssetId);
-
-      const [farmsRes, userRes] = await Promise.all([
-        axios.get(`${process.env.REACT_APP_API_BASE_URL}/api/farms`),
-        axios.get(
-          `${process.env.REACT_APP_API_BASE_URL}/nfts/farm/${wallet}`
-        ),
-      ]);
-
-      setAllFarms(farmsRes.data.farms || []);
-      setFarmInfo({
-        staked: userRes.data.staked || [],
-        unstaked: userRes.data.unstaked || [],
-        cells: userRes.data.cells || [],
-      });
+      await pollRefreshFarms({ tries: 4, delayMs: 700 });
+      await loadInventory(wallet, { tries: 2, delayMs: 600 });
+      setBagRefreshNonce((n) => n + 1);
     } catch (err) {
       console.error('Error staking cell:', err);
     } finally {
@@ -183,32 +253,15 @@ export default function Farming() {
     }
   };
 
-  const handleCellCancel = () => {
-    setShowCellModal(false);
-    setSelectedFarmId(null);
-  };
-
-  // ---------------------------------------------------------------------------
+  // --------------------------------------------------
   // Farm stake / unstake
-  // ---------------------------------------------------------------------------
+  // --------------------------------------------------
   const handleFarmStake = async (farm) => {
     setPendingAction(`farm-${farm.asset_id}`);
     try {
-      await stakeFarm(wallet, farm.asset_id);
-
-      const [farmsRes, userRes] = await Promise.all([
-        axios.get(`${process.env.REACT_APP_API_BASE_URL}/api/farms`),
-        axios.get(
-          `${process.env.REACT_APP_API_BASE_URL}/nfts/farm/${wallet}`
-        ),
-      ]);
-
-      setAllFarms(farmsRes.data.farms || []);
-      setFarmInfo({
-        staked: userRes.data.staked || [],
-        unstaked: userRes.data.unstaked || [],
-        cells: userRes.data.cells || [],
-      });
+      await stakeFarm(wallet, farm.asset_id, farm.template_id);
+      await pollRefreshFarms({ tries: 4, delayMs: 700 });
+      setBagRefreshNonce((n) => n + 1);
     } catch (err) {
       console.error('Error staking farm:', err);
     } finally {
@@ -220,20 +273,8 @@ export default function Farming() {
     setPendingAction(`farm-${farm.asset_id}`);
     try {
       await unstakeFarm(wallet, farm.asset_id);
-
-      const [farmsRes, userRes] = await Promise.all([
-        axios.get(`${process.env.REACT_APP_API_BASE_URL}/api/farms`),
-        axios.get(
-          `${process.env.REACT_APP_API_BASE_URL}/nfts/farm/${wallet}`
-        ),
-      ]);
-
-      setAllFarms(farmsRes.data.farms || []);
-      setFarmInfo({
-        staked: userRes.data.staked || [],
-        unstaked: userRes.data.unstaked || [],
-        cells: userRes.data.cells || [],
-      });
+      await pollRefreshFarms({ tries: 6, delayMs: 800 });
+      setBagRefreshNonce((n) => n + 1);
     } catch (err) {
       console.error('Error unstaking farm:', err);
     } finally {
@@ -241,84 +282,10 @@ export default function Farming() {
     }
   };
 
-  // ---------------------------------------------------------------------------
-  // Plant seed
-  // ---------------------------------------------------------------------------
-  const handlePlantSlot = async ({
-    plotAssetId,
-    slotIndex,
-    seedTemplateId,
-    seedBatchId,
-  }) => {
-    if (!wallet) return;
-
-    try {
-      await plantSlot({
-        actor: wallet,
-        plotAssetId,
-        slotIndex,
-        seedTemplateId,
-        seedBatchId,
-      });
-
-      const [farmRes, playerRes] = await Promise.all([
-        axios.get(
-          `${process.env.REACT_APP_API_BASE_URL}/nfts/farm/${wallet}`
-        ),
-        axios.get(
-          `${process.env.REACT_APP_API_BASE_URL}/api/player/${wallet}/status`
-        ),
-      ]);
-
-      setFarmInfo({
-        staked: farmRes.data.staked || [],
-        unstaked: farmRes.data.unstaked || [],
-        cells: farmRes.data.cells || [],
-      });
-      setPlayerStatus(playerRes.data);
-    } catch (err) {
-      console.error('Error planting seed:', err);
-    }
-  };
-
-  // ---------------------------------------------------------------------------
-  // Equip / Unequip tools
-  // ---------------------------------------------------------------------------
-  const handleUnequipTool = async (slot) => {
-    if (!wallet || !inventory?.tools?.equipped?.[slot]) return;
-
-    try {
-      setToolPending(`unequip-${slot}`);
-      await unequipTool({ actor: wallet, slot });
-
-      await loadInventory(wallet);
-    } catch (err) {
-      console.error('Error unequipping tool:', err);
-      alert('Failed to unequip tool. Check console for details.');
-    } finally {
-      setToolPending(null);
-    }
-  };
-
-  const handleEquipTool = async (slotType, toolAssetId) => {
-    if (!wallet || !toolAssetId) return;
-
-    try {
-      setToolPending(`equip-${slotType}`);
-      await equipTool({ actor: wallet, toolAssetId });
-
-      await loadInventory(wallet);
-    } catch (err) {
-      console.error('Error equipping tool:', err);
-      alert('Failed to equip tool. Check console for details.');
-    } finally {
-      setToolPending(null);
-    }
-  };
-
-  // ---------------------------------------------------------------------------
-  // Recharge user energy
-  // ---------------------------------------------------------------------------
+  // --------------------------------------------------
+  // ✅ Recharge USER energy
+  //   Poll loadInventory to ride out backend/index lag
+  // --------------------------------------------------
   const handleRechargeEnergy = async () => {
     if (!wallet) {
       alert('Please connect your wallet first.');
@@ -332,7 +299,7 @@ export default function Farming() {
     if (!amountStr) return;
 
     const amount = Number(amountStr);
-    if (isNaN(amount) || amount <= 0) {
+    if (!Number.isFinite(amount) || amount <= 0) {
       alert('Invalid amount.');
       return;
     }
@@ -340,7 +307,11 @@ export default function Farming() {
     try {
       setRecharging(true);
       await rechargeUserEnergy(amount);
-      await loadInventory(wallet);
+
+      // ✅ try multiple refreshes so UI catches new energy
+      await loadInventory(wallet, { tries: 3, delayMs: 700 });
+
+      setBagRefreshNonce((n) => n + 1);
     } catch (err) {
       console.error('Recharge failed:', err);
       alert('Recharge failed. Check console for details.');
@@ -349,19 +320,57 @@ export default function Farming() {
     }
   };
 
-  // ---------------------------------------------------------------------------
-  // Claim rewards
-  // ---------------------------------------------------------------------------
+  // --------------------------------------------------
+  // ✅ Recharge FARM energy
+  // --------------------------------------------------
+  const handleRechargeFarm = useCallback(
+    async (farmId) => {
+      if (!wallet) {
+        alert('Please connect your wallet first.');
+        return;
+      }
+
+      const amountStr = window.prompt(
+        'How much CINDER do you want to spend to recharge this farm?',
+        '1.0'
+      );
+      if (!amountStr) return;
+
+      const amount = Number(amountStr);
+      if (!Number.isFinite(amount) || amount <= 0) {
+        alert('Invalid amount.');
+        return;
+      }
+
+      const qty = `${amount.toFixed(6)} CINDER`;
+      const key = `recharge-${String(farmId)}`;
+
+      try {
+        setPendingAction(key);
+        await rechargeFarm(wallet, String(farmId), qty);
+
+        await pollRefreshFarms({ tries: 6, delayMs: 800 });
+        await loadInventory(wallet, { tries: 2, delayMs: 600 });
+      } catch (err) {
+        console.error('Farm recharge failed:', err);
+        alert(err?.message || 'Farm recharge failed.');
+      } finally {
+        setPendingAction(null);
+        setBagRefreshNonce((n) => n + 1);
+      }
+    },
+    [wallet, pollRefreshFarms, loadInventory]
+  );
+
+  // --------------------------------------------------
+  // Rewards
+  // --------------------------------------------------
   const handleClaimRewards = async () => {
     if (!wallet) return;
-
     try {
       setClaimingRewards(true);
       await claimSeedRewards(wallet);
-
-      const res = await axios.get(
-        `${process.env.REACT_APP_API_BASE_URL}/api/player/${wallet}/status`
-      );
+      const res = await axios.get(`${API}/api/player/${wallet}/status`);
       setPlayerStatus(res.data);
     } catch (err) {
       console.error('Error claiming rewards:', err);
@@ -371,9 +380,30 @@ export default function Farming() {
     }
   };
 
-  // ---------------------------------------------------------------------------
-  // RENDER
-  // ---------------------------------------------------------------------------
+  // --------------------------------------------------
+  // Child change handlers
+  // --------------------------------------------------
+  const handleFarmChanged = useCallback(
+    async (_evt) => {
+      try {
+        await pollRefreshFarms({ tries: 6, delayMs: 800 });
+        await loadInventory(wallet, { tries: 2, delayMs: 600 });
+      } finally {
+        setBagRefreshNonce((n) => n + 1);
+      }
+    },
+    [pollRefreshFarms, loadInventory, wallet]
+  );
+
+  const handleBagChanged = useCallback(async () => {
+    try {
+      await pollRefreshFarms({ tries: 4, delayMs: 700 });
+      await loadInventory(wallet, { tries: 2, delayMs: 600 });
+    } finally {
+      setBagRefreshNonce((n) => n + 1);
+    }
+  }, [pollRefreshFarms, loadInventory, wallet]);
+
   return (
     <div className="farming-container">
       <Weather weather={weather} loading={loadingWeather} />
@@ -387,30 +417,55 @@ export default function Farming() {
       />
 
       {farmError && <div className="error">{farmError}</div>}
+
+      {/* ✅ HARD ERROR only when both endpoints fail */}
       {inventoryError && <div className="error">{inventoryError}</div>}
+
+      {/* ✅ Soft warning when only /inventory fails */}
+      {inventoryWarning && <div className="warning">{inventoryWarning}</div>}
 
       {inventory && (
         <CharacterLoadout
           inventory={inventory}
           onRechargeEnergy={handleRechargeEnergy}
           recharging={recharging}
-          onUnequipTool={handleUnequipTool}
+          onUnequipTool={async (slot) => {
+            if (!wallet || !inventory?.tools?.equipped?.[slot]) return;
+            try {
+              setToolPending(`unequip-${slot}`);
+              await unequipTool({ actor: wallet, slot });
+              await loadInventory(wallet, { tries: 2, delayMs: 600 });
+              setBagRefreshNonce((n) => n + 1);
+            } finally {
+              setToolPending(null);
+            }
+          }}
           toolPending={toolPending}
+          accountName={wallet}
+          onRefreshInventory={async () => loadInventory(wallet, { tries: 2, delayMs: 600 })}
         />
       )}
 
-      {/* Now BagPanel receives equip callback + pending state */}
+      <UnequippedTools
+        actor={wallet}
+        onChanged={() => loadInventory(wallet, { tries: 2, delayMs: 600 })}
+      />
+
       <BagPanel
         wallet={wallet}
-        onEquipTool={handleEquipTool}
-        toolPending={toolPending}
+        farms={allFarms}
+        refreshNonce={bagRefreshNonce}
+        onChanged={handleBagChanged}
       />
 
       {showCellModal && (
         <SelectCellModal
           cells={farmInfo.cells}
           onConfirm={handleCellConfirm}
-          onCancel={handleCellCancel}
+          onCancel={() => {
+            setShowCellModal(false);
+            setSelectedFarmId(null);
+          }}
         />
       )}
 
@@ -425,27 +480,17 @@ export default function Farming() {
           setPendingAction(`cell-un-${farmId}`);
           try {
             await unstakeFarmCell(wallet, farmId);
-
-            const [farmsRes, userRes] = await Promise.all([
-              axios.get(`${process.env.REACT_APP_API_BASE_URL}/api/farms`),
-              axios.get(
-                `${process.env.REACT_APP_API_BASE_URL}/nfts/farm/${wallet}`
-              ),
-            ]);
-
-            setAllFarms(farmsRes.data.farms || []);
-            setFarmInfo({
-              staked: userRes.data.staked || [],
-              unstaked: userRes.data.unstaked || [],
-              cells: userRes.data.cells || [],
-            });
-          } catch (err) {
-            console.error('Error unstaking cell:', err);
+            await pollRefreshFarms({ tries: 6, delayMs: 800 });
+            await loadInventory(wallet, { tries: 2, delayMs: 600 });
+            setBagRefreshNonce((n) => n + 1);
           } finally {
             setPendingAction(null);
           }
         }}
-        onPlantSlot={handlePlantSlot}
+        onRechargeFarm={handleRechargeFarm}
+        onPlantSlot={plantSlot}
+        onChanged={handleFarmChanged}
+        refreshNonce={bagRefreshNonce}
       />
     </div>
   );

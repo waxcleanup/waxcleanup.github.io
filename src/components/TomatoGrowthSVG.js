@@ -1,89 +1,159 @@
 // src/components/TomatoGrowthSVG.js
-import React from "react";
+import React, { useId, useMemo } from "react";
 
-/**
- * TomatoGrowthSVG
- *
- * Props:
- *  - tick: current tick (0..tickGoal)
- *  - tickGoal: total ticks for this slot
- *  - weather: "sunny" | "rainy" | "cloudy" | "windy" | "stormy"
- *  - rarity: "common" | "rare" | "epic" | "legendary"
- *  - className: optional wrapper class
- */
+import TomatoStem from "./svg/TomatoStem";
+import TomatoLeaves from "./svg/TomatoLeaves";
+import TomatoFruitClusters from "./svg/TomatoFruitClusters";
+
+import {
+  clamp01,
+  lerpColorHex,
+  mixHex,
+  shadeHex,
+  mulberry32,
+  hashStringToInt,
+} from "./svg/svgUtils";
+
 export default function TomatoGrowthSVG({
   tick = 0,
   tickGoal = 21,
   weather = "sunny",
   rarity = "common",
   className = "",
+  cinderTheme = true,
 }) {
-  // Safety + progress 0..1
+  // ✅ unique per instance to prevent <defs> collisions
+  const rid = useId().replace(/:/g, "");
+  const ids = useMemo(() => {
+    const p = `tgs-${rid}`;
+    return {
+      sky: `${p}-sky`,
+      soil: `${p}-soil`,
+      sun: `${p}-sun`,
+      glow: `${p}-glow`,
+
+      // realism
+      stemGrad: `${p}-stemGrad`,
+      stemHi: `${p}-stemHi`,
+      leafGrad: `${p}-leafGrad`,
+      leafHi: `${p}-leafHi`,
+      leafShadow: `${p}-leafShadow`,
+
+      // cinder
+      cinderCore: `${p}-cinderCore`,
+      steamBlur: `${p}-steamBlur`,
+
+      // tomatoes
+      tomatoGrad: `${p}-tomatoGrad`,
+      tomatoSpec: `${p}-tomatoSpec`,
+    };
+  }, [rid]);
+
+  // -----------------------------
+  // Progress + growth stage
+  // -----------------------------
   const safeGoal = Math.max(1, tickGoal || 1);
   const clampedTick = Math.max(0, Math.min(tick || 0, safeGoal));
   const progress = clampedTick / safeGoal;
 
-  // Map progress → stage
-  // 0–0.15: seed; 0.15–0.35: seedling; 0.35–0.6: foliage;
-  // 0.6–0.8: flowering; 0.8–1: fruiting/ripening
   let stage = { key: "seed", label: "Germination" };
-  if (progress >= 0.15 && progress < 0.35) {
-    stage = { key: "seedling", label: "Seedling" };
-  } else if (progress >= 0.35 && progress < 0.6) {
-    stage = { key: "foliage", label: "Vegetative Growth" };
-  } else if (progress >= 0.6 && progress < 0.8) {
-    stage = { key: "flower", label: "Flowering" };
-  } else if (progress >= 0.8) {
-    stage = { key: "fruit", label: "Fruit & Ripening" };
-  }
+  if (progress >= 0.15 && progress < 0.35) stage = { key: "seedling", label: "Seedling" };
+  else if (progress >= 0.35 && progress < 0.6) stage = { key: "foliage", label: "Vegetative Growth" };
+  else if (progress >= 0.6 && progress < 0.8) stage = { key: "flower", label: "Flowering" };
+  else if (progress >= 0.8) stage = { key: "fruit", label: "Fruit & Ripening" };
 
-  // Rarity glow strength
-  const rarityGlowMap = {
-    common: 0.0,
-    rare: 0.3,
-    epic: 0.55,
-    legendary: 0.8,
-  };
-  const rarityGlow =
-    rarityGlowMap[rarity] != null ? rarityGlowMap[rarity] : 0.0;
+  const rarityGlowMap = { common: 0.0, rare: 0.3, epic: 0.55, legendary: 0.8 };
+  const rarityGlow = rarityGlowMap[rarity] ?? 0.0;
 
   const isCloudy = weather === "cloudy";
   const isWindy = weather === "windy";
   const isStormy = weather === "stormy";
 
   // Plant height (stem top Y)
-  // base at y = 78, top rises from 68 → 30 as it grows
   const stemTopY = 78 - 48 * Math.pow(progress, 0.7);
 
-  // Branch levels (3 main layers)
-  const branchLevels = [
-    stemTopY + 20, // lower
-    stemTopY + 10, // middle
-    stemTopY, // upper
-  ].map((y) => Math.min(74, y));
+  // Branch levels (clamped so nothing goes above soil too far)
+  const branchLevels = [stemTopY + 20, stemTopY + 10, stemTopY].map((y) =>
+    Math.min(74, y)
+  );
 
-  // How many leaves overall (tomato plants are leafy)
   const leafDensity =
-    stage.key === "seed" ? 0 :
-    stage.key === "seedling" ? 0.4 :
-    stage.key === "foliage" ? 1 :
-    stage.key === "flower" ? 1.1 : 1.2;
+    stage.key === "seed"
+      ? 0
+      : stage.key === "seedling"
+      ? 0.42
+      : stage.key === "foliage"
+      ? 1
+      : stage.key === "flower"
+      ? 1.1
+      : 1.2;
 
   const totalLeaves = Math.round(18 * leafDensity);
 
-  // Tomatoes (3 trusses, each can have 2–3 fruits)
-  const trussCount = 3;
-  const trussBaseProgress = Math.max(0, progress - 0.8) / 0.2; // 0..1 when in final stage
+  // -----------------------------
+  // Tomato color follows ripeness
+  // -----------------------------
+  const fruitRipeness = clamp01((progress - 0.8) / 0.2);
 
-  // color for fruit based on ripeness
-  const fruitRipeness = Math.max(0, progress - 0.8) / 0.2; // 0..1
-  const tomatoColor = lerpColor("#4CAF50", "#FF3D00", fruitRipeness); // green → red
+  // green -> yellow/orange -> red
+  const mid = lerpColorHex("#4CAF50", "#FFB300", clamp01(fruitRipeness * 0.6));
+  const tomatoBase = lerpColorHex(
+    mid,
+    "#FF3D00",
+    clamp01((fruitRipeness - 0.35) / 0.65)
+  );
 
-  // Clouds positions
+  const tomatoLight = mixHex(tomatoBase, "#FFFFFF", 0.34);
+  const tomatoMid = tomatoBase;
+  const tomatoDark = shadeHex(tomatoBase, -42);
+  const tomatoEdge = shadeHex(tomatoBase, -65);
+
+  // -----------------------------
+  // Atmosphere
+  // -----------------------------
   const clouds = [
     { x: 18, y: 20, w: 22, h: 10 },
     { x: 65, y: 16, w: 26, h: 12 },
   ];
+
+  const swayDur = isWindy ? "1.2s" : "3s";
+  const cloudOpacity = isCloudy || isStormy ? 0.7 : 0.35;
+
+  // -----------------------------
+  // CINDER heat + steam
+  // -----------------------------
+  const isCinder = !!cinderTheme;
+  const hot = isCinder ? 0.18 + 0.62 * progress : 0;
+  const coreOpacity = isCinder ? Math.min(0.92, 0.22 + hot + 0.18 * rarityGlow) : 0;
+
+  const steamCount = isCinder ? Math.round(5 + 9 * progress + 6 * rarityGlow) : 0;
+  const steamOpacity = isCinder
+    ? Math.min(0.65, 0.22 + 0.38 * progress + 0.12 * rarityGlow)
+    : 0;
+  const steamBaseY = 78.5; // above soil
+
+  // deterministic RNG (stable steam)
+  const seed = useMemo(() => hashStringToInt(rid), [rid]);
+  const rng = useMemo(() => mulberry32(seed), [seed]);
+
+  const steamLanes = useMemo(() => {
+    const lanes = [];
+    for (let i = 0; i < steamCount; i++) {
+      const x = 22 + rng() * 56; // 22..78
+      const drift = (rng() * 2 - 1) * 10;
+      const height = 16 + rng() * 22;
+      const width = 6 + rng() * 9;
+      const dur = 1.8 + rng() * 2.1;
+      const delay = rng() * 1.3;
+      const wobble = 2 + rng() * 5;
+      const puff = 0.9 + rng() * 0.9;
+      lanes.push({ x, drift, height, width, dur, delay, wobble, puff });
+    }
+    return lanes;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [steamCount, seed]);
+
+  const plantFilter = rarityGlow > 0 ? `url(#${ids.glow})` : undefined;
 
   return (
     <div className={"tomato-growth-wrapper " + className}>
@@ -94,96 +164,238 @@ export default function TomatoGrowthSVG({
         aria-label={"Tomato growth — " + stage.label}
       >
         <defs>
-          <linearGradient id="tgs-sky" x1="0" y1="0" x2="0" y2="1">
+          {/* Sky */}
+          <linearGradient id={ids.sky} x1="0" y1="0" x2="0" y2="1">
             <stop
               offset="0%"
-              stopColor={isStormy ? "#3a4763" : isCloudy ? "#7fb0ff" : "#87CEEB"}
+              stopColor={
+                isStormy
+                  ? "#3a4763"
+                  : isCloudy
+                  ? isCinder
+                    ? "#9bb6ff"
+                    : "#7fb0ff"
+                  : isCinder
+                  ? "#a8dcff"
+                  : "#87CEEB"
+              }
             />
-            <stop offset="100%" stopColor={isStormy ? "#1d2433" : "#cfe9ff"} />
+            <stop
+              offset="100%"
+              stopColor={isStormy ? "#1d2433" : isCinder ? "#f4e6ff" : "#cfe9ff"}
+            />
           </linearGradient>
 
-          <linearGradient id="tgs-soil" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#6d4c41" />
-            <stop offset="100%" stopColor="#4e342e" />
+          {/* Soil */}
+          <linearGradient id={ids.soil} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={isCinder ? "#7b4a3e" : "#6d4c41"} />
+            <stop offset="100%" stopColor={isCinder ? "#311a16" : "#4e342e"} />
           </linearGradient>
 
-          <radialGradient id="tgs-sun" cx="80%" cy="15%" r="20%">
-            <stop offset="0%" stopColor="#fff8e1" stopOpacity="0.9" />
-            <stop offset="100%" stopColor="#ffeb3b" stopOpacity="0.3" />
+          <radialGradient id={ids.sun} cx="80%" cy="15%" r="22%">
+            <stop offset="0%" stopColor="#fff8e1" stopOpacity="0.95" />
+            <stop offset="70%" stopColor="#ffeb3b" stopOpacity="0.28" />
+            <stop offset="100%" stopColor="#ffeb3b" stopOpacity="0.06" />
           </radialGradient>
 
-          <filter id="tgs-glow" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur
-              in="SourceGraphic"
-              stdDeviation={rarityGlow * 3}
-              result="tgs-blur"
+          {/* Stem gradient + highlight */}
+          <linearGradient id={ids.stemGrad} x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#124a18" />
+            <stop offset="50%" stopColor="#2e7d32" />
+            <stop offset="100%" stopColor="#1f6a28" />
+          </linearGradient>
+
+          <linearGradient id={ids.stemHi} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#eaffef" stopOpacity="0.28" />
+            <stop offset="100%" stopColor="#eaffef" stopOpacity="0.0" />
+          </linearGradient>
+
+          {/* Leaf gradient + highlight */}
+          <linearGradient id={ids.leafGrad} x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#49b053" />
+            <stop offset="55%" stopColor="#2e7d32" />
+            <stop offset="100%" stopColor="#1b5e20" />
+          </linearGradient>
+
+          <linearGradient id={ids.leafHi} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.22" />
+            <stop offset="100%" stopColor="#ffffff" stopOpacity="0.0" />
+          </linearGradient>
+
+          <filter id={ids.leafShadow} x="-40%" y="-40%" width="180%" height="180%">
+            <feDropShadow
+              dx="0"
+              dy="0.6"
+              stdDeviation="0.6"
+              floodColor="#000"
+              floodOpacity="0.22"
             />
-            <feMerge>
-              <feMergeNode in="tgs-blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
           </filter>
 
-          <style>{`
-            @keyframes tgs-drift {
-              from { transform: translateX(-15%); }
-              to   { transform: translateX(115%); }
-            }
-            @keyframes tgs-sway {
-              0%   { transform: rotate(-0.8deg); }
-              50%  { transform: rotate( 0.8deg); }
-              100% { transform: rotate(-0.8deg); }
-            }
-            .tgs-cloud {
-              animation: tgs-drift linear infinite;
-              opacity: ${isCloudy || isStormy ? 0.7 : 0.35};
-            }
-            .tgs-cloud0 { animation-duration: 28s; animation-delay: 0s; }
-            .tgs-cloud1 { animation-duration: 34s; animation-delay: 3s; }
-            .tgs-stem-group {
-              transform-origin: 50% 80%;
-              animation: tgs-sway ${isWindy ? 1.2 : 3}s ease-in-out infinite;
-            }
-          `}</style>
+          {/* CINDER core */}
+          <radialGradient id={ids.cinderCore} cx="50%" cy="50%" r="60%">
+            <stop offset="0%" stopColor="#ffd37a" stopOpacity="0.95" />
+            <stop offset="35%" stopColor="#ff7a18" stopOpacity="0.65" />
+            <stop offset="70%" stopColor="#ff2a2a" stopOpacity="0.22" />
+            <stop offset="100%" stopColor="#000" stopOpacity="0" />
+          </radialGradient>
+
+          <filter id={ids.steamBlur} x="-70%" y="-70%" width="240%" height="240%">
+            <feGaussianBlur stdDeviation="0.85" />
+          </filter>
+
+          {/* Tomato gradient follows ripeness */}
+          <radialGradient id={ids.tomatoGrad} cx="35%" cy="30%" r="72%">
+            <stop offset="0%" stopColor={tomatoLight} stopOpacity="0.98" />
+            <stop offset="35%" stopColor={tomatoMid} stopOpacity="0.98" />
+            <stop offset="80%" stopColor={tomatoDark} stopOpacity="1" />
+            <stop offset="100%" stopColor={tomatoEdge} stopOpacity="1" />
+          </radialGradient>
+
+          <radialGradient id={ids.tomatoSpec} cx="25%" cy="20%" r="55%">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.55" />
+            <stop offset="35%" stopColor="#ffffff" stopOpacity="0.18" />
+            <stop offset="100%" stopColor="#ffffff" stopOpacity="0.0" />
+          </radialGradient>
+
+          {/* optional rarity glow */}
+          {rarityGlow > 0 ? (
+            <filter id={ids.glow} x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur
+                in="SourceGraphic"
+                stdDeviation={Math.max(0.8, rarityGlow * 2.6)}
+                result="blur"
+              />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          ) : null}
         </defs>
 
         {/* Sky */}
-        <rect x="0" y="0" width="100" height="100" fill="url(#tgs-sky)" />
+        <rect x="0" y="0" width="100" height="100" fill={`url(#${ids.sky})`} />
 
         {/* Sun */}
-        {!isStormy && <circle cx="82" cy="13" r="9" fill="url(#tgs-sun)" />}
+        {!isStormy && <circle cx="82" cy="13" r="9" fill={`url(#${ids.sun})`} />}
 
         {/* Clouds */}
         {clouds.map((c, i) => (
-          <g
-            key={i}
-            className={"tgs-cloud tgs-cloud" + i}
-            style={{ transformBox: "fill-box" }}
-          >
-            <ellipse cx={c.x} cy={c.y} rx={c.w / 2} ry={c.h / 2} fill="#ffffff" />
-            <ellipse
-              cx={c.x + 6}
-              cy={c.y - 3}
-              rx={c.w / 3}
-              ry={c.h / 2.5}
-              fill="#ffffff"
-            />
-            <ellipse
-              cx={c.x - 6}
-              cy={c.y - 2}
-              rx={c.w / 3}
-              ry={c.h / 3}
-              fill="#ffffff"
-            />
+          <g key={i} opacity={cloudOpacity}>
+            <g>
+              <animateTransform
+                attributeName="transform"
+                type="translate"
+                dur={i === 0 ? "28s" : "34s"}
+                repeatCount="indefinite"
+                values="-40 0; 140 0"
+                begin={i === 0 ? "0s" : "3s"}
+              />
+              <ellipse cx={c.x} cy={c.y} rx={c.w / 2} ry={c.h / 2} fill="#fff" />
+              <ellipse cx={c.x + 6} cy={c.y - 3} rx={c.w / 3} ry={c.h / 2.5} fill="#fff" />
+              <ellipse cx={c.x - 6} cy={c.y - 2} rx={c.w / 3} ry={c.h / 3} fill="#fff" />
+            </g>
           </g>
         ))}
 
         {/* Soil */}
-        <rect x="0" y="80" width="100" height="20" fill="url(#tgs-soil)" />
+        <rect x="0" y="80" width="100" height="20" fill={`url(#${ids.soil})`} />
+
+        {/* CINDER core under soil */}
+        {isCinder && (
+          <g opacity={coreOpacity}>
+            <circle cx="50" cy="86" r="18" fill={`url(#${ids.cinderCore})`}>
+              <animate
+                attributeName="opacity"
+                values={`${coreOpacity};${Math.max(0.12, coreOpacity - 0.2)};${coreOpacity}`}
+                dur="2.4s"
+                repeatCount="indefinite"
+              />
+            </circle>
+          </g>
+        )}
+
+        {/* Steam above soil */}
+        {isCinder && steamCount > 0 && (
+          <g opacity={steamOpacity} filter={`url(#${ids.steamBlur})`}>
+            {steamLanes.map((s, i) => {
+              const x0 = s.x;
+              const y0 = steamBaseY + (i % 3) * 0.9;
+              const x1 = x0 + s.drift * 0.35;
+              const y1 = y0 - s.height * 0.45;
+              const x2 = x0 + s.drift;
+              const y2 = y0 - s.height;
+
+              const path = `M ${x0} ${y0}
+                            C ${x0 + s.wobble} ${y0 - 6},
+                              ${x1 - s.wobble} ${y1 + 6},
+                              ${x1} ${y1}
+                            S ${x2 + s.wobble} ${y2 + 6},
+                              ${x2} ${y2}`;
+
+              return (
+                <g key={i}>
+                  <path
+                    d={path}
+                    fill="none"
+                    stroke="#ffd7b2"
+                    strokeOpacity="0.62"
+                    strokeWidth={Math.max(1.0, s.width * 0.085)}
+                    strokeLinecap="round"
+                  >
+                    <animate
+                      attributeName="stroke-opacity"
+                      dur={`${s.dur}s`}
+                      repeatCount="indefinite"
+                      values="0;0.72;0"
+                      begin={`${s.delay}s`}
+                    />
+                  </path>
+
+                  <path
+                    d={path}
+                    fill="none"
+                    stroke="#ff7a18"
+                    strokeOpacity="0.18"
+                    strokeWidth={Math.max(1.9, s.width * 0.14)}
+                    strokeLinecap="round"
+                  >
+                    <animate
+                      attributeName="stroke-opacity"
+                      dur={`${s.dur}s`}
+                      repeatCount="indefinite"
+                      values="0;0.26;0"
+                      begin={`${s.delay}s`}
+                    />
+                  </path>
+
+                  <animateTransform
+                    attributeName="transform"
+                    type="translate"
+                    dur={`${s.dur}s`}
+                    repeatCount="indefinite"
+                    values={`0 0; 0 ${-s.height * 0.18}`}
+                    begin={`${s.delay}s`}
+                  />
+                  <animateTransform
+                    attributeName="transform"
+                    additive="sum"
+                    type="scale"
+                    dur={`${s.dur}s`}
+                    repeatCount="indefinite"
+                    values={`1; ${1 + s.puff * 0.06}; 1`}
+                    begin={`${s.delay}s`}
+                  />
+                </g>
+              );
+            })}
+          </g>
+        )}
 
         {/* Seed */}
         {stage.key === "seed" && (
-          <g filter="url(#tgs-glow)">
+          <g filter={plantFilter}>
             <ellipse cx="50" cy="80" rx="2.2" ry="1.6" fill="#8D6E63" />
             <path
               d="M49.7,79.3 Q50,78.6 50.3,79.3"
@@ -194,240 +406,131 @@ export default function TomatoGrowthSVG({
           </g>
         )}
 
-        {/* Plant (stem + branches + leaves + fruit) */}
-        <g className="tgs-stem-group" filter="url(#tgs-glow)">
-          {/* Main stem */}
-          <path
-            d={`M50 78 L50 ${stemTopY}`}
-            stroke="#2e7d32"
-            strokeWidth="2.4"
-            strokeLinecap="round"
-          />
+        {/* Plant */}
+        {stage.key !== "seed" && (
+          <g filter={plantFilter}>
+            <g>
+              <animateTransform
+                attributeName="transform"
+                type="rotate"
+                dur={swayDur}
+                repeatCount="indefinite"
+                values={`-0.8 50 80; 0.8 50 80; -0.8 50 80`}
+              />
 
-          {/* Side branches */}
-          {branchLevels.map((y, idx) => {
-            // fade lower branches on early stages
-            const visibleFactor =
-              stage.key === "seed"
-                ? 0
-                : stage.key === "seedling"
-                ? idx === 0
-                  ? 0.7
-                  : 0.2
-                : 1;
-            if (visibleFactor <= 0) return null;
+              {/* STEM */}
+              <TomatoStem stemTopY={stemTopY} ids={ids} />
 
-            const length = 11 + idx * 2;
-            const thickness = 1.4;
-            const alpha = 0.7 + 0.1 * (2 - idx);
+              {/* Branches */}
+              {branchLevels.map((y, idx) => {
+                const visibleFactor =
+                  stage.key === "seedling" ? (idx === 0 ? 0.75 : 0.25) : 1;
+                const length = 11 + idx * 2;
+                const thickness = 1.55;
+                const alpha = 0.7 + 0.1 * (2 - idx);
 
-            return (
-              <g key={idx} opacity={alpha * visibleFactor}>
-                {/* left */}
-                <path
-                  d={`M50 ${y} Q ${50 - length / 2} ${y - 2}, ${50 - length} ${y}`}
-                  stroke="#2e7d32"
-                  strokeWidth={thickness}
-                  fill="none"
-                  strokeLinecap="round"
-                />
-                {/* right */}
-                <path
-                  d={`M50 ${y} Q ${50 + length / 2} ${y - 2}, ${50 + length} ${y}`}
-                  stroke="#2e7d32"
-                  strokeWidth={thickness}
-                  fill="none"
-                  strokeLinecap="round"
-                />
-              </g>
-            );
-          })}
+                return (
+                  <g key={idx} opacity={alpha * visibleFactor}>
+                    <path
+                      d={`M50 ${y} Q ${50 - length / 2} ${y - 2}, ${50 - length} ${y}`}
+                      stroke="#0b2f10"
+                      strokeWidth={thickness + 0.9}
+                      fill="none"
+                      strokeLinecap="round"
+                      opacity="0.35"
+                    />
+                    <path
+                      d={`M50 ${y} Q ${50 + length / 2} ${y - 2}, ${50 + length} ${y}`}
+                      stroke="#0b2f10"
+                      strokeWidth={thickness + 0.9}
+                      fill="none"
+                      strokeLinecap="round"
+                      opacity="0.35"
+                    />
+                    <path
+                      d={`M50 ${y} Q ${50 - length / 2} ${y - 2}, ${50 - length} ${y}`}
+                      stroke={`url(#${ids.stemGrad})`}
+                      strokeWidth={thickness}
+                      fill="none"
+                      strokeLinecap="round"
+                    />
+                    <path
+                      d={`M50 ${y} Q ${50 + length / 2} ${y - 2}, ${50 + length} ${y}`}
+                      stroke={`url(#${ids.stemGrad})`}
+                      strokeWidth={thickness}
+                      fill="none"
+                      strokeLinecap="round"
+                    />
+                  </g>
+                );
+              })}
 
-          {/* Leaves */}
-          {Array.from({ length: totalLeaves }).map((_, i) => {
-            const levelIndex = i % branchLevels.length;
-            const baseY = branchLevels[levelIndex];
-            const side = i % 2 === 0 ? -1 : 1;
-            const offsetX = 8 + (i % 3) * 2;
-            const x = 50 + side * offsetX;
-            const y = baseY + (i % 3) * 1.2 - 4;
+              {/* Leaves */}
+              <TomatoLeaves
+                branchLevels={branchLevels}
+                totalLeaves={totalLeaves}
+                stageKey={stage.key}
+                ids={ids}
+              />
 
-            const scale = 0.85 + ((i * 7) % 5) * 0.05;
-            const rot = side * (18 + ((i * 11) % 7));
+              {/* Flowers */}
+              {(stage.key === "flower" || stage.key === "fruit") &&
+                branchLevels.map((y, idx) => {
+                  const cx = 50 + (idx - 1) * 6;
+                  const cy = y - 4;
+                  const op = stage.key === "flower" ? 0.9 : 0.4;
+                  return (
+                    <g key={idx} opacity={op}>
+                      {Array.from({ length: 3 }).map((_, j) => {
+                        const angle = (j * 120 * Math.PI) / 180;
+                        const fx = cx + Math.cos(angle) * 3;
+                        const fy = cy + Math.sin(angle) * 3;
+                        return (
+                          <g key={j}>
+                            <circle
+                              cx={fx}
+                              cy={fy}
+                              r="1.4"
+                              fill="#FFD54F"
+                              stroke="#F9A825"
+                              strokeWidth="0.3"
+                            />
+                            <circle cx={fx} cy={fy} r="0.5" fill="#F57F17" />
+                          </g>
+                        );
+                      })}
+                    </g>
+                  );
+                })}
 
-            // pointier / jagged tomato leaf shape
-            return (
-              <g
-                key={i}
-                transform={`translate(${x} ${y}) rotate(${rot}) scale(${scale})`}
-                opacity={stage.key === "seed" ? 0 : 0.9}
-              >
-                <path
-                  d="M0 0
-                     C 5 -2, 8 -1, 9 1
-                     C 7 1.5, 6 3, 5.5 4.5
-                     C 3 4.5, 1.5 5, 0 4.8
-                     C -1.5 5, -3 4.5, -4.8 3.8
-                     C -4.2 2, -3.5 1, -2.5 0.3
-                     C -1.2 -0.5, 0 -0.4, 0 0 Z"
-                  fill="#388E3C"
-                  stroke="#1B5E20"
-                  strokeWidth="0.3"
-                />
-                <path
-                  d="M0 0 L 5 4.2"
-                  stroke="#1B5E20"
-                  strokeWidth="0.3"
-                />
-              </g>
-            );
-          })}
+              {/* ✅ Fruit clusters (new component) */}
+              <TomatoFruitClusters
+                ids={ids}
+                stageKey={stage.key}
+                branchLevels={branchLevels}
+                stemTopY={stemTopY}
+                progress={progress}
+                rid={rid}
+              />
+            </g>
+          </g>
+        )}
 
-          {/* Flower clusters (small yellow stars) */}
-          {stage.key === "flower" || stage.key === "fruit" ? (
-            branchLevels.map((y, idx) => {
-              const cx = 50 + (idx - 1) * 6;
-              const cy = y - 4;
-              const opacity = stage.key === "flower" ? 0.9 : 0.4;
-              return (
-                <g key={idx} opacity={opacity}>
-                  {Array.from({ length: 3 }).map((_, j) => {
-                    const angle = (j * 120 * Math.PI) / 180;
-                    const fx = cx + Math.cos(angle) * 3;
-                    const fy = cy + Math.sin(angle) * 3;
-                    return (
-                      <g key={j}>
-                        <circle
-                          cx={fx}
-                          cy={fy}
-                          r="1.4"
-                          fill="#FFD54F"
-                          stroke="#F9A825"
-                          strokeWidth="0.3"
-                        />
-                        <circle cx={fx} cy={fy} r="0.5" fill="#F57F17" />
-                      </g>
-                    );
-                  })}
-                </g>
-              );
-            })
-          ) : null}
-
-          {/* Tomato trusses (only later) */}
-          {stage.key === "fruit" &&
-            branchLevels.map((y, idx) => {
-              const cx = 50 + (idx - 1) * 7;
-              const cy = y + 2;
-              const fruitsHere = idx === 0 ? 2 : 3;
-
-              return (
-                <g key={idx} filter="url(#tgs-glow)">
-                  {/* little stem downwards for truss */}
-                  <path
-                    d={`M${cx} ${cy - 2} Q ${cx} ${cy}, ${cx} ${cy + 4}`}
-                    stroke="#2e7d32"
-                    strokeWidth="0.7"
-                    fill="none"
-                  />
-                  {Array.from({ length: fruitsHere }).map((_, j) => {
-                    const spread = 5;
-                    const fx = cx + (j - (fruitsHere - 1) / 2) * spread;
-                    const fy = cy + 5 + (j % 2) * 1.5;
-                    const r = 2.8 + ((j + idx) % 2) * 0.6;
-
-                    return (
-                      <g key={j}>
-                        <circle
-                          cx={fx}
-                          cy={fy}
-                          r={r}
-                          fill={tomatoColor}
-                          stroke="#8B1A1A"
-                          strokeWidth="0.5"
-                        />
-                        {/* highlight */}
-                        <ellipse
-                          cx={fx - r * 0.3}
-                          cy={fy - r * 0.3}
-                          rx={r * 0.4}
-                          ry={r * 0.25}
-                          fill="#ffffff"
-                          opacity="0.15"
-                        />
-                      </g>
-                    );
-                  })}
-                </g>
-              );
-            })}
-        </g>
-
-        {/* Stage label bar */}
+        {/* Stage label */}
         <g>
-          <rect
-            x="6"
-            y="86"
-            width="88"
-            height="8"
-            rx="2"
-            fill="#FFFFFF"
-            opacity="0.6"
-          />
-          <text
-            x="50"
-            y="91.5"
-            textAnchor="middle"
-            fontSize="3.6"
-            fill="#1b3a2f"
-          >
+          <rect x="6" y="86" width="88" height="8" rx="2" fill="#fff" opacity="0.6" />
+          <text x="50" y="91.5" textAnchor="middle" fontSize="3.6" fill="#1b3a2f">
             {stage.label}
           </text>
         </g>
 
-        {/* Progress bar (real tick progress) */}
+        {/* Progress */}
         <g>
           <rect x="6" y="96" width="88" height="2" rx="1" fill="#e0e0e0" />
-          <rect
-            x="6"
-            y="96"
-            width={88 * progress}
-            height="2"
-            rx="1"
-            fill="#43A047"
-          />
+          <rect x="6" y="96" width={88 * progress} height="2" rx="1" fill="#43A047" />
         </g>
       </svg>
     </div>
   );
-}
-
-/* ---------- tiny color helpers ---------- */
-
-function lerpColor(a, b, t) {
-  const ca = hexToRgb(a);
-  const cb = hexToRgb(b);
-  const tt = Math.max(0, Math.min(1, t));
-  const r = Math.round(ca.r + (cb.r - ca.r) * tt);
-  const g = Math.round(ca.g + (cb.g - ca.g) * tt);
-  const b2 = Math.round(ca.b + (cb.b - ca.b) * tt);
-  return `rgb(${r}, ${g}, ${b2})`;
-}
-
-function hexToRgb(hex) {
-  const s = hex.replace("#", "");
-  const full =
-    s.length === 3
-      ? s
-          .split("")
-          .map((ch) => ch + ch)
-          .join("")
-      : s;
-  const n = parseInt(full, 16);
-  return {
-    r: (n >> 16) & 255,
-    g: (n >> 8) & 255,
-    b: n & 255,
-  };
 }
 

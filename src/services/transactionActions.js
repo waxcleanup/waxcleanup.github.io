@@ -7,54 +7,46 @@ import {
   ATOMIC_ASSETS_CONTRACT,
 } from './atomicAssetsService';
 
+// ✅ removed: memoEncryption (no more ENC memos)
+// import { encryptBurnPayload } from './memoEncryption';
+
 /**
  * Stake an incinerator by transferring it to the contract.
- * @param {string} accountName - The account name of the user.
- * @param {Object} incinerator - The incinerator object to stake.
- * @returns {string} - The transaction ID.
- * @throws Will throw an error if the staking process fails.
+ * Contract expects memo: "stakeincin:<template_id>"
  */
 export const stakeIncinerator = async (accountName, incinerator) => {
-  if (!incinerator) {
-    throw new Error('No incinerator selected for staking.');
-  }
+  if (!incinerator) throw new Error('No incinerator selected for staking.');
 
   const asset_id = incinerator.asset_id || incinerator.id;
   if (!asset_id) {
-    throw new Error(
-      'Selected incinerator is missing asset_id or id. Cannot proceed with staking.'
-    );
+    throw new Error('Selected incinerator is missing asset_id or id.');
   }
 
   let template_id;
   try {
     // Fetch template_id dynamically using asset_id
-    const response = await axios.get(
-      `${ATOMIC_ASSETS_BASE}/assets/${asset_id}`
-    );
-    if (response.data?.data) {
-      template_id = response.data.data.template.template_id;
-      console.log('[DEBUG] Fetched template_id:', template_id);
-    } else {
+    const response = await axios.get(`${ATOMIC_ASSETS_BASE}/assets/${asset_id}`);
+    template_id = response?.data?.data?.template?.template_id;
+
+    if (!template_id) {
       throw new Error('Failed to fetch template_id from AtomicAssets API.');
     }
+
+    console.log('[DEBUG] Fetched template_id:', template_id);
   } catch (error) {
     console.error('[ERROR] Error fetching template_id:', error.message || error);
     throw new Error('Could not fetch template_id for the selected incinerator.');
   }
 
-  const memo = `Stake NFT:${asset_id}`;
+  // ✅ MUST MATCH contract memo router
+  const memo = `stakeincin:${String(template_id)}`;
+
   const dataTrx = {
     actions: [
       {
         account: ATOMIC_ASSETS_CONTRACT,
         name: 'transfer',
-        authorization: [
-          {
-            actor: accountName,
-            permission: 'active',
-          },
-        ],
+        authorization: [{ actor: accountName, permission: 'active' }],
         data: {
           from: accountName,
           to: 'cleanupcentr',
@@ -84,45 +76,46 @@ export const stakeIncinerator = async (accountName, incinerator) => {
       error.message || error
     );
     throw new Error(
-      error.message || `Failed to stake incinerator (asset_id: ${asset_id}). Please try again.`
+      error.message ||
+        `Failed to stake incinerator (asset_id: ${asset_id}). Please try again.`
     );
   }
 };
 
 /**
  * Burn an NFT using an incinerator by transferring it to the contract.
- * @param {string} accountName - The account name of the user.
- * @param {Object} nft - The NFT object to burn.
- * @param {Object} incinerator - The incinerator object to use.
- * @returns {string} - The transaction ID.
- * @throws Will throw an error if the burn process fails.
+ * Contract expects memo: "burn:<incinerator_id>"
  */
 export const burnNFT = async (accountName, nft, incinerator) => {
   if (!nft || !incinerator) {
     throw new Error('Both an NFT and an incinerator must be selected for burning.');
   }
 
-  if (!nft.asset_id) {
+  const nftAssetId = String(nft.asset_id || '');
+  if (!nftAssetId) {
     console.error('[ERROR] Invalid NFT object:', nft);
     throw new Error('Selected NFT is invalid. Missing asset_id.');
   }
 
-  const memo = `Incinerate NFT:${nft.asset_id}:${incinerator.asset_id || incinerator.id}`;
+  const incId = String(incinerator.asset_id || incinerator.id || '');
+  if (!incId || incId === '0') {
+    console.error('[ERROR] Invalid incinerator object:', incinerator);
+    throw new Error('Selected incinerator is invalid. Missing asset_id or id.');
+  }
+
+  // ✅ MUST MATCH contract memo router (NO encryption)
+  const memo = `burn:${incId}`;
+
   const dataTrx = {
     actions: [
       {
-        account: ATOMIC_ASSETS_CONTRACT,
+        account: ATOMIC_ASSETS_CONTRACT, // usually "atomicassets"
         name: 'transfer',
-        authorization: [
-          {
-            actor: accountName,
-            permission: 'active',
-          },
-        ],
+        authorization: [{ actor: accountName, permission: 'active' }],
         data: {
           from: accountName,
           to: 'cleanupcentr',
-          asset_ids: [String(nft.asset_id)],
+          asset_ids: [nftAssetId],
           memo,
         },
       },
@@ -130,36 +123,32 @@ export const burnNFT = async (accountName, nft, incinerator) => {
   };
 
   try {
-    console.log('[DEBUG] Initiating burn transaction for NFT:', nft.asset_id);
+    console.log('[DEBUG] Initiating burn transaction for NFT:', nftAssetId, 'memo:', memo);
 
     const result = await InitTransaction(dataTrx);
     console.log('[DEBUG] Burn transaction result:', result);
 
     if (!result?.transactionId) {
       throw new Error(
-        `Burn transaction failed for NFT: ${nft.asset_id}. Missing transaction ID.`
+        `Burn transaction failed for NFT: ${nftAssetId}. Missing transaction ID.`
       );
     }
 
     return result.transactionId;
   } catch (error) {
     console.error(
-      `[ERROR] Error during burn transaction for NFT: ${nft.asset_id}`,
+      `[ERROR] Error during burn transaction for NFT: ${nftAssetId}`,
       error.message || error
     );
     throw new Error(
-      error.message || `Failed to burn NFT (asset_id: ${nft.asset_id}). Please try again.`
+      error.message || `Failed to burn NFT (asset_id: ${nftAssetId}). Please try again.`
     );
   }
 };
 
 /**
  * Load fuel into an incinerator.
- * @param {string} accountName - The user's WAX account name.
- * @param {string} incineratorId - The ID of the incinerator.
- * @param {number} amount - The amount of fuel to load.
- * @returns {string} - The transaction ID.
- * @throws Will throw an error if the load fuel process fails.
+ * Memo: "loadfuel:<incinerator_id>"
  */
 export const loadFuel = async (accountName, incineratorId, amount) => {
   if (!Number.isInteger(amount) || amount <= 0) {
@@ -171,17 +160,12 @@ export const loadFuel = async (accountName, incineratorId, amount) => {
       {
         account: 'cleanuptoken',
         name: 'transfer',
-        authorization: [
-          {
-            actor: accountName,
-            permission: 'active',
-          },
-        ],
+        authorization: [{ actor: accountName, permission: 'active' }],
         data: {
           from: accountName,
           to: 'cleanupcentr',
           quantity: `${Number(amount).toFixed(3)} TRASH`,
-          memo: `loadfuel:${incineratorId}`,
+          memo: `loadfuel:${String(incineratorId)}`,
         },
       },
     ],
@@ -213,10 +197,7 @@ export const loadFuel = async (accountName, incineratorId, amount) => {
 
 /**
  * Load energy into an incinerator.
- * @param {string} accountName - The user's WAX account name.
- * @param {string} incineratorId - The ID of the incinerator.
- * @returns {string} - The transaction ID.
- * @throws Will throw an error if the load energy process fails.
+ * Memo: "loadenergy:<incinerator_id>"
  */
 export const loadEnergy = async (accountName, incineratorId) => {
   const dataTrx = {
@@ -224,17 +205,12 @@ export const loadEnergy = async (accountName, incineratorId) => {
       {
         account: 'cleanuptoken',
         name: 'transfer',
-        authorization: [
-          {
-            actor: accountName,
-            permission: 'active',
-          },
-        ],
+        authorization: [{ actor: accountName, permission: 'active' }],
         data: {
           from: accountName,
           to: 'cleanupcentr',
           quantity: `2.000000 CINDER`,
-          memo: `loadenergy:${incineratorId}`,
+          memo: `loadenergy:${String(incineratorId)}`,
         },
       },
     ],
@@ -266,16 +242,17 @@ export const loadEnergy = async (accountName, incineratorId) => {
 
 /**
  * Repair an incinerator by sending CINDER to the contract.
- * @param {string} accountName – The user's WAX account.
- * @param {string|number} incineratorId – The incinerator asset ID.
- * @param {number} points – Number of durability points to repair (1 CINDER = 1 point).
+ * Memo: "repair:<incinerator_id>"
  */
 export const repairIncinerator = async (accountName, incineratorId, points) => {
-  if (!Number.isInteger(points) || points < 1)
+  if (!Number.isInteger(points) || points < 1) {
     throw new Error('Repair points must be a positive integer.');
+  }
 
   const quantity = `${points.toFixed(6)} CINDER`;
-  const memo = `repairincin:${incineratorId}`;
+  // NOTE: contract router expects memo prefix "repair:" (not "repairincin:")
+  const memo = `repair:${String(incineratorId)}`;
+
   const dataTrx = {
     actions: [
       {
@@ -290,34 +267,31 @@ export const repairIncinerator = async (accountName, incineratorId, points) => {
   try {
     console.log('[DEBUG] Initiating repair transaction:', dataTrx);
     const result = await InitTransaction(dataTrx);
-    if (!result?.transactionId)
+
+    if (!result?.transactionId) {
       throw new Error(`Repair failed for incinerator ${incineratorId}.`);
+    }
+
     return result.transactionId;
   } catch (error) {
-    console.error('[ERROR] Repair transaction error:', error);
-    throw new Error(
-      error.message || `Failed to repair incinerator ${incineratorId}.`
-    );
+    console.error('[ERROR] Repair transaction error:', error.message || error);
+    throw new Error(error.message || `Failed to repair incinerator ${incineratorId}.`);
   }
 };
 
 /**
  * Unstake an incinerator by calling the backend route.
- * @param {string} accountName - The user's WAX account name.
- * @param {Object} incinerator - The incinerator object to unstake.
- * @returns {string} - The transaction ID.
  */
 export const unstakeIncinerator = async (accountName, incinerator) => {
   const asset_id = incinerator.asset_id || incinerator.id;
-  if (!asset_id) throw new Error('Invalid incinerator object. Missing asset_id or id.');
+  if (!asset_id) {
+    throw new Error('Invalid incinerator object. Missing asset_id or id.');
+  }
 
   try {
     const response = await axios.post(
       `${process.env.REACT_APP_API_BASE_URL}/incinerators/unstake`,
-      {
-        owner: accountName,
-        incinerator_id: asset_id,
-      }
+      { owner: accountName, incinerator_id: asset_id }
     );
 
     const result = response.data;
@@ -339,18 +313,94 @@ export const finalizeRepair = async (accountName, incineratorId) => {
       `${process.env.REACT_APP_API_BASE_URL}/finalize-repair`,
       { user: accountName, incinerator_id: incineratorId }
     );
+
     const data = response.data;
     if (data.success) {
-      const txId =
-        data.result?.transaction_id ||
-        data.result?.transactionId ||
-        data.result;
-      return txId;
-    } else {
-      throw new Error(data.error || 'Failed to finalize repair');
+      return data.result?.transaction_id || data.result?.transactionId || data.result;
     }
+
+    throw new Error(data.error || 'Failed to finalize repair');
   } catch (error) {
     console.error('[ERROR] finalizeRepair error:', error.message || error);
     throw new Error(error.message || 'Failed to finalize repair');
   }
 };
+
+// ======================================================
+// ✅ Incinerator Slotting (contract-managed)
+// actions:
+//   setincslot(user, slot, incinerator_id)
+//   clearincslot(user, slot)
+// ======================================================
+
+export const setIncineratorSlot = async (accountName, slotIndex, incineratorId) => {
+  const slot = Number(slotIndex);
+  const id = String(incineratorId);
+
+  if (!accountName) throw new Error('Missing accountName.');
+  if (!Number.isInteger(slot) || slot < 0) throw new Error('Invalid slot index.');
+  if (!id || id === '0') throw new Error('Invalid incinerator id.');
+
+  const dataTrx = {
+    actions: [
+      {
+        account: 'cleanupcentr',
+        name: 'setincslot',
+        authorization: [{ actor: accountName, permission: 'active' }],
+        data: {
+          user: accountName,
+          slot,
+          incinerator_id: id,
+        },
+      },
+    ],
+  };
+
+  try {
+    console.log('[DEBUG] Initiating setIncineratorSlot:', dataTrx);
+    const result = await InitTransaction(dataTrx);
+
+    if (!result?.transactionId) {
+      throw new Error(`Failed to equip incinerator ${id} into slot ${slot}.`);
+    }
+    return result.transactionId;
+  } catch (error) {
+    console.error('[ERROR] setIncineratorSlot error:', error.message || error);
+    throw new Error(error.message || 'Failed to equip incinerator. Please try again.');
+  }
+};
+
+export const clearIncineratorSlot = async (accountName, slotIndex) => {
+  const slot = Number(slotIndex);
+
+  if (!accountName) throw new Error('Missing accountName.');
+  if (!Number.isInteger(slot) || slot < 0) throw new Error('Invalid slot index.');
+
+  const dataTrx = {
+    actions: [
+      {
+        account: 'cleanupcentr',
+        name: 'clearincslot',
+        authorization: [{ actor: accountName, permission: 'active' }],
+        data: {
+          user: accountName,
+          slot,
+        },
+      },
+    ],
+  };
+
+  try {
+    console.log('[DEBUG] Initiating clearIncineratorSlot:', dataTrx);
+    const result = await InitTransaction(dataTrx);
+
+    if (!result?.transactionId) {
+      throw new Error(`Failed to clear incinerator slot ${slot}.`);
+    }
+    return result.transactionId;
+  } catch (error) {
+    console.error('[ERROR] clearIncineratorSlot error:', error.message || error);
+    throw new Error(error.message || 'Failed to unequip incinerator. Please try again.');
+  }
+};
+

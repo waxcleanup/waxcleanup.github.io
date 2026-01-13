@@ -16,8 +16,10 @@ const PRECISION = 6;
  * Recharge the *user energy* pool.
  *
  * Sends a CINDER transfer from the logged-in wallet to the rhythmfarmer
- * contract with memo "Recharge User". The listener will pick this up and
- * call `chguser(user, qty)` on-chain.
+ * contract with memo "poweruser".
+ *
+ * This triggers on-chain `on_notify("*::transfer")` and calls
+ * `chguser_internal(...)` directly (NO backend listener).
  *
  * @param {number|string} amount  CINDER amount (e.g. 1, "1", "0.5")
  */
@@ -44,12 +46,13 @@ export async function rechargeUserEnergy(amount) {
         account: TOKEN_CONTRACT,   // cleanuptoken
         name: 'transfer',
         data: {
-          from: actor,            // 👈 FIXED: no longer ""
-          to: FARM_CONTRACT,      // rhythmfarmer
-          quantity,               // "1.000000 CINDER"
-          memo: 'Recharge User'   // listener routes this to chguser
+          from: actor,
+          to: FARM_CONTRACT,       // rhythmfarmer
+          quantity,                // "1.000000 CINDER"
+          memo: 'poweruser'        // ✅ on-chain notify route
         }
       }
     ]
   });
 }
+

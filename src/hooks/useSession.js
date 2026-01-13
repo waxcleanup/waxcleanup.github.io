@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 
 export const TAPOS = {
   blocksBehind: 3, // Adjusted for lower latency
-  expireSeconds: 30, // Reduced expiration time for faster testing
+  expireSeconds: 120, // Reduced expiration time for faster testing
   broadcast: true,
 };
 

@@ -1,28 +1,93 @@
 /* src/components/FarmSlotModal.css */
 
+/* =========================
+   Modal Backdrop
+   ========================= */
 .slot-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
+
+  background:
+    radial-gradient(900px 520px at 20% 10%, rgba(255, 214, 128, 0.12), transparent 60%),
+    radial-gradient(900px 520px at 80% 20%, rgba(111, 255, 179, 0.10), transparent 55%),
+    rgba(0, 0, 0, 0.62);
+
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 40;
+
+  z-index: 9999;
+
+  overscroll-behavior: contain;
+
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: opacity;
 }
 
-/* The actual card */
+/* =========================
+   Card
+   ========================= */
 .slot-modal-card {
-  width: 320px;
-  max-width: 90vw;
-  background-color: #020617;        /* <-- solid background */
-  border-radius: 12px;
-  border: 1px solid #1f2937;
-  padding: 0.9rem 1rem 1.1rem;
-  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.6);
-  color: #e5e7eb;                   /* light text */
+  width: 360px;
+  max-width: 92vw;
+
+  max-height: 84vh;
+  overflow: auto;
+
+  border-radius: 16px;
+  padding: 1rem 1rem 1.1rem;
+
+  color: rgba(235, 255, 245, 0.92);
+
+  /* Farm vibe: foliage + soil + night */
+  background:
+    radial-gradient(800px 340px at 15% 0%, rgba(255, 214, 128, 0.12), transparent 60%),
+    radial-gradient(700px 320px at 90% 15%, rgba(111, 255, 179, 0.10), transparent 55%),
+    radial-gradient(700px 520px at 30% 115%, rgba(160, 110, 70, 0.16), transparent 60%),
+    linear-gradient(180deg, rgba(8, 17, 11, 0.96) 0%, rgba(10, 24, 15, 0.96) 55%, rgba(14, 36, 21, 0.96) 100%);
+
+  border: 1px solid rgba(111, 255, 179, 0.20);
+
+  box-shadow:
+    0 18px 55px rgba(0, 0, 0, 0.62),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: transform;
+
+  animation: slotModalPop 160ms ease-out;
 }
 
-/* Header */
+@keyframes slotModalPop {
+  from { transform: translateZ(0) scale(0.985); opacity: 0; }
+  to   { transform: translateZ(0) scale(1); opacity: 1; }
+}
+
+/* subtle top glow bar */
+.slot-modal-card::before {
+  content: "";
+  position: absolute;
+  /* allow the pseudo element without affecting layout */
+  inset: 0;
+  pointer-events: none;
+  border-radius: 16px;
+  mask-image: linear-gradient(180deg, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 40%);
+  opacity: 0.9;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(111, 255, 179, 0),
+      rgba(111, 255, 179, 0.22),
+      rgba(255, 214, 128, 0.18),
+      rgba(111, 255, 179, 0)
+    );
+}
+
+/* =========================
+   Header
+   ========================= */
 .slot-modal-header {
   display: flex;
   align-items: center;
@@ -31,108 +96,212 @@
 }
 
 .slot-modal-header h3 {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #f9fafb;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  color: rgba(245, 255, 250, 0.95);
+  margin: 0;
 }
 
 .slot-modal-close {
-  background: transparent;
-  border: none;
-  color: #9ca3af;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  color: rgba(210, 214, 235, 0.85);
+
   font-size: 1rem;
   cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 10px;
+
+  transition: transform 140ms ease, background 140ms ease, border-color 140ms ease;
 }
 
 .slot-modal-close:hover {
-  color: #f97373;
+  color: rgba(255, 107, 107, 0.95);
+  background: rgba(255, 107, 107, 0.08);
+  border-color: rgba(255, 107, 107, 0.25);
+  transform: translateY(-1px);
 }
 
-/* Body & rows */
+.slot-modal-close:active {
+  transform: translateY(0);
+}
+
+.slot-modal-close:focus-visible {
+  outline: 2px solid rgba(111, 255, 179, 0.55);
+  outline-offset: 3px;
+}
+
+/* =========================
+   Body
+   ========================= */
 .slot-modal-body {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.55rem;
 }
 
+/* Plant preview area (svg container) */
+.slot-modal-plant {
+  border-radius: 14px;
+  padding: 0.65rem;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(160, 110, 70, 0.16), transparent 55%),
+    linear-gradient(180deg, rgba(0,0,0,0.18), rgba(0,0,0,0.10));
+  border: 1px solid rgba(111, 255, 179, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.slot-modal-plant-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Rows */
 .slot-modal-row {
   display: flex;
   justify-content: space-between;
-  font-size: 0.9rem;
+  align-items: center;
+
+  font-size: 0.92rem;
+  gap: 10px;
+
+  padding: 0.45rem 0.55rem;
+  border-radius: 12px;
+
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .slot-label {
-  color: #9ca3af;
+  color: rgba(220, 255, 235, 0.72);
+  font-weight: 700;
+  letter-spacing: 0.15px;
 }
 
 .slot-value {
-  color: #e5e7eb;
-  font-weight: 500;
+  color: rgba(235, 255, 245, 0.92);
+  font-weight: 800;
+  text-align: right;
+}
+
+/* State chips */
+.slot-value.state-empty,
+.slot-value.state-growing,
+.slot-value.state-ready {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  letter-spacing: 0.25px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .slot-value.state-empty {
-  color: #9ca3af;
+  color: rgba(210, 214, 235, 0.85);
+  border-color: rgba(255, 255, 255, 0.10);
 }
 
 .slot-value.state-growing {
-  color: #22c55e;
+  color: rgba(134, 239, 172, 0.95);
+  border-color: rgba(34, 197, 94, 0.35);
+  background: rgba(34, 197, 94, 0.10);
 }
 
 .slot-value.state-ready {
-  color: #facc15;
+  color: rgba(253, 230, 138, 0.95);
+  border-color: rgba(251, 191, 36, 0.45);
+  background: rgba(251, 191, 36, 0.10);
 }
 
-/* Actions */
-.slot-modal-actions {
-  margin-top: 0.8rem;
+/* =========================
+   Progress Bar (new)
+   ========================= */
+.slot-progress {
+  margin-top: 0.35rem;
+  padding: 0.6rem 0.7rem;
+  border-radius: 14px;
+
+  background:
+    radial-gradient(700px 220px at 15% 0%, rgba(255, 214, 128, 0.10), transparent 60%),
+    rgba(0, 0, 0, 0.18);
+
+  border: 1px solid rgba(111, 255, 179, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.slot-progress-top {
   display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 0.4rem;
 }
 
-.slot-action-btn {
-  flex: 1;
-  min-width: 120px;
-  padding: 0.4rem 0.6rem;
-  border-radius: 999px;
-  border: none;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: transform 0.1s ease, box-shadow 0.1s ease, opacity 0.1s ease;
+.slot-progress-title {
+  font-weight: 900;
+  letter-spacing: 0.2px;
+  color: rgba(245, 255, 250, 0.95);
+  font-size: 0.9rem;
 }
 
-.slot-action-btn:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
-.water-btn {
-  background: linear-gradient(90deg, #0ea5e9, #22c55e);
-  color: #0b1120;
-  box-shadow: 0 0 12px rgba(56, 189, 248, 0.6);
-}
-
-.water-btn:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 0 16px rgba(56, 189, 248, 0.9);
-}
-
-.harvest-btn {
-  background: linear-gradient(90deg, #f97316, #facc15);
-  color: #0b1120;
-  box-shadow: 0 0 12px rgba(248, 250, 109, 0.6);
-}
-
-.harvest-btn:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 0 16px rgba(248, 250, 109, 0.9);
-}
-
-/* Empty info text */
-.slot-empty-info {
-  margin-top: 0.4rem;
+.slot-progress-meta {
+  font-weight: 900;
   font-size: 0.8rem;
-  color: #9ca3af;
+  color: rgba(220, 255, 235, 0.72);
+}
+
+.slot-progress-track {
+  height: 12px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.slot-progress-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+
+  background:
+    linear-gradient(
+      90deg,
+      rgba(34, 197, 94, 0.95),
+      rgba(111, 255, 179, 0.95),
+      rgba(251, 191, 36, 0.90)
+    );
+
+  box-shadow: 0 0 14px rgba(111, 255, 179, 0.14);
+  transition: width 220ms ease;
+}
+
+/* =========================
+   Empty state note
+   ========================= */
+.slot-empty-info {
+  margin-top: 0.25rem;
+  font-size: 0.82rem;
+  color: rgba(220, 255, 235, 0.65);
+
+  padding: 0.55rem 0.65rem;
+  border-radius: 12px;
+
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .slot-modal-card {
+    animation: none;
+  }
+  .slot-modal-close {
+    transition: none;
+  }
+  .slot-progress-fill {
+    transition: none;
+  }
 }
 
