@@ -24,3 +24,10 @@ yarn-error.log*
 
 
 .env
+
+# build artifacts
+build/
+static/
+404.html
+node_modules/.cache/
+
