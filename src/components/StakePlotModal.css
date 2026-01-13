@@ -1,0 +1,113 @@
+/* src/components/StakePlotModal.css */
+.stakeplot-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.stakeplot-modal {
+  width: min(520px, calc(100vw - 24px));
+  max-height: min(80vh, 720px);
+  overflow: auto; /* ✅ allow content scroll inside, not page */
+
+  background: #0b1020;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+
+  /* ✅ prevents “jump/flicker” on some GPUs/Chrome */
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: transform;
+}
+
+
+.stakeplot-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.stakeplot-header h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.stakeplot-x {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.stakeplot-body {
+  padding: 14px;
+}
+
+.stakeplot-sub {
+  margin: 0 0 12px 0;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 13px;
+}
+
+.stakeplot-label {
+  display: block;
+  margin: 0 0 6px 0;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.stakeplot-select {
+  width: 100%;
+  padding: 10px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.stakeplot-empty {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.stakeplot-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 12px 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.btn-primary,
+.btn-secondary {
+  padding: 10px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.btn-primary {
+  background: #f59f0b;
+  color: #0b1020;
+  border-color: rgba(0, 0, 0, 0.2);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.9);
+}

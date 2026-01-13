@@ -1,0 +1,40 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Remove leftover submodule references
+        run: |
+          # Remove .gitmodules if it exists
+          if [ -f .gitmodules ]; then
+            rm .gitmodules
+          fi
+          # Remove any submodule config from local git config
+          git config --local --remove-section submodule.cleanupcenter || true
+          # Remove the submodule folder if exists
+          rm -rf cleanupcenter || true
+
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build the project
+        run: npm run build
+
+      - name: Deploy to GitHub Pages
+        run: npm run deploy

@@ -1,0 +1,181 @@
+/* ======================================================
+   PROPOSALS PAGE – CLEANUPCENTR DARK / ORANGE STYLE
+   (Improves readability + proposer link visibility)
+   ====================================================== */
+
+.proposals-section {
+  padding: 18px;
+  color: #e8e8e8;
+}
+
+.proposals-section h2 {
+  margin: 0 0 12px;
+  text-align: center;
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #ff9f2f;
+  text-shadow: 0 0 10px rgba(255, 140, 0, 0.35);
+}
+
+/* ---------- Table wrapper (lets it scroll on mobile) ---------- */
+.proposals-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: rgba(20, 20, 20, 0.92);
+  border: 1px solid rgba(255, 140, 0, 0.18);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 0 18px rgba(0, 0, 0, 0.55);
+}
+
+/* Header */
+.proposals-table thead th {
+  padding: 12px 10px;
+  text-align: left;
+  font-weight: 800;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.9);
+
+  background: linear-gradient(180deg, rgba(40, 40, 40, 0.95), rgba(18, 18, 18, 0.95));
+  border-bottom: 1px solid rgba(255, 140, 0, 0.18);
+  white-space: nowrap;
+}
+
+/* Cells */
+.proposals-table tbody td {
+  padding: 10px 10px;
+  font-size: 0.92rem;
+  color: rgba(255, 255, 255, 0.82);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+/* Zebra rows */
+.proposal-row:nth-child(odd) {
+  background: rgba(255, 255, 255, 0.02);
+}
+.proposal-row:nth-child(even) {
+  background: rgba(255, 255, 255, 0.01);
+}
+
+/* Hover highlight */
+.proposal-row:hover {
+  background: rgba(255, 140, 0, 0.06);
+}
+
+/* ---------- Proposer link FIX (was too dark blue) ---------- */
+.proposals-table tbody td a {
+  color: #8fd3ff; /* ✅ brighter cyan/blue for dark theme */
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.proposals-table tbody td a:hover {
+  color: #ffd08a; /* ✅ orange-ish hover */
+  text-decoration: underline;
+  text-shadow: 0 0 8px rgba(255, 140, 0, 0.35);
+}
+
+/* ---------- Schema-wide label ---------- */
+.schema-wide-label {
+  display: inline-block;
+  padding: 6px 8px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #000;
+
+  background: linear-gradient(180deg, #ffb14a, #ff8c00);
+  box-shadow: 0 0 10px rgba(255, 140, 0, 0.35);
+}
+
+/* ---------- Actions column ---------- */
+.actions {
+  min-width: 220px;
+}
+
+.vote-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+/* Buttons baseline */
+.vote-button {
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.08s ease, filter 0.15s ease, background 0.15s ease;
+}
+
+.vote-button:hover {
+  filter: brightness(1.06);
+}
+
+.vote-button:active {
+  transform: translateY(1px);
+}
+
+/* Vote For / Against styling */
+.vote-for {
+  border-color: rgba(40, 167, 69, 0.4);
+  box-shadow: 0 0 12px rgba(40, 167, 69, 0.18);
+}
+
+.vote-against {
+  border-color: rgba(220, 53, 69, 0.45);
+  box-shadow: 0 0 12px rgba(220, 53, 69, 0.18);
+}
+
+.vote-unstake {
+  border-color: rgba(255, 140, 0, 0.45);
+  box-shadow: 0 0 12px rgba(255, 140, 0, 0.18);
+}
+
+/* Voting closed text */
+.voting-closed {
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* No proposals */
+.no-proposals-message {
+  text-align: center;
+  margin-top: 14px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* ======================================================
+   MOBILE: make table scroll instead of squishing
+   ====================================================== */
+@media (max-width: 980px) {
+  .proposals-section {
+    padding: 12px;
+  }
+
+  /* Wrap the table in its own horizontal scroll */
+  .proposals-table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 520px) {
+  .proposals-section h2 {
+    font-size: 1.35rem;
+  }
+
+  .vote-buttons {
+    flex-direction: column;
+  }
+
+  .actions {
+    min-width: 160px;
+  }
+}
+

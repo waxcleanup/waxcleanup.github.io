@@ -1,0 +1,225 @@
+/* src/components/FarmCard.css */
+
+/* =========================
+   Farm Card (Horizontal-first)
+   Matches FarmDisplay farm theme
+   ========================= */
+
+.farm-card {
+  position: relative;
+  overflow: hidden;
+
+  border-radius: 1rem;
+  padding: 1rem;
+
+  background:
+    radial-gradient(800px 360px at 15% 0%, rgba(111, 255, 179, 0.10), transparent 60%),
+    radial-gradient(900px 420px at 90% 20%, rgba(255, 214, 128, 0.08), transparent 60%),
+    linear-gradient(180deg, rgba(12, 30, 18, 0.86) 0%, rgba(10, 24, 15, 0.84) 100%);
+
+  border: 1px solid rgba(111, 255, 179, 0.18);
+  box-shadow:
+    0 14px 40px rgba(0, 0, 0, 0.46),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+/* optional class you use */
+.farm-card.compact {
+  padding: 0.9rem;
+}
+
+/* subtle top glow bar */
+.farm-card::before {
+  content: "";
+  position: absolute;
+  left: 1rem;
+  right: 1rem;
+  top: 0.75rem;
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    rgba(111, 255, 179, 0.0),
+    rgba(111, 255, 179, 0.32),
+    rgba(255, 214, 128, 0.20),
+    rgba(111, 255, 179, 0.0)
+  );
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+/* =========================
+   ✅ HORIZONTAL-FIRST CARD GRID
+   image | info | actions
+   plots row spans full width
+   ========================= */
+.farm-card {
+  display: grid;
+  grid-template-columns: 120px 1fr 220px;
+  grid-template-areas:
+    "image info actions"
+    "plots plots plots";
+  gap: 1rem;
+  align-items: start;
+}
+
+/* -------------------------
+   Image
+-------------------------- */
+.farm-card-image,
+.farm-card-image--empty {
+  grid-area: image;
+  width: 120px;
+  height: 120px;
+  border-radius: 0.95rem;
+  object-fit: cover;
+
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+
+  box-shadow:
+    0 10px 22px rgba(0,0,0,0.35),
+    inset 0 1px 0 rgba(255,255,255,0.04);
+}
+
+/* empty placeholder */
+.farm-card-image--empty {
+  display: block;
+}
+
+/* -------------------------
+   Info
+-------------------------- */
+.farm-info {
+  grid-area: info;
+  min-width: 0;
+  color: rgba(235, 255, 245, 0.92);
+}
+
+.farm-title {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.05rem;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+  color: rgba(240, 255, 250, 0.96);
+  text-shadow: 0 0 18px rgba(111, 255, 179, 0.12);
+}
+
+.farm-info p {
+  margin: 0.28rem 0;
+  font-size: 0.92rem;
+  color: rgba(220, 255, 235, 0.78);
+}
+
+.farm-info strong {
+  color: rgba(245, 255, 250, 0.92);
+}
+
+/* -------------------------
+   Actions
+-------------------------- */
+.farm-actions {
+  grid-area: actions;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  align-items: stretch;
+}
+
+/* Buttons inherit styles from FarmDisplay.css too,
+   but we keep defaults here so FarmCard works standalone */
+.farm-actions button {
+  background:
+    radial-gradient(600px 260px at 20% 0%, rgba(255, 214, 128, 0.10), transparent 55%),
+    linear-gradient(180deg, rgba(30, 90, 55, 0.88), rgba(18, 60, 38, 0.92));
+  color: rgba(245, 255, 250, 0.95);
+  border: 1px solid rgba(111, 255, 179, 0.22);
+  border-radius: 0.85rem;
+  padding: 0.58rem 0.95rem;
+  cursor: pointer;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+
+  transition: transform 140ms ease, background 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+  box-shadow:
+    0 10px 20px rgba(0, 0, 0, 0.30),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.farm-actions button:hover {
+  background:
+    radial-gradient(600px 260px at 20% 0%, rgba(255, 214, 128, 0.14), transparent 55%),
+    linear-gradient(180deg, rgba(42, 118, 72, 0.95), rgba(24, 80, 50, 0.96));
+  border-color: rgba(111, 255, 179, 0.35);
+  transform: translateY(-1px);
+  box-shadow:
+    0 14px 26px rgba(0, 0, 0, 0.38),
+    0 0 24px rgba(111, 255, 179, 0.10);
+}
+
+.farm-actions button:active {
+  transform: translateY(0px) scale(0.99);
+}
+
+.farm-actions button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* -------------------------
+   Plots section (full width)
+-------------------------- */
+.farm-plots-section {
+  grid-area: plots;
+  margin-top: 0.25rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+.farm-plots-title {
+  margin: 0 0 0.55rem 0;
+  font-size: 0.95rem;
+  font-weight: 900;
+  color: rgba(235, 255, 245, 0.92);
+}
+
+/* -------------------------
+   Responsive: stack on small screens
+-------------------------- */
+@media (max-width: 780px) {
+  .farm-card {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "image"
+      "info"
+      "actions"
+      "plots";
+  }
+
+  .farm-card-image,
+  .farm-card-image--empty {
+    width: 100%;
+    height: 190px;
+  }
+
+  .farm-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .farm-actions button {
+    flex: 1 1 190px;
+    max-width: 280px;
+  }
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .farm-actions button {
+    transition: none;
+  }
+}
+
