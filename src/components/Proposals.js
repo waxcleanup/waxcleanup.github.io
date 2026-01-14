@@ -33,6 +33,12 @@ const Proposals = ({ proposals, handleVote, handleUnstake }) => {
     return `${hours}h ${minutes}m ${seconds}s`;
   }, []);
 
+  // ✅ Proposal cap formatter (shows in table)
+  const formatCap = useCallback((v) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n.toLocaleString() : '—';
+  }, []);
+
   // Initialize remaining seconds from API (seconds_left)
   useEffect(() => {
     if (!proposals || !proposals.length) {
@@ -148,6 +154,8 @@ const Proposals = ({ proposals, handleVote, handleUnstake }) => {
               <th>NFT</th>
               <th>Trash Fee</th>
               <th>Cinder Reward</th>
+              {/* ✅ NEW */}
+              <th>Burn Cap</th>
               <th>Votes For</th>
               <th>Votes Against</th>
               <th>My Stake</th>
@@ -205,6 +213,10 @@ const Proposals = ({ proposals, handleVote, handleUnstake }) => {
 
                   <td>{proposal.trash_fee}</td>
                   <td>{proposal.cinder_reward}</td>
+
+                  {/* ✅ NEW: proposal cap (works for nftburn + schemaburn) */}
+                  <td>{formatCap(proposal.proposal_cap)}</td>
+
                   <td>{fmtVotes(proposal.votes_for)}</td>
                   <td>{fmtVotes(proposal.votes_against)}</td>
 
