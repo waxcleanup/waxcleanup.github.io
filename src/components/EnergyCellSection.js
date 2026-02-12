@@ -5,7 +5,7 @@ import { stakeUserCell, unstakeUserCell } from "../services/userCellActions";
 import { toIpfsUrl } from "../utils/ipfs";
 import "./EnergyCellSection.css";
 
-const ENERGY_PER_CINDER = 10;
+const ENERGY_PER_CINDER = 5;
 
 function clamp(n, a, b) {
   return Math.max(a, Math.min(b, n));
