@@ -52,7 +52,12 @@ function getWaterCooldownMs(slot) {
   return null;
 }
 
-export default function FarmPlotsGrid({ farmId, onChanged, refreshNonce }) {
+export default function FarmPlotsGrid({
+  farmId,
+  onChanged,
+  refreshNonce,
+  showMyPlotsOnly = false, // ✅ filter toggle
+}) {
   const { session } = useSession();
   const wallet = session?.actor;
 
@@ -251,6 +256,12 @@ export default function FarmPlotsGrid({ farmId, onChanged, refreshNonce }) {
     [blockchainTime]
   );
 
+  // ✅ Filter plots (renders only user's plots when toggle enabled)
+  const visiblePlots =
+    showMyPlotsOnly && wallet
+      ? plots.filter((p) => String(p.owner || '') === String(wallet))
+      : plots;
+
   if (loading && !plots.length) {
     return <div className="plots-grid-status">Loading plots…</div>;
   }
@@ -263,44 +274,51 @@ export default function FarmPlotsGrid({ farmId, onChanged, refreshNonce }) {
     <>
       {txError && <div className="plots-grid-status error">{txError}</div>}
 
-      <div className="farm-plots-grid">
-        {plots.map((plot) => {
-          const isOwner =
-            !!wallet && !!plot.owner && String(plot.owner) === String(wallet);
+      {showMyPlotsOnly && wallet && !loading && plots.length > 0 && visiblePlots.length === 0 && (
+        <div className="plots-grid-status">No plots owned by you in this farm.</div>
+      )}
 
-          // ✅ FIX 1: correct active-crop detection (do NOT treat seed_tpl_id: 0 as active)
+      <div className="farm-plots-grid">
+        {visiblePlots.map((plot) => {
+          const isOwner = !!wallet && !!plot.owner && String(plot.owner) === String(wallet);
+
+          // ✅ correct active-crop detection
           const hasActiveCrop = (plot.slots || []).some((s) => {
             const state = String(s?.state || '').toUpperCase();
-
-            // EMPTY is never an active crop
             if (state === 'EMPTY') return false;
-
-            // These states mean there is an active crop
             if (state === 'GROWING' || state === 'READY') return true;
-
-            // Fallback: seed_tpl_id must be > 0 to count as planted
             const tpl = Number(s?.seed_tpl_id || 0);
             return tpl > 0;
           });
 
           const unstakeBlockedByCrop = hasActiveCrop;
 
+          const unstakeKey = `unstake-plot-${plot.plot_asset_id}`;
+
           return (
             <div key={plot.plot_asset_id} className="plot-card">
+              {/* ✅ Header: meta wraps safely, no button in header (prevents overflow) */}
               <div className="plot-header">
                 {plot.image && (
-                  <img
-                    src={toIpfsUrl(plot.image)}
-                    alt={plot.name}
-                    className="plot-image"
-                  />
+                  <img src={toIpfsUrl(plot.image)} alt={plot.name} className="plot-image" />
                 )}
 
                 <div className="plot-header-text">
                   <div className="plot-name">{plot.name}</div>
+
                   <div className="plot-meta">
-                    Plot #{String(plot.plot_asset_id).slice(-4)} · Slots: {plot.capacity}
-                    {plot.owner ? ` · Owner: ${plot.owner}` : ''}
+                    <span className="plot-id">Plot #{String(plot.plot_asset_id).slice(-4)}</span>
+
+                    {plot.owner && (
+                      <span
+                        className={`plot-owner ${
+                          wallet && String(plot.owner) === String(wallet) ? 'me' : ''
+                        }`}
+                        title={plot.owner}
+                      >
+                        Owner: {plot.owner}
+                      </span>
+                    )}
 
                     {hasActiveCrop && (
                       <span className="active-crop-badge" title="This plot has an active crop">
@@ -309,25 +327,6 @@ export default function FarmPlotsGrid({ farmId, onChanged, refreshNonce }) {
                     )}
                   </div>
                 </div>
-
-                <button
-                  className="unstake-plot-btn"
-                  onClick={() => handleUnstakePlot(plot.plot_asset_id)}
-                  disabled={
-                    !isOwner ||
-                    unstakeBlockedByCrop ||
-                    slotPending === `unstake-plot-${plot.plot_asset_id}`
-                  }
-                  title={
-                    !isOwner
-                      ? 'Only the plot owner can unstake'
-                      : unstakeBlockedByCrop
-                        ? 'Unstake disabled: harvest/remove crop first'
-                        : ''
-                  }
-                >
-                  Unstake
-                </button>
               </div>
 
               <div className={`plot-slots plot-slots-${plot.capacity}`}>
@@ -360,117 +359,125 @@ export default function FarmPlotsGrid({ farmId, onChanged, refreshNonce }) {
                 })}
               </div>
 
-              {/* ✅ Footer actions for 1-slot plots:
-                  - EMPTY: PLANT
-                  - GROWING: WATER when ready
-                  - READY: HARVEST
-              */}
-              {plot.capacity === 1 && plot.slots?.[0] && (() => {
-                const slot = plot.slots[0];
+              {/* ✅ Admin row: keeps Unstake aligned and INSIDE the card */}
+              <div className="plot-admin-row">
+                <button
+                  className="unstake-plot-btn"
+                  onClick={() => handleUnstakePlot(plot.plot_asset_id)}
+                  disabled={!isOwner || unstakeBlockedByCrop || slotPending === unstakeKey}
+                  title={
+                    !isOwner
+                      ? 'Only the plot owner can unstake'
+                      : unstakeBlockedByCrop
+                        ? 'Unstake disabled: harvest/remove crop first'
+                        : 'Unstake this plot'
+                  }
+                >
+                  {slotPending === unstakeKey ? 'Unstaking…' : 'Unstake'}
+                </button>
+              </div>
 
-                const isEmpty = slot.state === 'EMPTY';
-                const isGrowing = slot.state === 'GROWING';
-                const isReady = slot.state === 'READY';
+              {/* Footer actions for 1-slot plots */}
+              {plot.capacity === 1 &&
+                plot.slots?.[0] &&
+                (() => {
+                  const slot = plot.slots[0];
 
-                const batch = getPlantBatch();
-                const canPlant = isEmpty && !!batch;
+                  const isEmpty = slot.state === 'EMPTY';
+                  const isGrowing = slot.state === 'GROWING';
+                  const isReady = slot.state === 'READY';
 
-                const waterLabel = getWaterLabel(slot); // "READY" or "m:ss" or null
-                const waterReady = isGrowing && waterLabel === 'READY';
+                  const batch = getPlantBatch();
+                  const canPlant = isEmpty && !!batch;
 
-                const waterKey = `water-${plot.plot_asset_id}-${slot.index}`;
-                const harvestKey = `harvest-${plot.plot_asset_id}-${slot.index}`;
-                const plantKey = `plant-${plot.plot_asset_id}-${slot.index}`;
+                  const waterLabel = getWaterLabel(slot);
+                  const waterReady = isGrowing && waterLabel === 'READY';
 
-                return (
-                  <div className="plot-footer">
-                    <div className="plot-seed">
-                      {slot.seed_name ? slot.seed_name : isEmpty ? 'Empty slot' : '—'}
+                  const waterKey = `water-${plot.plot_asset_id}-${slot.index}`;
+                  const harvestKey = `harvest-${plot.plot_asset_id}-${slot.index}`;
+                  const plantKey = `plant-${plot.plot_asset_id}-${slot.index}`;
+
+                  return (
+                    <div className="plot-footer">
+                      <div className="plot-seed">
+                        {slot.seed_name ? slot.seed_name : isEmpty ? 'Empty slot' : '—'}
+                      </div>
+
+                      {isEmpty && (
+                        <button
+                          type="button"
+                          className={`plot-water-pill ${canPlant ? 'ready' : ''}`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (!isOwner || !wallet) return;
+                            if (!canPlant) return;
+                            handlePlant({ plotAssetId: plot.plot_asset_id, slotIndex: slot.index });
+                          }}
+                          disabled={!isOwner || !wallet || !canPlant || slotPending === plantKey}
+                          title={
+                            !isOwner
+                              ? 'Only the plot owner can plant'
+                              : !batch
+                                ? 'No seeds available'
+                                : 'Click to plant a seed'
+                          }
+                        >
+                          {slotPending === plantKey ? '🌱 PLANTING…' : '🌱 PLANT'}
+                        </button>
+                      )}
+
+                      {isGrowing && (
+                        <button
+                          type="button"
+                          className={`plot-water-pill ${waterReady ? 'ready' : ''}`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (!isOwner) return;
+                            if (!waterReady) return;
+                            handleWater(plot, slot);
+                          }}
+                          disabled={!isOwner || !wallet || !waterReady || slotPending === waterKey}
+                          title={
+                            !isOwner
+                              ? 'Only the plot owner can water'
+                              : waterReady
+                                ? 'Click to water'
+                                : 'Not ready yet'
+                          }
+                        >
+                          {slotPending === waterKey
+                            ? '💧 WATERING…'
+                            : `💧 WATER: ${waterLabel || '—'}`}
+                        </button>
+                      )}
+
+                      {isReady && (
+                        <button
+                          type="button"
+                          className="plot-water-pill ready"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (!isOwner) return;
+                            handleHarvest(plot, slot);
+                          }}
+                          disabled={!isOwner || !wallet || slotPending === harvestKey}
+                          title={!isOwner ? 'Only the plot owner can harvest' : 'Click to harvest'}
+                        >
+                          {slotPending === harvestKey ? '🌾 HARVESTING…' : '🌾 HARVEST: READY'}
+                        </button>
+                      )}
                     </div>
-
-                    {isEmpty && (
-                      <button
-                        type="button"
-                        className={`plot-water-pill ${canPlant ? 'ready' : ''}`}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          if (!isOwner || !wallet) return;
-                          if (!canPlant) return;
-                          handlePlant({ plotAssetId: plot.plot_asset_id, slotIndex: slot.index });
-                        }}
-                        disabled={
-                          !isOwner ||
-                          !wallet ||
-                          !canPlant ||
-                          slotPending === plantKey
-                        }
-                        title={
-                          !isOwner
-                            ? 'Only the plot owner can plant'
-                            : !batch
-                              ? 'No seeds available'
-                              : 'Click to plant a seed'
-                        }
-                      >
-                        {slotPending === plantKey ? '🌱 PLANTING…' : '🌱 PLANT'}
-                      </button>
-                    )}
-
-                    {isGrowing && (
-                      <button
-                        type="button"
-                        className={`plot-water-pill ${waterReady ? 'ready' : ''}`}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          if (!isOwner) return;
-                          if (!waterReady) return;
-                          handleWater(plot, slot);
-                        }}
-                        disabled={
-                          !isOwner ||
-                          !wallet ||
-                          !waterReady ||
-                          slotPending === waterKey
-                        }
-                        title={
-                          !isOwner
-                            ? 'Only the plot owner can water'
-                            : waterReady
-                              ? 'Click to water'
-                              : 'Not ready yet'
-                        }
-                      >
-                        {slotPending === waterKey ? '💧 WATERING…' : `💧 WATER: ${waterLabel || '—'}`}
-                      </button>
-                    )}
-
-                    {isReady && (
-                      <button
-                        type="button"
-                        className="plot-water-pill ready"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          if (!isOwner) return;
-                          handleHarvest(plot, slot);
-                        }}
-                        disabled={!isOwner || !wallet || slotPending === harvestKey}
-                        title={!isOwner ? 'Only the plot owner can harvest' : 'Click to harvest'}
-                      >
-                        {slotPending === harvestKey ? '🌾 HARVESTING…' : '🌾 HARVEST: READY'}
-                      </button>
-                    )}
-                  </div>
-                );
-              })()}
+                  );
+                })()}
             </div>
           );
         })}
       </div>
 
-      {/* ✅ Modal is now progress-only (no action buttons) */}
+      {/* Modal */}
       {selectedSlot && (
         <FarmSlotModal
           farmId={selectedSlot.farmId}
@@ -482,4 +489,3 @@ export default function FarmPlotsGrid({ farmId, onChanged, refreshNonce }) {
     </>
   );
 }
-

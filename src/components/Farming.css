@@ -500,3 +500,23 @@
   font-size: 14px;
 }
 
+.plots-filter-row {
+  margin: 10px 0 14px;
+  display: flex;
+  justify-content: flex-end;
+  padding: 6px 0;
+}
+
+.plots-filter-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff; /* if your background is dark */
+  z-index: 2;
+}
+
+.plots-filter-toggle input {
+  transform: scale(1.1);
+}

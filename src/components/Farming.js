@@ -19,6 +19,8 @@ import { claimSeedRewards } from '../services/rewardActions';
 import { plantSlot } from '../services/plantActions';
 import { unequipTool } from '../services/toolEquipActions';
 
+const PLOTS_FILTER_KEY = 'cc_showMyPlotsOnly';
+
 export default function Farming() {
   const { session } = useSession();
   const wallet = session?.actor;
@@ -51,6 +53,23 @@ export default function Farming() {
 
   // ✅ force BagPanel to refetch after stake/unstake operations
   const [bagRefreshNonce, setBagRefreshNonce] = useState(0);
+
+  // ✅ plots filter: persists across refresh
+  const [showMyPlotsOnly, setShowMyPlotsOnly] = useState(() => {
+    try {
+      return localStorage.getItem(PLOTS_FILTER_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(PLOTS_FILTER_KEY, showMyPlotsOnly ? '1' : '0');
+    } catch {
+      // ignore
+    }
+  }, [showMyPlotsOnly]);
 
   // --------------------------------------------------
   // Global: Weather + All Farms
@@ -117,10 +136,6 @@ export default function Farming() {
 
   // --------------------------------------------------
   // Inventory
-  // ✅ Key Fix:
-  //   - /userenergy success = energy UI updates even if /inventory fails
-  //   - Only "hard error" if BOTH fail
-  //   - /inventory failure becomes a WARNING not fatal
   // --------------------------------------------------
   const loadInventory = useCallback(
     async (account, { tries = 1, delayMs = 600 } = {}) => {
@@ -144,12 +159,8 @@ export default function Farming() {
           const inv = invOk ? results[0].value.data : {};
           const ue = ueOk ? results[1].value.data : {};
 
-          // ❌ If both failed -> HARD ERROR (retryable)
-          if (!invOk && !ueOk) {
-            throw new Error('BOTH_FAILED');
-          }
+          if (!invOk && !ueOk) throw new Error('BOTH_FAILED');
 
-          // ✅ Merge shape: /userenergy is authoritative for cells
           const merged = {
             ...inv,
             account: inv.account || ue.account || account,
@@ -159,14 +170,13 @@ export default function Farming() {
               max: Number(ue.max ?? inv?.cells?.max ?? 0),
               cell_count: Number(ue.count ?? inv?.cells?.cell_count ?? 0),
               total_staked: Number(ue.total_staked ?? inv?.cells?.total_staked ?? 0),
-              staked: Array.isArray(ue.staked) ? ue.staked : (inv?.cells?.staked || []),
+              staked: Array.isArray(ue.staked) ? ue.staked : inv?.cells?.staked || [],
               unstaked: Array.isArray(inv?.cells?.unstaked) ? inv.cells.unstaked : [],
             },
           };
 
           setInventory(merged);
 
-          // ✅ Warn if inventory failed but energy succeeded
           if (!invOk && ueOk) {
             setInventoryWarning(
               'Inventory is still loading (AtomicAssets can be slow). Energy is up to date.'
@@ -176,7 +186,7 @@ export default function Farming() {
           }
 
           setInventoryError(null);
-          return; // ✅ success
+          return;
         } catch (e) {
           lastErr = e;
           // eslint-disable-next-line no-await-in-loop
@@ -186,11 +196,9 @@ export default function Farming() {
 
       console.error('Error loading inventory:', lastErr);
 
-      // ✅ Only show HARD error if BOTH failed
       if (String(lastErr?.message || '').includes('BOTH_FAILED')) {
         setInventoryError('Could not load your inventory (and energy). Please try again.');
       } else {
-        // fallback safety
         setInventoryWarning('Some data is still loading. Energy should be up to date.');
       }
     },
@@ -283,8 +291,7 @@ export default function Farming() {
   };
 
   // --------------------------------------------------
-  // ✅ Recharge USER energy
-  //   Poll loadInventory to ride out backend/index lag
+  // Recharge USER energy
   // --------------------------------------------------
   const handleRechargeEnergy = async () => {
     if (!wallet) {
@@ -307,10 +314,7 @@ export default function Farming() {
     try {
       setRecharging(true);
       await rechargeUserEnergy(amount);
-
-      // ✅ try multiple refreshes so UI catches new energy
       await loadInventory(wallet, { tries: 3, delayMs: 700 });
-
       setBagRefreshNonce((n) => n + 1);
     } catch (err) {
       console.error('Recharge failed:', err);
@@ -321,7 +325,7 @@ export default function Farming() {
   };
 
   // --------------------------------------------------
-  // ✅ Recharge FARM energy
+  // Recharge FARM energy
   // --------------------------------------------------
   const handleRechargeFarm = useCallback(
     async (farmId) => {
@@ -418,10 +422,7 @@ export default function Farming() {
 
       {farmError && <div className="error">{farmError}</div>}
 
-      {/* ✅ HARD ERROR only when both endpoints fail */}
       {inventoryError && <div className="error">{inventoryError}</div>}
-
-      {/* ✅ Soft warning when only /inventory fails */}
       {inventoryWarning && <div className="warning">{inventoryWarning}</div>}
 
       {inventory && (
@@ -491,8 +492,10 @@ export default function Farming() {
         onPlantSlot={plantSlot}
         onChanged={handleFarmChanged}
         refreshNonce={bagRefreshNonce}
+        showMyPlotsOnly={showMyPlotsOnly}
+        onToggleShowMyPlotsOnly={setShowMyPlotsOnly}
+        wallet={wallet}
       />
     </div>
   );
 }
-

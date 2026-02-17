@@ -51,6 +51,7 @@ export default function FarmCard({
   allowCellStake = false,
   onChanged,
   refreshNonce,
+  showMyPlotsOnly = false, // ✅ NEW: plot filter toggle
 }) {
   const {
     asset_id,
@@ -168,7 +169,9 @@ export default function FarmCard({
             onClick={() => onRechargeFarm && onRechargeFarm(String(asset_id))}
             disabled={isPending(`recharge-${String(asset_id)}`)}
           >
-            {isPending(`recharge-${String(asset_id)}`) ? 'Recharging…' : 'Recharge Farm'}
+            {isPending(`recharge-${String(asset_id)}`)
+              ? 'Recharging…'
+              : 'Recharge Farm'}
           </button>
         )}
       </div>
@@ -180,9 +183,9 @@ export default function FarmCard({
           farmId={asset_id}
           onChanged={onChanged}
           refreshNonce={refreshNonce}
+          showMyPlotsOnly={showMyPlotsOnly} // ✅ NEW
         />
       </div>
     </div>
   );
 }
-
