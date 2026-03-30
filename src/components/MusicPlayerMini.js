@@ -4,10 +4,15 @@ import TrackDetailsModal from './TrackDetailsModal';
 import '../styles/Skins.css';
 import './MusicPlayerMini.css';
 
-const API_BASE      = 'https://maestrobeatz.servegame.com';
-const IPFS_GATEWAY  = 'https://maestrobeatz.servegame.com/ipfs';
-const PLAYLIST_SIZE = 15;    // ← now 15 tracks
-const PER_PAGE      = 25;    // items per API page
+// ✅ Use env like the rest of the app
+const API_BASE = (process.env.REACT_APP_API_BASE_URL || '')
+  .replace(/\/+$/, '');
+
+const IPFS_GATEWAY = (process.env.REACT_APP_IPFS_GATEWAY || '')
+  .replace(/\/+$/, '');
+
+const PLAYLIST_SIZE = 15;
+const PER_PAGE = 25;
 
 function resolveMediaUrl(hash) {
   return hash.startsWith('http') ? hash : `${IPFS_GATEWAY}/${hash}`;

@@ -1,9 +1,7 @@
 import axios from 'axios';
 
-const API_BASE =
-  process.env.REACT_APP_BACKEND_API_BASE_URL ||
-  process.env.REACT_APP_API_BASE_URL ||
-  'http://localhost:3003';
+const API_BASE = (process.env.REACT_APP_API_BASE_URL || 'https://maestrobeatz.servegame.com')
+  .replace(/\/+$/, '');
 
 /**
  * Fetch approved template IDs for filtering burnable NFTs.

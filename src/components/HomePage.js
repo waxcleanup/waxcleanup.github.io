@@ -1,6 +1,7 @@
 // src/components/HomePage.js
 import React, { useEffect, useMemo, useState } from 'react';
 import { JsonRpc } from 'eosjs';
+import { useNavigate } from 'react-router-dom';
 import { useSession } from '../hooks/SessionContext';
 import logo from '../assets/cleanupcentr.png';
 import MessageBoard from './MessageBoard';
@@ -11,8 +12,8 @@ const rpc = new JsonRpc('https://api.wax.alohaeos.com');
 export default function HomePage() {
   const { session, handleLogin, handleLogout } = useSession();
   const [accountInfo, setAccountInfo] = useState(null);
+  const navigate = useNavigate();
 
-  // ---- configurable links (safe defaults) ----
   const LINKS = useMemo(() => {
     const neftyCollectionUrl =
       process.env.REACT_APP_NEFTY_COLLECTION_URL ||
@@ -83,6 +84,14 @@ export default function HomePage() {
         <div className="intro-actions">
           <button
             className="homepage-link-button"
+            onClick={() => navigate('/shop')}
+            title="Browse machines, cores, and packs"
+          >
+            View Shop
+          </button>
+
+          <button
+            className="homepage-link-button"
             onClick={() => openLink(LINKS.neftyCollectionUrl)}
             title="View official collections on NeftyBlocks"
           >
@@ -116,8 +125,8 @@ export default function HomePage() {
 
         <div className="intro-notes">
           <p className="intro-note">
-            Tip: Bookmark pages like /farming or /burn — refresh is supported on GitHub Pages
-            via the 404 redirect-path fix.
+            Tip: Browse the Shop without logging in, then connect your wallet when you're ready
+            to buy or manage your machines.
           </p>
         </div>
       </div>
@@ -137,7 +146,6 @@ export default function HomePage() {
         <h1 className="homepage-title">TheCleanupCentr</h1>
       </header>
 
-      {/* 🔑 PRIMARY AREA (closer to top): Login OR Wallet Info */}
       <section className="homepage-primary">
         {!session ? (
           <div className="homepage-login">
@@ -181,9 +189,7 @@ export default function HomePage() {
         )}
       </section>
 
-      {/* 📘 Intro + links below primary area */}
       <ProjectIntro />
     </div>
   );
 }
-

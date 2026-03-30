@@ -2,10 +2,11 @@
 
 import axios from 'axios';
 
-// URL for the backend API
-const API_URL = process.env.REACT_APP_API_BASE_URL || 'http://maestrobeatz.servegame.com:3003';
+// ✅ Use domain only (nginx handles routing)
+const API_URL = (process.env.REACT_APP_API_BASE_URL || 'https://maestrobeatz.servegame.com')
+  .replace(/\/+$/, '');
 
-// Function to send a log message to the backend (e.g., after a successful burn)
+// Function to send a log message to the backend
 export const sendBurnMessage = async (message) => {
   try {
     const response = await axios.post(`${API_URL}/log`, {
@@ -18,7 +19,7 @@ export const sendBurnMessage = async (message) => {
   }
 };
 
-// Function to fetch recent messages (if the endpoint exists)
+// Function to fetch recent messages
 export const fetchMessages = async () => {
   try {
     const response = await axios.get(`${API_URL}/log`);

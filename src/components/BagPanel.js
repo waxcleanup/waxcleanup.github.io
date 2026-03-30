@@ -3,7 +3,12 @@ import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import './BagPanel.css';
 
-import { depositCompost, depositPack, depositTool } from '../services/depositActions';
+import {
+  depositCompost,
+  depositPack,
+  openCratePack,
+  depositTool,
+} from '../services/depositActions';
 import { stakeUserCell } from '../services/userCellActions';
 import { stakePlot } from '../services/plotStakeActions';
 
@@ -12,7 +17,9 @@ import StakePlotModal from './StakePlotModal';
 // -----------------------------
 // IPFS helper (CID -> URL)
 // -----------------------------
-const IPFS_GATEWAY = (process.env.REACT_APP_IPFS_GATEWAY || 'https://ipfs.io/ipfs').replace(/\/$/, '');
+const IPFS_GATEWAY = (
+  process.env.REACT_APP_IPFS_GATEWAY || 'https://ipfs.io/ipfs'
+).replace(/\/$/, '');
 
 function toIpfsUrl(image) {
   if (!image) return null;
@@ -59,8 +66,13 @@ function groupAssets(assets = []) {
 
     if (rawType.includes('seed')) bucket = 'seeds';
     else if (rawType.includes('compost')) bucket = 'compost';
-    else if (rawType.includes('tool') || rawType.includes('watering') || rawType.includes('harvest')) bucket = 'tools';
-    else if (rawType.includes('core')) bucket = 'cores';
+    else if (
+      rawType.includes('tool') ||
+      rawType.includes('watering') ||
+      rawType.includes('harvest')
+    ) {
+      bucket = 'tools';
+    } else if (rawType.includes('core')) bucket = 'cores';
     else if (rawType.includes('plot')) bucket = 'plots';
     else if (rawType.includes('pack') || rawType.includes('crate')) bucket = 'packs';
     else if (rawType.includes('farm')) bucket = 'farms';
@@ -82,6 +94,34 @@ function shortId(id) {
   return `${s.slice(0, 6)}…${s.slice(-4)}`;
 }
 
+function normalizeBagAsset(a) {
+  return {
+    ...a,
+    image: toIpfsUrl(a.image),
+    asset_id: safeStr(a.asset_id),
+    template_id: safeStr(a.template_id),
+    recipe_id: a.recipe_id ?? null,
+    open_method: a.open_method ?? null,
+    open_memo: a.open_memo ?? null,
+    can_open: a.can_open ?? null,
+  };
+}
+
+function getLootDiff(beforeAssets = [], afterAssets = [], openedAssetId = null) {
+  const beforeIds = new Set((beforeAssets || []).map((a) => safeStr(a.asset_id)));
+
+  return (afterAssets || []).filter((asset) => {
+    const id = safeStr(asset.asset_id);
+    if (!id) return false;
+    if (openedAssetId && id === safeStr(openedAssetId)) return false;
+    return !beforeIds.has(id);
+  });
+}
+
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export default function BagPanel({
   wallet,
   farms = null,
@@ -95,9 +135,8 @@ export default function BagPanel({
   const [statusMsg, setStatusMsg] = useState(null);
   const [pendingAssetId, setPendingAssetId] = useState(null);
 
-  // ✅ UX controls
   const [filterText, setFilterText] = useState('');
-  const [sortMode, setSortMode] = useState('newest'); // newest | name | template | type
+  const [sortMode, setSortMode] = useState('newest');
   const [collapsed, setCollapsed] = useState({
     seeds: false,
     compost: false,
@@ -109,13 +148,16 @@ export default function BagPanel({
     other: false,
   });
 
-  // Plot stake modal
   const [plotModalOpen, setPlotModalOpen] = useState(false);
   const [plotToStake, setPlotToStake] = useState(null);
 
-  // If farms prop isn't provided, fetch farms as fallback
   const [globalFarms, setGlobalFarms] = useState([]);
   const [farmsLoading, setFarmsLoading] = useState(false);
+
+  // Loot reveal modal
+  const [lootModalOpen, setLootModalOpen] = useState(false);
+  const [lootItems, setLootItems] = useState([]);
+  const [lastOpenedPackName, setLastOpenedPackName] = useState('');
 
   const effectiveFarms = useMemo(() => {
     const list = Array.isArray(farms) ? farms : globalFarms;
@@ -136,42 +178,42 @@ export default function BagPanel({
     }
   };
 
-  // ✅ Auto-dismiss status messages
   useEffect(() => {
     if (!statusMsg) return;
     const t = setTimeout(() => setStatusMsg(null), 4500);
     return () => clearTimeout(t);
   }, [statusMsg]);
 
-  // -----------------------------
-  // Load bag
-  // -----------------------------
-  const fetchBag = async () => {
+  const fetchBag = async ({ silent = false } = {}) => {
     if (!wallet) {
       setBag(null);
-      return;
+      return [];
     }
 
-    setLoading(true);
-    setError(null);
+    if (!silent) {
+      setLoading(true);
+      setError(null);
+    }
 
     try {
-      const res = await axios.get(`${process.env.REACT_APP_API_BASE_URL}/bag/${wallet}`);
+      const res = await axios.get(
+        `${process.env.REACT_APP_API_BASE_URL}/bag/${wallet}`
+      );
       const payload = res.data || { account: wallet, count: 0, assets: [] };
 
-      const normalizedAssets = (payload.assets || []).map((a) => ({
-        ...a,
-        image: toIpfsUrl(a.image),
-        asset_id: safeStr(a.asset_id),
-        template_id: safeStr(a.template_id),
-      }));
-
+      const normalizedAssets = (payload.assets || []).map(normalizeBagAsset);
       setBag({ ...payload, assets: normalizedAssets });
+      return normalizedAssets;
     } catch (err) {
       console.error('Error loading bag:', err);
-      setError('Could not load your bag inventory.');
+      if (!silent) {
+        setError('Could not load your bag inventory.');
+      }
+      return [];
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   };
 
@@ -180,9 +222,6 @@ export default function BagPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wallet, refreshNonce]);
 
-  // -----------------------------
-  // Fallback farms loader
-  // -----------------------------
   const loadGlobalFarmsFallback = async () => {
     if (Array.isArray(farms)) return farms;
     if (farmsLoading) return globalFarms;
@@ -205,7 +244,6 @@ export default function BagPanel({
 
   const assets = bag?.assets || [];
 
-  // ✅ filter + sort (before grouping)
   const filteredAssets = useMemo(() => {
     const q = filterText.trim().toLowerCase();
     let list = [...assets];
@@ -220,6 +258,8 @@ export default function BagPanel({
           a.tool_type,
           a.schema,
           a.type,
+          a.open_method,
+          a.recipe_id,
         ]
           .map((x) => safeStr(x).toLowerCase())
           .join(' ');
@@ -228,7 +268,8 @@ export default function BagPanel({
     }
 
     const byName = (a, b) => safeStr(a.name).localeCompare(safeStr(b.name));
-    const byTemplate = (a, b) => Number(a.template_id || 0) - Number(b.template_id || 0);
+    const byTemplate = (a, b) =>
+      Number(a.template_id || 0) - Number(b.template_id || 0);
     const byType = (a, b) =>
       safeStr(a.nft_type || a.tool_type || a.type).localeCompare(
         safeStr(b.nft_type || b.tool_type || b.type)
@@ -248,7 +289,10 @@ export default function BagPanel({
   const removeFromBag = (asset_id) => {
     setBag((prev) => {
       if (!prev) return prev;
-      return { ...prev, assets: (prev.assets || []).filter((a) => a.asset_id !== asset_id) };
+      return {
+        ...prev,
+        assets: (prev.assets || []).filter((a) => a.asset_id !== asset_id),
+      };
     });
   };
 
@@ -266,9 +310,51 @@ export default function BagPanel({
     }
   };
 
-  // -----------------------------
-  // Action handlers
-  // -----------------------------
+  const revealLootFromBagDiff = async (beforeAssets, openedAsset) => {
+  let bestLoot = [];
+  let stablePasses = 0;
+  let lastCount = -1;
+
+  // poll for up to ~4 seconds total
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const afterAssets = await fetchBag({ silent: true });
+    const loot = getLootDiff(beforeAssets, afterAssets, openedAsset?.asset_id);
+
+    // keep the largest loot set we have seen
+    if (loot.length > bestLoot.length) {
+      bestLoot = loot;
+    }
+
+    // once count stops changing for a couple passes, assume settled
+    if (loot.length === lastCount) {
+      stablePasses += 1;
+    } else {
+      stablePasses = 0;
+      lastCount = loot.length;
+    }
+
+    // if we already found loot and it has stabilized, stop
+    if (bestLoot.length > 0 && stablePasses >= 2) {
+      break;
+    }
+
+    await wait(500);
+  }
+
+  if (bestLoot.length > 0) {
+    setLootItems(bestLoot);
+    setLastOpenedPackName(openedAsset?.name || 'Pack');
+    setLootModalOpen(true);
+    setStatusMsg(
+      `Pack opened ✅ You received ${bestLoot.length} item${bestLoot.length === 1 ? '' : 's'}.`
+    );
+  } else {
+    setLootItems([]);
+    setLastOpenedPackName(openedAsset?.name || 'Pack');
+    setStatusMsg('Pack opened ✅ Loot may take a moment to appear.');
+  }
+};
+
   const handleCompostDeposit = async (asset) => {
     try {
       setPendingAssetId(asset.asset_id);
@@ -277,6 +363,7 @@ export default function BagPanel({
       setStatusMsg('Compost deposited ✅');
       removeFromBag(asset.asset_id);
       await notifyChanged();
+      await fetchBag({ silent: true });
     } catch (err) {
       console.error(err);
       setStatusMsg(err.message || 'Compost deposit failed or was cancelled.');
@@ -287,12 +374,15 @@ export default function BagPanel({
 
   const handleSeedPackOpen = async (asset) => {
     try {
+      const beforeAssets = [...assets];
+
       setPendingAssetId(asset.asset_id);
       setStatusMsg('Signing seed pack open…');
       await depositPack(wallet, asset.asset_id, asset.template_id);
-      setStatusMsg('Seed pack opened ✅');
+
       removeFromBag(asset.asset_id);
       await notifyChanged();
+      await revealLootFromBagDiff(beforeAssets, asset);
     } catch (err) {
       console.error(err);
       setStatusMsg(err.message || 'Seed pack open failed or was cancelled.');
@@ -303,12 +393,15 @@ export default function BagPanel({
 
   const handleGenericPackOpen = async (asset) => {
     try {
+      const beforeAssets = [...assets];
+
       setPendingAssetId(asset.asset_id);
       setStatusMsg('Signing pack open…');
-      await depositPack(wallet, asset.asset_id, asset.template_id);
-      setStatusMsg('Pack opened ✅');
+      await openCratePack(wallet, asset);
+
       removeFromBag(asset.asset_id);
       await notifyChanged();
+      await revealLootFromBagDiff(beforeAssets, asset);
     } catch (err) {
       console.error(err);
       setStatusMsg(err.message || 'Pack open failed or was cancelled.');
@@ -325,6 +418,7 @@ export default function BagPanel({
       setStatusMsg('Tool staked ✅');
       removeFromBag(asset.asset_id);
       await notifyChanged();
+      await fetchBag({ silent: true });
     } catch (err) {
       console.error(err);
       setStatusMsg(err.message || 'Tool stake failed or was cancelled.');
@@ -341,6 +435,7 @@ export default function BagPanel({
       setStatusMsg('Core staked ✅');
       removeFromBag(asset.asset_id);
       await notifyChanged();
+      await fetchBag({ silent: true });
     } catch (err) {
       console.error(err);
       setStatusMsg(err.message || 'Core stake failed or was cancelled.');
@@ -349,7 +444,6 @@ export default function BagPanel({
     }
   };
 
-  // ---- Plot staking flow ----
   const openStakePlotModal = async (asset) => {
     setPlotToStake(asset);
     setPlotModalOpen(true);
@@ -374,6 +468,7 @@ export default function BagPanel({
       setPlotToStake(null);
 
       await notifyChanged();
+      await fetchBag({ silent: true });
     } catch (err) {
       console.error(err);
       setStatusMsg(err.message || 'Plot stake failed or was cancelled.');
@@ -382,9 +477,6 @@ export default function BagPanel({
     }
   };
 
-  // -----------------------------
-  // Render guards
-  // -----------------------------
   if (!wallet) {
     return (
       <div className="bag-panel">
@@ -454,7 +546,7 @@ export default function BagPanel({
 
           <button
             className="bag-refresh"
-            onClick={fetchBag}
+            onClick={() => fetchBag()}
             disabled={!!pendingAssetId}
             title="Refresh bag"
           >
@@ -466,15 +558,22 @@ export default function BagPanel({
       {statusMsg && (
         <div className="bag-status bag-status-action">
           {statusMsg}
-          <button className="bag-status-x" onClick={() => setStatusMsg(null)}>✕</button>
+          <button
+            className="bag-status-x"
+            onClick={() => setStatusMsg(null)}
+            type="button"
+          >
+            ✕
+          </button>
         </div>
       )}
 
       {assets.length === 0 && (
-        <div className="bag-status">Your bag is empty — open packs or harvest to fill it.</div>
+        <div className="bag-status">
+          Your bag is empty — open packs or harvest to fill it.
+        </div>
       )}
 
-      {/* Plot stake modal */}
       <StakePlotModal
         open={plotModalOpen}
         plotAsset={plotToStake}
@@ -487,10 +586,59 @@ export default function BagPanel({
         }}
       />
 
-      {filteredAssets.length === 0 && assets.length > 0 && (
-        <div className="bag-status">
-          No matches for “{filterText}”.
+      {lootModalOpen && (
+        <div className="bag-loot-overlay" onClick={() => setLootModalOpen(false)}>
+          <div
+            className="bag-loot-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="bag-loot-header">
+              <h3 className="bag-loot-title">🎉 {lastOpenedPackName} Opened</h3>
+              <button
+                className="bag-loot-close"
+                onClick={() => setLootModalOpen(false)}
+                type="button"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="bag-loot-subtitle">You received:</div>
+
+            <div className="bag-loot-grid">
+              {lootItems.map((item) => (
+                <div key={item.asset_id} className="bag-loot-card">
+                  {!!item.image && (
+                    <img
+                      src={item.image}
+                      alt={item.name || item.asset_id}
+                      className="bag-loot-image"
+                    />
+                  )}
+                  <div className="bag-loot-name">{item.name || `#${item.asset_id}`}</div>
+                  <div className="bag-loot-meta">
+                    <span className="bag-item-chip">Tpl: {item.template_id}</span>
+                    <span className="bag-item-chip">ID: {shortId(item.asset_id)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="bag-loot-actions">
+              <button
+                className="bag-item-btn bag-item-btn-pack"
+                onClick={() => setLootModalOpen(false)}
+                type="button"
+              >
+                Nice
+              </button>
+            </div>
+          </div>
         </div>
+      )}
+
+      {filteredAssets.length === 0 && assets.length > 0 && (
+        <div className="bag-status">No matches for “{filterText}”.</div>
       )}
 
       {filteredAssets.length > 0 && (
@@ -521,8 +669,14 @@ export default function BagPanel({
                       const typeLabel =
                         asset.nft_type || asset.tool_type || asset.type || asset.schema || '';
 
+                      const isPackUnavailable =
+                        groupKey === 'packs' && asset.can_open === false;
+
                       return (
-                        <div key={asset.asset_id} className={`bag-item-card bag-item-${groupKey}`}>
+                        <div
+                          key={asset.asset_id}
+                          className={`bag-item-card bag-item-${groupKey}`}
+                        >
                           {!!asset.image && (
                             <img
                               src={asset.image}
@@ -532,12 +686,25 @@ export default function BagPanel({
                           )}
 
                           <div className="bag-item-body">
-                            <div className="bag-item-name">{asset.name || `#${asset.asset_id}`}</div>
+                            <div className="bag-item-name">
+                              {asset.name || `#${asset.asset_id}`}
+                            </div>
 
                             <div className="bag-item-meta">
-                              <span className="bag-item-chip">Tpl: {asset.template_id}</span>
-                              <span className="bag-item-chip">ID: {shortId(asset.asset_id)}</span>
-                              {typeLabel ? <span className="bag-item-tag">{typeLabel}</span> : null}
+                              <span className="bag-item-chip">
+                                Tpl: {asset.template_id}
+                              </span>
+                              <span className="bag-item-chip">
+                                ID: {shortId(asset.asset_id)}
+                              </span>
+                              {typeLabel ? (
+                                <span className="bag-item-tag">{typeLabel}</span>
+                              ) : null}
+                              {groupKey === 'packs' && asset.recipe_id ? (
+                                <span className="bag-item-chip">
+                                  Recipe: {asset.recipe_id}
+                                </span>
+                              ) : null}
                             </div>
 
                             <div className="bag-item-minirow">
@@ -551,14 +718,15 @@ export default function BagPanel({
                               </button>
                             </div>
 
-                            {/* ACTION BUTTONS */}
                             {groupKey === 'tools' && (
                               <button
                                 className="bag-item-btn bag-item-btn-tool"
                                 disabled={pendingAssetId === asset.asset_id}
                                 onClick={() => handleToolStake(asset)}
                               >
-                                {pendingAssetId === asset.asset_id ? 'Staking…' : 'Stake Tool'}
+                                {pendingAssetId === asset.asset_id
+                                  ? 'Staking…'
+                                  : 'Stake Tool'}
                               </button>
                             )}
 
@@ -568,7 +736,9 @@ export default function BagPanel({
                                 disabled={pendingAssetId === asset.asset_id}
                                 onClick={() => handleCoreStake(asset)}
                               >
-                                {pendingAssetId === asset.asset_id ? 'Staking…' : 'Stake Core'}
+                                {pendingAssetId === asset.asset_id
+                                  ? 'Staking…'
+                                  : 'Stake Core'}
                               </button>
                             )}
 
@@ -592,7 +762,9 @@ export default function BagPanel({
                                 disabled={pendingAssetId === asset.asset_id}
                                 onClick={() => handleCompostDeposit(asset)}
                               >
-                                {pendingAssetId === asset.asset_id ? 'Depositing…' : 'Deposit Compost'}
+                                {pendingAssetId === asset.asset_id
+                                  ? 'Depositing…'
+                                  : 'Deposit Compost'}
                               </button>
                             )}
 
@@ -602,17 +774,30 @@ export default function BagPanel({
                                 disabled={pendingAssetId === asset.asset_id}
                                 onClick={() => handleSeedPackOpen(asset)}
                               >
-                                {pendingAssetId === asset.asset_id ? 'Opening…' : 'Open Seed Pack'}
+                                {pendingAssetId === asset.asset_id
+                                  ? 'Opening…'
+                                  : 'Open Seed Pack'}
                               </button>
                             )}
 
                             {groupKey === 'packs' && (
                               <button
                                 className="bag-item-btn bag-item-btn-pack"
-                                disabled={pendingAssetId === asset.asset_id}
+                                disabled={
+                                  pendingAssetId === asset.asset_id || isPackUnavailable
+                                }
                                 onClick={() => handleGenericPackOpen(asset)}
+                                title={
+                                  isPackUnavailable
+                                    ? 'This pack cannot be opened yet.'
+                                    : ''
+                                }
                               >
-                                {pendingAssetId === asset.asset_id ? 'Opening…' : 'Open Pack'}
+                                {pendingAssetId === asset.asset_id
+                                  ? 'Opening…'
+                                  : isPackUnavailable
+                                  ? 'Unavailable'
+                                  : 'Open Pack'}
                               </button>
                             )}
                           </div>
@@ -629,4 +814,3 @@ export default function BagPanel({
     </div>
   );
 }
-

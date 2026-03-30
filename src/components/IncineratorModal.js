@@ -5,7 +5,7 @@ import IncineratorDetails from './IncineratorDetails';
 import RepairModal from './RepairModal';
 import { repairIncinerator } from '../services/transactionActions';
 
-const formatSeconds = secs => {
+const formatSeconds = (secs) => {
   const h = Math.floor(secs / 3600);
   const m = Math.floor((secs % 3600) / 60);
   const s = secs % 60;
@@ -20,7 +20,7 @@ const IncineratorModal = ({
   accountName,
   stakedIncinerators = [],
   unstakedIncinerators = [],
-  assignedSlots = [], // ✅ used to hide already-slotted incinerators
+  assignedSlots = [],
   onIncineratorSelect,
   onUnstakedStake,
   onUnstake,
@@ -29,7 +29,6 @@ const IncineratorModal = ({
   loadEnergy,
   fetchData,
   repairTimers = {},
-  onFinalizeRepair
 }) => {
   const [loadingIncinerators, setLoadingIncinerators] = useState(true);
   const [incineratorError, setIncineratorError] = useState('');
@@ -42,7 +41,6 @@ const IncineratorModal = ({
   const [repairPoints, setRepairPoints] = useState('');
   const [repairError, setRepairError] = useState('');
 
-  // ✅ Build a fast lookup of currently assigned incinerator IDs (hide them)
   const assignedIds = useMemo(() => {
     const set = new Set();
     (assignedSlots || []).forEach((s) => {
@@ -53,14 +51,12 @@ const IncineratorModal = ({
     return set;
   }, [assignedSlots]);
 
-  // ✅ DEDUPE staked list by id (prevents seeing the same incinerator twice)
   const stakedDeduped = useMemo(() => {
     const seen = new Set();
     const out = [];
-    for (const inc of (stakedIncinerators || [])) {
+    for (const inc of stakedIncinerators || []) {
       const id = String(inc?.asset_id || inc?.id || '');
-      if (!id) continue;
-      if (seen.has(id)) continue;
+      if (!id || seen.has(id)) continue;
       seen.add(id);
       out.push(inc);
     }
@@ -68,7 +64,9 @@ const IncineratorModal = ({
   }, [stakedIncinerators]);
 
   useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    const onKey = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
@@ -76,31 +74,36 @@ const IncineratorModal = ({
   useEffect(() => {
     setLoadingIncinerators(true);
     setIncineratorError('');
+
     const timeout = setTimeout(() => {
       if (!stakedIncinerators.length && !unstakedIncinerators.length) {
         setIncineratorError('Failed to load incinerators.');
         setLoadingIncinerators(false);
       }
     }, 20000);
+
     if (stakedIncinerators.length + unstakedIncinerators.length > 0) {
       clearTimeout(timeout);
       setLoadingIncinerators(false);
     }
+
     return () => clearTimeout(timeout);
   }, [stakedIncinerators, unstakedIncinerators]);
 
   const pollUntilInList = async (targetId, isInListFn, timeout = 10000, interval = 2000) => {
     setIsPolling(true);
     const start = Date.now();
+
     while (Date.now() - start < timeout) {
       await fetchData();
       if (isInListFn(targetId)) break;
-      await new Promise(res => setTimeout(res, interval));
+      await new Promise((res) => setTimeout(res, interval));
     }
+
     setIsPolling(false);
   };
 
-  const handleRepairClick = inc => {
+  const handleRepairClick = (inc) => {
     setRepairTarget(inc);
     setRepairPoints('');
     setRepairError('');
@@ -110,12 +113,15 @@ const IncineratorModal = ({
   const handleRepairConfirm = async () => {
     const maxNeeded = repairTarget ? 500 - repairTarget.durability : 0;
     const pts = parseInt(repairPoints, 10);
+
     if (!Number.isInteger(pts) || pts < 1 || pts > maxNeeded) {
       setRepairError(`Enter a value between 1 and ${maxNeeded}.`);
       return;
     }
+
     setIsLoading(true);
     setMessage('Repair in progress…');
+
     try {
       await repairIncinerator(accountName, repairTarget.asset_id || repairTarget.id, pts);
       setMessage('Repair sent, waiting on-chain.');
@@ -138,14 +144,17 @@ const IncineratorModal = ({
     e.stopPropagation();
     setIsLoading(true);
     setMessage('Staking in progress...');
+
     try {
       await onUnstakedStake(inc);
       setMessage('Waiting for incinerator to appear in staked list...');
+
       const targetId = inc.asset_id || inc.id;
       await pollUntilInList(
         targetId,
-        id => (stakedIncinerators || []).some(i => i.asset_id === id || i.id === id)
+        (id) => (stakedIncinerators || []).some((i) => i.asset_id === id || i.id === id)
       );
+
       setMessage('Staked!');
     } catch (err) {
       console.error('[ERROR] Stake failed:', err);
@@ -158,16 +167,20 @@ const IncineratorModal = ({
   const handleUnstakeClick = async (e, inc) => {
     e.stopPropagation();
     if (!window.confirm('Unstake? Fuel and energy reset to 0. Cannot undo.')) return;
+
     setIsLoading(true);
     setMessage('Unstaking in progress...');
+
     try {
       await onUnstake(inc);
       setMessage('Waiting for incinerator to return to unstaked list...');
+
       const targetId = inc.asset_id || inc.id;
       await pollUntilInList(
         targetId,
-        id => (unstakedIncinerators || []).some(i => i.asset_id === id || i.id === id)
+        (id) => (unstakedIncinerators || []).some((i) => i.asset_id === id || i.id === id)
       );
+
       setMessage('Unstaked!');
     } catch (err) {
       console.error('[ERROR] Unstake failed:', err);
@@ -193,10 +206,18 @@ const IncineratorModal = ({
       <div className="modal-content incinerator-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2 className="burn-room-title">Select Incinerator</h2>
-          <button className="close-button" onClick={handleClose} aria-label="Close">&times;</button>
+          <button className="close-button" onClick={handleClose} aria-label="Close">
+            &times;
+          </button>
         </div>
 
         <div className="modal-body">
+          {message && (
+            <div className="status-message" style={{ marginBottom: 12 }}>
+              {message}
+            </div>
+          )}
+
           {loadingIncinerators && !isPolling ? (
             <div className="loading-overlay">
               <div className="loading-message">🔄 Loading incinerators...</div>
@@ -211,7 +232,6 @@ const IncineratorModal = ({
             </div>
           ) : (
             <>
-              {/* Staked */}
               <div className="staked-section">
                 <h4 className="incinerator-section-title" style={{ color: '#00ff80' }}>
                   Staked Incinerators
@@ -219,15 +239,13 @@ const IncineratorModal = ({
 
                 <div className="incinerator-grid">
                   {stakedDeduped
-                    // ✅ HIDE already-slotted incinerators completely
                     .filter((inc) => {
                       const id = String(inc.asset_id || inc.id || '');
                       return id && !assignedIds.has(id);
                     })
-                    .map(inc => {
+                    .map((inc) => {
                       const id = inc.asset_id || inc.id;
                       const seconds = repairTimers[id];
-                      const showFinalize = seconds !== undefined && seconds <= 0;
 
                       return (
                         <div
@@ -250,24 +268,15 @@ const IncineratorModal = ({
                             </p>
                           )}
 
-                          {showFinalize && (
-                            <button
-                              className="finalize-button"
-                              disabled={isLoading}
-                              onClick={e => {
-                                e.stopPropagation();
-                                onFinalizeRepair(id);
-                              }}
-                            >
-                              Finalize Repair
-                            </button>
+                          {seconds === 0 && (
+                            <p className="repair-timer">✅ Repair complete — refreshing…</p>
                           )}
 
                           {inc.durability === 500 && (
                             <button
                               className="unstake-button"
                               disabled={isLoading}
-                              onClick={e => handleUnstakeClick(e, inc)}
+                              onClick={(e) => handleUnstakeClick(e, inc)}
                             >
                               Unstake
                             </button>
@@ -278,13 +287,13 @@ const IncineratorModal = ({
                 </div>
               </div>
 
-              {/* Unstaked */}
               <div className="unstaked-section" style={{ marginTop: 16 }}>
                 <h4 className="incinerator-section-title" style={{ color: '#00bfff' }}>
                   Unstaked Incinerators
                 </h4>
+
                 <div className="incinerator-grid">
-                  {unstakedIncinerators.map(inc => (
+                  {unstakedIncinerators.map((inc) => (
                     <div key={inc.asset_id || inc.id} className="incinerator-card">
                       <IncineratorDetails
                         incinerator={inc}
@@ -294,7 +303,7 @@ const IncineratorModal = ({
                       <button
                         className="stake-button"
                         disabled={isLoading}
-                        onClick={e => handleStakeClick(e, inc)}
+                        onClick={(e) => handleStakeClick(e, inc)}
                       >
                         Stake
                       </button>
@@ -330,7 +339,7 @@ IncineratorModal.propTypes = {
   accountName: PropTypes.string.isRequired,
   stakedIncinerators: PropTypes.array.isRequired,
   unstakedIncinerators: PropTypes.array.isRequired,
-  assignedSlots: PropTypes.array, // ✅ NEW
+  assignedSlots: PropTypes.array,
   onIncineratorSelect: PropTypes.func.isRequired,
   onUnstakedStake: PropTypes.func.isRequired,
   onUnstake: PropTypes.func.isRequired,
@@ -339,8 +348,6 @@ IncineratorModal.propTypes = {
   loadEnergy: PropTypes.func.isRequired,
   fetchData: PropTypes.func.isRequired,
   repairTimers: PropTypes.object,
-  onFinalizeRepair: PropTypes.func.isRequired
 };
 
 export default IncineratorModal;
-

@@ -12,8 +12,7 @@ export default function NavBar() {
   const { session, handleLogin, handleLogout } = useSession();
   const { skins, activeSkin, setActiveSkin } = useSkin();
 
-  // Don’t render the nav bar or player if not authenticated
-  if (!session) return null;
+  const isLoggedIn = !!session;
 
   return (
     <header>
@@ -27,37 +26,114 @@ export default function NavBar() {
           />
           <span className="nav-logo-text">CleanupCentr</span>
         </div>
+
         <ul className="nav-links">
-          <li><NavLink to="/" end className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>Home</NavLink></li>
-          <li><NavLink to="/burn" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>Burn</NavLink></li>
-          <li><NavLink to="/farming" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>Farming</NavLink></li>
-          <li><NavLink to="/collections" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>Collections</NavLink></li>
-          <li><NavLink to="/dashboard" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>Dashboard</NavLink></li>
-          <li><NavLink to="/markets" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>Markets</NavLink></li>
-          <li><NavLink to="/debug" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>Debug</NavLink></li> {/* ✅ Added debug */}
+          <li>
+            <NavLink
+              to="/"
+              end
+              className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
+            >
+              Home
+            </NavLink>
+          </li>
+
+          <li>
+            <NavLink
+              to="/shop"
+              className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
+            >
+              Shop
+            </NavLink>
+          </li>
+
+          {isLoggedIn && (
+            <>
+              <li>
+                <NavLink
+                  to="/burn"
+                  className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
+                >
+                  Burn
+                </NavLink>
+              </li>
+
+              <li>
+                <NavLink
+                  to="/farming"
+                  className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
+                >
+                  Farming
+                </NavLink>
+              </li>
+
+              <li>
+                <NavLink
+                  to="/collections"
+                  className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
+                >
+                  Collections
+                </NavLink>
+              </li>
+
+              <li>
+                <NavLink
+                  to="/dashboard"
+                  className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
+                >
+                  Dashboard
+                </NavLink>
+              </li>
+
+              <li>
+                <NavLink
+                  to="/markets"
+                  className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
+                >
+                  Markets
+                </NavLink>
+              </li>
+
+              <li>
+                <NavLink
+                  to="/debug"
+                  className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
+                >
+                  Debug
+                </NavLink>
+              </li>
+            </>
+          )}
         </ul>
 
-        <div className="nav-skins">
-          <SkinSelector
-            skins={skins}
-            activeSkin={activeSkin}
-            onChange={setActiveSkin}
-          />
-        </div>
+        {isLoggedIn && (
+          <div className="nav-skins">
+            <SkinSelector
+              skins={skins}
+              activeSkin={activeSkin}
+              onChange={setActiveSkin}
+            />
+          </div>
+        )}
 
         <div className="nav-auth">
-          {!session ? (
-            <button onClick={() => handleLogin('anchor')} className="nav-button">Login</button>
+          {!isLoggedIn ? (
+            <button onClick={() => handleLogin('anchor')} className="nav-button">
+              Login
+            </button>
           ) : (
-            <button onClick={handleLogout} className="nav-button">Logout</button>
+            <button onClick={handleLogout} className="nav-button">
+              Logout
+            </button>
           )}
         </div>
       </nav>
 
-      <div className="nav-music-player">
-        <MusicPlayerMini />
-      </div>
+      {isLoggedIn && (
+        <div className="nav-music-player">
+          <MusicPlayerMini />
+        </div>
+      )}
     </header>
   );
 }
-

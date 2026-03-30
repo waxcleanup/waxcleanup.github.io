@@ -177,11 +177,7 @@ const BurnRoom = ({ accountName, onClose }) => {
 
   // ---------- helpers ----------
   const apiRoot = useCallback(() => {
-    const base = (process.env.REACT_APP_API_BASE_URL || '').replace(/\/+$/, '');
-    if (!base) return '';
-    const host = base.replace(/^https?:\/\//, '').split('/')[0];
-    const hasPort = /:\d+$/.test(host);
-    return hasPort ? base : `${base}:3003`;
+    return (process.env.REACT_APP_API_BASE_URL || '').replace(/\/+$/, '');
   }, []);
 
   useEffect(() => {

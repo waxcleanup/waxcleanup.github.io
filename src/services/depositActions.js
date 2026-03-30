@@ -7,120 +7,123 @@ const RHYTHM_CONTRACT =
   process.env.REACT_APP_RHYTHMFARMER_ACCOUNT || 'rhythmfarmer';
 
 /**
- * Deposit Compost (contract-router version)
+ * Shared helper:
+ * transfer one NFT to rhythmfarmer with a specific memo
+ */
+async function transferNftWithMemo(wallet, assetId, memo, debugLabel = 'transferNftWithMemo') {
+  if (!wallet) {
+    throw new Error(`Missing wallet account for ${debugLabel}.`);
+  }
+
+  if (!assetId) {
+    throw new Error(`Missing assetId for ${debugLabel}.`);
+  }
+
+  if (!memo) {
+    throw new Error(`Missing memo for ${debugLabel}.`);
+  }
+
+  const tx = {
+    actions: [
+      {
+        account: ATOMIC_CONTRACT,
+        name: 'transfer',
+        authorization: [
+          {
+            actor: wallet,
+            permission: 'active',
+          },
+        ],
+        data: {
+          from: wallet,
+          to: RHYTHM_CONTRACT,
+          asset_ids: [String(assetId)],
+          memo: String(memo),
+        },
+      },
+    ],
+  };
+
+  console.log(`[DEBUG] ${debugLabel} tx:`, tx);
+  const result = await InitTransaction(tx);
+  console.log(`[DEBUG] ${debugLabel} result:`, result);
+  return result;
+}
+
+/**
+ * Deposit Compost
  *
  * NFT transfer -> rhythmfarmer
  * Memo expected by contract router:
  *   "deposit:compost"
  */
 export async function depositCompost(wallet, assetId) {
-  if (!wallet) throw new Error('Missing wallet account for depositCompost.');
-  if (!assetId) throw new Error('Missing assetId for depositCompost.');
-
-  const tx = {
-    actions: [
-      {
-        account: ATOMIC_CONTRACT,
-        name: 'transfer',
-        authorization: [{ actor: wallet, permission: 'active' }],
-        data: {
-          from: wallet,
-          to: RHYTHM_CONTRACT,
-          asset_ids: [String(assetId)],
-          memo: 'deposit:compost',
-        },
-      },
-    ],
-  };
-
-  console.log('[DEBUG] depositCompost tx:', tx);
-  const result = await InitTransaction(tx);
-  console.log('[DEBUG] depositCompost result:', result);
-  return result;
+  return transferNftWithMemo(wallet, assetId, 'deposit:compost', 'depositCompost');
 }
 
 /**
- * Open Seed Pack (on-chain router)
+ * Open Seed Pack
  *
  * NFT transfer -> rhythmfarmer
- * Memo format expected by contract router:
+ * Memo expected by contract router:
  *   "open:seedpack"
  */
 export async function depositPack(wallet, assetId) {
-  if (!wallet) {
-    throw new Error('Missing wallet account for depositPack.');
-  }
-  if (!assetId) {
-    throw new Error('Missing assetId for depositPack.');
-  }
-
-  const tx = {
-    actions: [
-      {
-        account: ATOMIC_CONTRACT,
-        name: 'transfer',
-        authorization: [
-          {
-            actor: wallet,
-            permission: 'active',
-          },
-        ],
-        data: {
-          from: wallet,
-          to: RHYTHM_CONTRACT,
-          asset_ids: [String(assetId)],
-          memo: 'open:seedpack',
-        },
-      },
-    ],
-  };
-
-  console.log('[DEBUG] depositPack tx:', tx);
-  const result = await InitTransaction(tx);
-  console.log('[DEBUG] depositPack result:', result);
-  return result;
+  return transferNftWithMemo(wallet, assetId, 'open:seedpack', 'depositPack');
 }
-
 
 /**
- * Stake Tool (contract-only)
+ * Open Crate / Pack Schema item
  *
- * NFT transfer -> rhythmfarmer
- * Contract on_notify handles memo "stake:tool"
+ * Uses bag metadata returned by backend:
+ * - open_memo
+ * - recipe_id
+ * - can_open
+ *
+ * Example:
+ * {
+ *   asset_id: "1099983319081",
+ *   recipe_id: 1,
+ *   open_method: "blend",
+ *   open_memo: "BLEND:1",
+ *   can_open: true
+ * }
  */
-export async function depositTool(wallet, assetId, templateId) {
+export async function openCratePack(wallet, asset, overrideMemo = null) {
   if (!wallet) {
-    throw new Error('Missing wallet account for depositTool.');
+    throw new Error('Missing wallet account for openCratePack.');
   }
+
+  const assetId = asset?.asset_id || asset?.assetId || asset;
   if (!assetId) {
-    throw new Error('Missing assetId for depositTool.');
+    throw new Error('Missing assetId for openCratePack.');
   }
 
-  const tx = {
-    actions: [
-      {
-        account: ATOMIC_CONTRACT,
-        name: 'transfer',
-        authorization: [
-          {
-            actor: wallet,
-            permission: 'active',
-          },
-        ],
-        data: {
-          from: wallet,
-          to: RHYTHM_CONTRACT,
-          asset_ids: [String(assetId)],
-          memo: 'stake:tool', // ✅ NEW contract router
-        },
-      },
-    ],
-  };
+  if (asset?.can_open === false) {
+    throw new Error('This crate cannot be opened yet.');
+  }
 
-  console.log('[DEBUG] depositTool tx:', tx, { templateId }); // templateId no longer needed
-  const result = await InitTransaction(tx);
-  console.log('[DEBUG] depositTool result:', result);
-  return result;
+  const memo =
+    overrideMemo ||
+    asset?.open_memo ||
+    (asset?.recipe_id ? `BLEND:${asset.recipe_id}` : null);
+
+  if (!memo) {
+    throw new Error('Missing crate open_memo or recipe_id.');
+  }
+
+  return transferNftWithMemo(wallet, assetId, memo, 'openCratePack');
 }
 
-
+/**
+ * Stake Tool
+ *
+ * NFT transfer -> rhythmfarmer
+ * Contract on_notify handles memo:
+ *   "stake:tool"
+ */
+export async function depositTool(wallet, assetId, templateId) {
+  const result = await transferNftWithMemo(wallet, assetId, 'stake:tool', 'depositTool');
+  console.log('[DEBUG] depositTool templateId (unused):', templateId);
+  return result;
+}

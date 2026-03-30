@@ -6,7 +6,7 @@ import App from './App';
 import reportWebVitals from './reportWebVitals';
 import { BrowserRouter } from 'react-router-dom';
 import { SessionProvider } from './hooks/SessionContext';
-import { SkinProvider } from './hooks/SkinContext';   // ← import SkinProvider
+import { SkinProvider } from './hooks/SkinContext';
 
 // Restore original path after GitHub Pages 404 redirect
 const savedPath = sessionStorage.getItem('redirectPath');
@@ -16,16 +16,15 @@ if (savedPath && savedPath !== window.location.pathname) {
 }
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
+
 root.render(
-  <React.StrictMode>
-    <SessionProvider>
-      <SkinProvider>               {/* ← wrap App with SkinProvider too */}
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
-      </SkinProvider>
-    </SessionProvider>
-  </React.StrictMode>
+  <SessionProvider>
+    <SkinProvider>
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    </SkinProvider>
+  </SessionProvider>
 );
 
 reportWebVitals();

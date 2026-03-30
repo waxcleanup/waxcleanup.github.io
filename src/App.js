@@ -6,13 +6,17 @@ import { useSession } from './hooks/SessionContext';
 
 import NavBar from './components/NavBar';
 import HomePage from './components/HomePage';
+import ShopPage from './components/ShopPage';
 import BurnCenter from './components/BurnCenter';
 import Farming from './components/Farming';
 import CollectionsPage from './components/CollectionsPage';
 import Dashboard from './components/Dashboard';
 import MarketsPage from './components/MarketsPage';
+import PacksPage from './components/PacksPage';
+import BlendsPage from './components/BlendsPage';
+import MachinesPage from './components/MachinesPage';
 
-// Simple inline loader (swap for your spinner component if you have one)
+// Simple inline loader
 function LoadingScreen() {
   return (
     <div style={{ padding: 24, textAlign: 'center' }}>
@@ -21,15 +25,6 @@ function LoadingScreen() {
   );
 }
 
-/**
- * ProtectedRoute
- * - Prevents "refresh -> session briefly null -> Navigate home" flicker
- * - Waits for SessionContext to finish restoring
- *
- * IMPORTANT:
- * Your SessionContext should expose `loading` (or `isRestoring`) boolean.
- * If it doesn't yet, add it there (recommended).
- */
 function ProtectedRoute({ session, loading, children }) {
   const location = useLocation();
 
@@ -43,16 +38,19 @@ function ProtectedRoute({ session, loading, children }) {
 }
 
 export default function App() {
-  // EXPECTED from SessionContext:
-  // - session: wallet session object or null
-  // - loading: boolean while restoring session on page load
-  const { session, loading } = useSession();
+  const { session, loading, login } = useSession();
 
   return (
     <>
       <NavBar />
       <Routes>
         <Route path="/" element={<HomePage />} />
+
+        {/* Public shop page */}
+        <Route
+          path="/shop"
+          element={<ShopPage session={session} onLogin={login} />}
+        />
 
         <Route
           path="/burn"
@@ -91,6 +89,33 @@ export default function App() {
         />
 
         <Route
+          path="/packs"
+          element={
+            <ProtectedRoute session={session} loading={loading}>
+              <PacksPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/blends"
+          element={
+            <ProtectedRoute session={session} loading={loading}>
+              <BlendsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/machines"
+          element={
+            <ProtectedRoute session={session} loading={loading}>
+              <MachinesPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
           path="/markets"
           element={
             <ProtectedRoute session={session} loading={loading}>
@@ -99,10 +124,9 @@ export default function App() {
           }
         />
 
-        {/* Optional: enable if you want unknown routes to go home */}
+        {/* Optional fallback */}
         {/* <Route path="*" element={<Navigate to="/" replace />} /> */}
       </Routes>
     </>
   );
 }
-

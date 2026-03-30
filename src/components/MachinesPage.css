@@ -1,0 +1,18 @@
+.machines-page {
+  padding: 30px;
+  color: #e8fff1;
+}
+
+.machines-container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.machines-placeholder {
+  margin-top: 20px;
+  padding: 20px;
+  border-radius: 12px;
+  background: rgba(255, 180, 120, 0.08);
+  border: 1px solid rgba(255, 180, 120, 0.15);
+  text-align: center;
+}

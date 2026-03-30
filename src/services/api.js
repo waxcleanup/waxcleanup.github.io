@@ -1,12 +1,11 @@
-import axios from 'axios';  
+import axios from 'axios';
 import { JsonRpc } from 'eosjs';
 
-// Prefer BACKEND_API_BASE_URL, but keep old API_BASE_URL for backward compatibility
-const API_URL =
-  process.env.REACT_APP_BACKEND_API_BASE_URL ||
-  process.env.REACT_APP_API_BASE_URL ||
-  'http://localhost:3003';
-const rpc = new JsonRpc(process.env.REACT_APP_RPC || 'https://wax.pink.gg'); // Mainnet WAX URL
+// ✅ ALWAYS use domain (nginx handles proxy)
+const API_URL = (process.env.REACT_APP_API_BASE_URL || 'https://maestrobeatz.servegame.com')
+  .replace(/\/+$/, '');
+
+const rpc = new JsonRpc(process.env.REACT_APP_RPC || 'https://wax.pink.gg');
 // Helper function to introduce a delay
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 const toGatewayUrl = (val) => {

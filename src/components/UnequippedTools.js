@@ -1,8 +1,7 @@
-// src/components/UnequippedTools.js
 import React, { useEffect, useState } from 'react';
 import { fetchUnequippedStakedTools } from '../services/tools';
 import { equipTool } from '../services/toolEquipActions';
-import { unstakeTool } from '../services/toolActions';   // ✅ use removetool
+import { unstakeTool } from '../services/toolActions';
 import './UnequippedTools.css';
 
 export default function UnequippedTools({ actor, onChanged }) {
@@ -41,11 +40,13 @@ export default function UnequippedTools({ actor, onChanged }) {
 
   useEffect(() => {
     let mounted = true;
+
     (async () => {
       if (!mounted) return;
 
-      if (actor) await load();
-      else {
+      if (actor) {
+        await load();
+      } else {
         setTools([]);
         setRaw(null);
         setError(null);
@@ -69,7 +70,6 @@ export default function UnequippedTools({ actor, onChanged }) {
       setBusyAsset(String(assetId));
       setError(null);
 
-      // ✅ correct signature
       await equipTool({ actor, toolAssetId: String(assetId) });
 
       await load();
@@ -89,7 +89,6 @@ export default function UnequippedTools({ actor, onChanged }) {
       setBusyAsset(String(assetId));
       setError(null);
 
-      // ✅ correct action for unstaking
       await unstakeTool(actor, String(assetId));
 
       await load();
@@ -103,62 +102,90 @@ export default function UnequippedTools({ actor, onChanged }) {
   };
 
   return (
-    <div className="unequipped-tools-wrap">
+    <section className="unequipped-tools-panel">
       <div className="unequipped-tools-header">
-        <div className="unequipped-tools-title">Staked Tools (Unequipped)</div>
-        <div className="unequipped-tools-sub">
+        <div>
+          <h3 className="unequipped-tools-title">Staked Tools</h3>
+          <div className="unequipped-tools-subtitle">
+            Unequipped tools ready to use
+          </div>
+        </div>
+
+        <div className="unequipped-tools-actor">
           actor: <span className="mono">{String(actor || '—')}</span>
         </div>
       </div>
 
-      {loading && <div className="unequipped-tools-note">Loading…</div>}
-      {error && <div className="unequipped-tools-error">Error: {error}</div>}
-
-      {!loading && !error && tools.length === 0 && (
-        <div className="unequipped-tools-note">No unequipped staked tools found.</div>
+      {loading && (
+        <div className="unequipped-tools-state">Loading tools…</div>
       )}
 
-      <div className="unequipped-tools-grid">
-        {tools.map((t) => {
-          const assetId = String(t.asset_id);
-          const isBusy = busyAsset === assetId;
+      {error && (
+        <div className="unequipped-tools-error">Error: {error}</div>
+      )}
 
-          return (
-            <div key={assetId} className="unequipped-tool-card">
-              <img className="unequipped-tool-img" src={t.img} alt={t.name || 'Tool'} />
-              <div className="unequipped-tool-name">{t.name || 'Unnamed Tool'}</div>
-              <div className="unequipped-tool-meta">
-                <span>{t.rarity || 'Unknown'}</span>
-                <span className="mono">#{assetId}</span>
-              </div>
+      {!loading && !error && tools.length === 0 && (
+        <div className="unequipped-tools-state">
+          No unequipped staked tools found.
+        </div>
+      )}
 
-              <div className="unequipped-tool-actions">
-                <button
-                  className="unequipped-tool-btn"
-                  disabled={isBusy}
-                  onClick={() => handleEquip(assetId)}
-                >
-                  {isBusy ? 'Working…' : 'Equip'}
-                </button>
+      {!loading && !error && tools.length > 0 && (
+        <div className="unequipped-tools-grid">
+          {tools.map((t) => {
+            const assetId = String(t.asset_id);
+            const isBusy = busyAsset === assetId;
 
-                <button
-                  className="unequipped-tool-btn secondary"
-                  disabled={isBusy}
-                  onClick={() => handleUnstake(assetId)}
-                >
-                  {isBusy ? 'Working…' : 'Unstake'}
-                </button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            return (
+              <article key={assetId} className="unequipped-tool-card">
+                <div className="unequipped-tool-image-wrap">
+                  <img
+                    className="unequipped-tool-img"
+                    src={t.img}
+                    alt={t.name || 'Tool'}
+                  />
+                </div>
 
-      <details className="unequipped-tools-debug">
-        <summary>Debug payload</summary>
-        <pre>{JSON.stringify(raw, null, 2)}</pre>
-      </details>
-    </div>
+                <div className="unequipped-tool-body">
+                  <div className="unequipped-tool-name">
+                    {t.name || 'Unnamed Tool'}
+                  </div>
+
+                  <div className="unequipped-tool-meta">
+                    <span>{t.rarity || 'Unknown'}</span>
+                    <span className="mono">#{assetId}</span>
+                  </div>
+
+                  <div className="unequipped-tool-actions">
+                    <button
+                      className="unequipped-tool-btn"
+                      disabled={isBusy}
+                      onClick={() => handleEquip(assetId)}
+                    >
+                      {isBusy ? 'Working…' : 'Equip'}
+                    </button>
+
+                    <button
+                      className="unequipped-tool-btn secondary"
+                      disabled={isBusy}
+                      onClick={() => handleUnstake(assetId)}
+                    >
+                      {isBusy ? 'Working…' : 'Unstake'}
+                    </button>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
+
+      {raw && (
+        <details className="unequipped-tools-debug">
+          <summary>Debug payload</summary>
+          <pre>{JSON.stringify(raw, null, 2)}</pre>
+        </details>
+      )}
+    </section>
   );
 }
-
