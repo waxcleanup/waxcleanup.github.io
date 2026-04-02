@@ -1,0 +1,296 @@
+/* src/components/GuidePage.css */
+
+.guide-page {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 32px 20px 56px;
+  color: #f5f7fb;
+}
+
+.guide-hero {
+  text-align: center;
+  margin-bottom: 36px;
+  padding: 36px 24px;
+  border-radius: 20px;
+  background:
+    linear-gradient(135deg, rgba(44, 82, 130, 0.22), rgba(34, 197, 94, 0.12)),
+    rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(8px);
+}
+
+.guide-hero h2 {
+  margin: 0 0 12px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.1;
+  letter-spacing: 0.02em;
+}
+
+.guide-hero p {
+  margin: 0 auto;
+  max-width: 780px;
+  font-size: 1.05rem;
+  line-height: 1.7;
+  color: rgba(245, 247, 251, 0.88);
+}
+
+.guide-section {
+  margin-bottom: 28px;
+  padding: 24px;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.03));
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(8px);
+}
+
+.guide-section h3 {
+  margin: 0 0 14px;
+  font-size: 1.4rem;
+  line-height: 1.2;
+  color: #ffffff;
+}
+
+.guide-content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.guide-content p {
+  margin: 0;
+  line-height: 1.75;
+  color: rgba(245, 247, 251, 0.9);
+}
+
+.guide-content ul,
+.guide-content ol {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: rgba(245, 247, 251, 0.9);
+}
+
+.guide-content li {
+  margin-bottom: 10px;
+  line-height: 1.65;
+}
+
+.guide-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.guide-card {
+  position: relative;
+  padding: 18px 16px;
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, rgba(19, 24, 38, 0.72), rgba(13, 17, 28, 0.82));
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  overflow: hidden;
+}
+
+.guide-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(90deg, rgba(34, 197, 94, 0.9), rgba(59, 130, 246, 0.9));
+  opacity: 0.9;
+}
+
+.guide-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.28);
+  border-color: rgba(255, 255, 255, 0.13);
+}
+
+.guide-card h4 {
+  margin: 0 0 8px;
+  font-size: 1.02rem;
+  color: #ffffff;
+}
+
+.guide-card p {
+  margin: 0;
+  line-height: 1.65;
+  color: rgba(245, 247, 251, 0.84);
+}
+
+.guide-subsection {
+  margin-top: 8px;
+  margin-bottom: 8px;
+  padding: 18px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.guide-subsection h4 {
+  margin: 0 0 10px;
+  font-size: 1.05rem;
+  color: #ffffff;
+}
+
+.guide-highlight {
+  margin: 8px 0 2px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.16), rgba(59, 130, 246, 0.12));
+  border: 1px solid rgba(120, 220, 170, 0.22);
+  color: #f8fafc;
+  line-height: 1.7;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.guide-link-row {
+  margin-top: 14px;
+}
+
+.guide-link-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 12px;
+  text-decoration: none;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: #ffffff;
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.88), rgba(59, 130, 246, 0.88));
+  box-shadow: 0 10px 24px rgba(20, 60, 120, 0.22);
+  transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
+}
+
+.guide-link-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(20, 60, 120, 0.3);
+  filter: brightness(1.04);
+}
+
+.guide-link-button:active {
+  transform: translateY(0);
+}
+
+.guide-step {
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  gap: 14px;
+  align-items: start;
+  padding: 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.guide-step + .guide-step {
+  margin-top: 12px;
+}
+
+.guide-step-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  font-weight: 800;
+  font-size: 1.05rem;
+  color: #ffffff;
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.9), rgba(59, 130, 246, 0.9));
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.2);
+}
+
+.guide-step-body h4 {
+  margin: 2px 0 6px;
+  font-size: 1.05rem;
+  color: #ffffff;
+}
+
+.guide-step-body p {
+  margin: 0;
+  line-height: 1.7;
+  color: rgba(245, 247, 251, 0.88);
+}
+
+.guide-progression {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.guide-progression-stage {
+  padding: 18px 16px;
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, rgba(17, 24, 39, 0.72), rgba(11, 15, 24, 0.82));
+  border: 1px solid rgba(255, 255, 255, 0.065);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2);
+}
+
+.guide-progression-stage h4 {
+  margin: 0 0 8px;
+  font-size: 1.02rem;
+  color: #ffffff;
+}
+
+.guide-progression-stage p {
+  margin: 0;
+  line-height: 1.7;
+  color: rgba(245, 247, 251, 0.84);
+}
+
+.guide-page strong {
+  color: #ffffff;
+}
+
+@media (max-width: 768px) {
+  .guide-page {
+    padding: 20px 14px 40px;
+  }
+
+  .guide-hero {
+    padding: 24px 16px;
+    border-radius: 16px;
+  }
+
+  .guide-section {
+    padding: 18px;
+    border-radius: 16px;
+  }
+
+  .guide-step {
+    grid-template-columns: 44px 1fr;
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .guide-step-number {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .guide-grid,
+  .guide-progression {
+    grid-template-columns: 1fr;
+  }
+
+  .guide-hero h2 {
+    font-size: 1.9rem;
+  }
+
+  .guide-section h3 {
+    font-size: 1.2rem;
+  }
+}

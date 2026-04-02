@@ -21,21 +21,42 @@ const IPFS_GATEWAY = (
   process.env.REACT_APP_IPFS_GATEWAY || 'https://ipfs.io/ipfs'
 ).replace(/\/$/, '');
 
+const FALLBACK_IPFS_GATEWAY = 'https://ipfs.io/ipfs';
+
+function extractIpfsCid(image) {
+  if (!image) return null;
+
+  const s = String(image).trim();
+  if (!s) return null;
+
+  if (s.startsWith('ipfs://')) {
+    return s.replace('ipfs://', '').replace(/^ipfs\//, '');
+  }
+
+  const m = s.match(/\/ipfs\/([a-zA-Z0-9]+)/);
+  if (m?.[1]) return m[1];
+
+  if (!/^https?:\/\//i.test(s)) return s;
+
+  return null;
+}
+
 function toIpfsUrl(image) {
   if (!image) return null;
   const s = String(image).trim();
 
   if (/^https?:\/\//i.test(s)) return s;
 
-  if (s.startsWith('ipfs://')) {
-    const cid = s.replace('ipfs://', '').replace(/^ipfs\//, '');
-    return `${IPFS_GATEWAY}/${cid}`;
-  }
+  const cid = extractIpfsCid(s);
+  if (!cid) return null;
 
-  const m = s.match(/\/ipfs\/([a-zA-Z0-9]+)/);
-  if (m?.[1]) return `${IPFS_GATEWAY}/${m[1]}`;
+  return `${IPFS_GATEWAY}/${cid}`;
+}
 
-  return `${IPFS_GATEWAY}/${s}`;
+function buildFallbackImageUrl(image) {
+  const cid = extractIpfsCid(image);
+  if (!cid) return null;
+  return `${FALLBACK_IPFS_GATEWAY}/${cid}`;
 }
 
 function groupAssets(assets = []) {
@@ -95,9 +116,21 @@ function shortId(id) {
 }
 
 function normalizeBagAsset(a) {
+  const rawImg =
+    a.image ||
+    a.img ||
+    a?.data?.img ||
+    a?.data?.image ||
+    a?.template?.immutable_data?.img ||
+    a?.template?.immutable_data?.image ||
+    a?.immutable_data?.img ||
+    a?.immutable_data?.image ||
+    null;
+
   return {
     ...a,
-    image: toIpfsUrl(a.image),
+    raw_image: rawImg,
+    image: toIpfsUrl(rawImg),
     asset_id: safeStr(a.asset_id),
     template_id: safeStr(a.template_id),
     recipe_id: a.recipe_id ?? null,
@@ -120,6 +153,28 @@ function getLootDiff(beforeAssets = [], afterAssets = [], openedAssetId = null) 
 
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function NFTImage({ asset, className }) {
+  if (!asset?.image) return null;
+
+  return (
+    <img
+      src={asset.image}
+      alt={asset.name || `#${asset.asset_id}`}
+      className={className}
+      loading="lazy"
+      onError={(e) => {
+        const fallbackUrl = buildFallbackImageUrl(asset.raw_image || asset.image);
+        if (fallbackUrl && e.currentTarget.src !== fallbackUrl) {
+          e.currentTarget.src = fallbackUrl;
+          return;
+        }
+
+        e.currentTarget.style.display = 'none';
+      }}
+    />
+  );
 }
 
 export default function BagPanel({
@@ -161,11 +216,23 @@ export default function BagPanel({
 
   const effectiveFarms = useMemo(() => {
     const list = Array.isArray(farms) ? farms : globalFarms;
-    return (list || []).map((f) => ({
-      ...f,
-      image: toIpfsUrl(f.image),
-      asset_id: String(f.asset_id),
-    }));
+    return (list || []).map((f) => {
+      const rawImg =
+        f.image ||
+        f.img ||
+        f?.data?.img ||
+        f?.data?.image ||
+        f?.immutable_data?.img ||
+        f?.immutable_data?.image ||
+        null;
+
+      return {
+        ...f,
+        raw_image: rawImg,
+        image: toIpfsUrl(rawImg),
+        asset_id: String(f.asset_id),
+      };
+    });
   }, [farms, globalFarms]);
 
   const notifyChanged = async () => {
@@ -311,49 +378,49 @@ export default function BagPanel({
   };
 
   const revealLootFromBagDiff = async (beforeAssets, openedAsset) => {
-  let bestLoot = [];
-  let stablePasses = 0;
-  let lastCount = -1;
+    let bestLoot = [];
+    let stablePasses = 0;
+    let lastCount = -1;
 
-  // poll for up to ~4 seconds total
-  for (let attempt = 0; attempt < 8; attempt += 1) {
-    const afterAssets = await fetchBag({ silent: true });
-    const loot = getLootDiff(beforeAssets, afterAssets, openedAsset?.asset_id);
+    // poll for up to ~4 seconds total
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      const afterAssets = await fetchBag({ silent: true });
+      const loot = getLootDiff(beforeAssets, afterAssets, openedAsset?.asset_id);
 
-    // keep the largest loot set we have seen
-    if (loot.length > bestLoot.length) {
-      bestLoot = loot;
+      // keep the largest loot set we have seen
+      if (loot.length > bestLoot.length) {
+        bestLoot = loot;
+      }
+
+      // once count stops changing for a couple passes, assume settled
+      if (loot.length === lastCount) {
+        stablePasses += 1;
+      } else {
+        stablePasses = 0;
+        lastCount = loot.length;
+      }
+
+      // if we already found loot and it has stabilized, stop
+      if (bestLoot.length > 0 && stablePasses >= 2) {
+        break;
+      }
+
+      await wait(500);
     }
 
-    // once count stops changing for a couple passes, assume settled
-    if (loot.length === lastCount) {
-      stablePasses += 1;
+    if (bestLoot.length > 0) {
+      setLootItems(bestLoot);
+      setLastOpenedPackName(openedAsset?.name || 'Pack');
+      setLootModalOpen(true);
+      setStatusMsg(
+        `Pack opened ✅ You received ${bestLoot.length} item${bestLoot.length === 1 ? '' : 's'}.`
+      );
     } else {
-      stablePasses = 0;
-      lastCount = loot.length;
+      setLootItems([]);
+      setLastOpenedPackName(openedAsset?.name || 'Pack');
+      setStatusMsg('Pack opened ✅ Loot may take a moment to appear.');
     }
-
-    // if we already found loot and it has stabilized, stop
-    if (bestLoot.length > 0 && stablePasses >= 2) {
-      break;
-    }
-
-    await wait(500);
-  }
-
-  if (bestLoot.length > 0) {
-    setLootItems(bestLoot);
-    setLastOpenedPackName(openedAsset?.name || 'Pack');
-    setLootModalOpen(true);
-    setStatusMsg(
-      `Pack opened ✅ You received ${bestLoot.length} item${bestLoot.length === 1 ? '' : 's'}.`
-    );
-  } else {
-    setLootItems([]);
-    setLastOpenedPackName(openedAsset?.name || 'Pack');
-    setStatusMsg('Pack opened ✅ Loot may take a moment to appear.');
-  }
-};
+  };
 
   const handleCompostDeposit = async (asset) => {
     try {
@@ -608,13 +675,7 @@ export default function BagPanel({
             <div className="bag-loot-grid">
               {lootItems.map((item) => (
                 <div key={item.asset_id} className="bag-loot-card">
-                  {!!item.image && (
-                    <img
-                      src={item.image}
-                      alt={item.name || item.asset_id}
-                      className="bag-loot-image"
-                    />
-                  )}
+                  <NFTImage asset={item} className="bag-loot-image" />
                   <div className="bag-loot-name">{item.name || `#${item.asset_id}`}</div>
                   <div className="bag-loot-meta">
                     <span className="bag-item-chip">Tpl: {item.template_id}</span>
@@ -677,13 +738,7 @@ export default function BagPanel({
                           key={asset.asset_id}
                           className={`bag-item-card bag-item-${groupKey}`}
                         >
-                          {!!asset.image && (
-                            <img
-                              src={asset.image}
-                              alt={asset.name || `#${asset.asset_id}`}
-                              className="bag-item-image"
-                            />
-                          )}
+                          <NFTImage asset={asset} className="bag-item-image" />
 
                           <div className="bag-item-body">
                             <div className="bag-item-name">

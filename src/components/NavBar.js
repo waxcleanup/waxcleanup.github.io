@@ -47,6 +47,15 @@ export default function NavBar() {
             </NavLink>
           </li>
 
+          <li>
+            <NavLink
+              to="/guide"
+              className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
+            >
+              Guide
+            </NavLink>
+          </li>
+
           {isLoggedIn && (
             <>
               <li>
@@ -69,37 +78,19 @@ export default function NavBar() {
 
               <li>
                 <NavLink
+                  to="/machines"
+                  className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
+                >
+                  Machines
+                </NavLink>
+              </li>
+
+              <li>
+                <NavLink
                   to="/collections"
                   className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
                 >
-                  Collections
-                </NavLink>
-              </li>
-
-              <li>
-                <NavLink
-                  to="/dashboard"
-                  className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
-                >
-                  Dashboard
-                </NavLink>
-              </li>
-
-              <li>
-                <NavLink
-                  to="/markets"
-                  className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
-                >
-                  Markets
-                </NavLink>
-              </li>
-
-              <li>
-                <NavLink
-                  to="/debug"
-                  className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
-                >
-                  Debug
+                  Encyclopedia
                 </NavLink>
               </li>
             </>

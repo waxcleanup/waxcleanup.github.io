@@ -104,7 +104,7 @@ export default function Dashboard() {
               className="dashboard-hub-btn"
               onClick={() => navigate('/machines')}
             >
-              Go to Machines
+              Open Machines Section
             </button>
           </div>
         </section>

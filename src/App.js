@@ -11,10 +11,10 @@ import BurnCenter from './components/BurnCenter';
 import Farming from './components/Farming';
 import CollectionsPage from './components/CollectionsPage';
 import Dashboard from './components/Dashboard';
-import MarketsPage from './components/MarketsPage';
 import PacksPage from './components/PacksPage';
 import BlendsPage from './components/BlendsPage';
 import MachinesPage from './components/MachinesPage';
+import GuidePage from './components/GuidePage';
 
 // Simple inline loader
 function LoadingScreen() {
@@ -43,14 +43,16 @@ export default function App() {
   return (
     <>
       <NavBar />
+
       <Routes>
         <Route path="/" element={<HomePage />} />
 
-        {/* Public shop page */}
         <Route
           path="/shop"
           element={<ShopPage session={session} onLogin={login} />}
         />
+
+        <Route path="/guide" element={<GuidePage />} />
 
         <Route
           path="/burn"
@@ -110,22 +112,12 @@ export default function App() {
           path="/machines"
           element={
             <ProtectedRoute session={session} loading={loading}>
-              <MachinesPage />
+              <MachinesPage session={session} />
             </ProtectedRoute>
           }
         />
 
-        <Route
-          path="/markets"
-          element={
-            <ProtectedRoute session={session} loading={loading}>
-              <MarketsPage />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Optional fallback */}
-        {/* <Route path="*" element={<Navigate to="/" replace />} /> */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>
   );
