@@ -1,0 +1,155 @@
+.yield-panel {
+  width: 100%;
+  margin-top: 24px;
+  color: #f5f5f5;
+}
+
+.yield-header {
+  margin-bottom: 18px;
+}
+
+.yield-header h2 {
+  margin: 0 0 8px;
+  font-size: 1.8rem;
+}
+
+.yield-header p {
+  margin: 0;
+  opacity: 0.75;
+}
+
+.yield-loading,
+.yield-error {
+  background: #141414;
+  border: 1px solid #2a2a2a;
+  border-radius: 14px;
+  padding: 18px;
+}
+
+.yield-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.yield-card {
+  background: linear-gradient(180deg, #171717 0%, #101010 100%);
+  border: 1px solid #2c2c2c;
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.yield-card-label {
+  font-size: 0.9rem;
+  opacity: 0.75;
+  margin-bottom: 8px;
+}
+
+.yield-card-value {
+  font-size: 1.7rem;
+  font-weight: 700;
+}
+
+.yield-highlights {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.yield-highlight-card {
+  background: linear-gradient(180deg, #181818 0%, #121212 100%);
+  border: 1px solid #303030;
+  border-radius: 18px;
+  padding: 18px;
+}
+
+.yield-highlight-card h3 {
+  margin-top: 0;
+  margin-bottom: 12px;
+  font-size: 1rem;
+}
+
+.yield-highlight-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.yield-highlight-stat {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.yield-highlight-sub {
+  font-size: 0.92rem;
+  opacity: 0.72;
+}
+
+.yield-section {
+  margin-bottom: 26px;
+}
+
+.yield-section h3 {
+  margin-bottom: 12px;
+}
+
+.yield-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  background: #101010;
+  border: 1px solid #252525;
+  border-radius: 16px;
+}
+
+.yield-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 760px;
+}
+
+.yield-table th,
+.yield-table td {
+  padding: 14px 12px;
+  text-align: left;
+  border-bottom: 1px solid #242424;
+  vertical-align: top;
+}
+
+.yield-table th {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #f0f0f0;
+  background: #151515;
+}
+
+.yield-table tr:hover td {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.yield-main-text {
+  font-weight: 600;
+}
+
+.yield-sub-text {
+  font-size: 0.82rem;
+  opacity: 0.68;
+  margin-top: 4px;
+}
+
+.yield-positive {
+  font-weight: 700;
+  color: #7ee787;
+}
+
+@media (max-width: 768px) {
+  .yield-header h2 {
+    font-size: 1.45rem;
+  }
+
+  .yield-card-value {
+    font-size: 1.4rem;
+  }
+}
