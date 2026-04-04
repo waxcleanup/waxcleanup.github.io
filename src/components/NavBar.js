@@ -87,6 +87,15 @@ export default function NavBar() {
 
               <li>
                 <NavLink
+                  to="/recipes"
+                  className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
+                >
+                  Blends
+                </NavLink>
+              </li>
+
+              <li>
+                <NavLink
                   to="/collections"
                   className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
                 >

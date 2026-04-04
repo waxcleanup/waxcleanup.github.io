@@ -11,10 +11,9 @@ import BurnCenter from './components/BurnCenter';
 import Farming from './components/Farming';
 import CollectionsPage from './components/CollectionsPage';
 import Dashboard from './components/Dashboard';
-import PacksPage from './components/PacksPage';
-import BlendsPage from './components/BlendsPage';
 import MachinesPage from './components/MachinesPage';
 import GuidePage from './components/GuidePage';
+import RecipesPage from './components/RecipesPage';
 
 // Simple inline loader
 function LoadingScreen() {
@@ -82,28 +81,10 @@ export default function App() {
         />
 
         <Route
-          path="/dashboard"
+          path="/recipes"
           element={
             <ProtectedRoute session={session} loading={loading}>
-              <Dashboard />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/packs"
-          element={
-            <ProtectedRoute session={session} loading={loading}>
-              <PacksPage />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/blends"
-          element={
-            <ProtectedRoute session={session} loading={loading}>
-              <BlendsPage />
+              <RecipesPage />
             </ProtectedRoute>
           }
         />

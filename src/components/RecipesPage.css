@@ -1,0 +1,237 @@
+.recipes-page {
+  min-height: 100vh;
+  padding: 24px;
+  background: radial-gradient(circle at top, #18231b 0%, #0c1110 55%, #070909 100%);
+  color: #ebf7ee;
+}
+
+.recipes-shell {
+  max-width: 1240px;
+  margin: 0 auto;
+}
+
+.recipes-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.recipes-header h1 {
+  margin: 0;
+  color: #8cffb0;
+  font-size: 2rem;
+}
+
+.recipes-muted {
+  margin: 6px 0 0;
+  color: #adbcaf;
+}
+
+.recipes-refresh,
+.recipe-action {
+  border: 1px solid #2f4535;
+  border-radius: 10px;
+  background: #15351f;
+  color: #dff9e4;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.recipes-refresh:hover,
+.recipe-action:hover:not(:disabled) {
+  background: #1d4b2b;
+  transform: translateY(-1px);
+}
+
+.recipe-action:disabled,
+.recipes-refresh:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.recipes-topbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.recipes-pill {
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(120, 255, 170, 0.08);
+  border: 1px solid rgba(120, 255, 170, 0.18);
+  color: #c7f5d3;
+  font-size: 0.9rem;
+}
+
+.recipes-status,
+.recipes-error,
+.recipes-empty {
+  padding: 12px 14px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+
+.recipes-status {
+  background: rgba(70, 180, 110, 0.12);
+  border: 1px solid rgba(70, 180, 110, 0.35);
+}
+
+.recipes-error {
+  background: rgba(220, 80, 80, 0.12);
+  border: 1px solid rgba(220, 80, 80, 0.35);
+}
+
+.recipes-empty {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.recipes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: 18px;
+}
+
+.recipe-card {
+  background: linear-gradient(180deg, rgba(17, 24, 21, 0.98), rgba(9, 13, 11, 0.98));
+  border: 1px solid rgba(121, 255, 176, 0.15);
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
+}
+
+.recipe-card-head h2 {
+  margin: 4px 0 6px;
+  font-size: 1.2rem;
+  color: #f0fff3;
+}
+
+.recipe-kicker {
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #88ffb0;
+}
+
+.recipe-description {
+  margin: 0;
+  color: #b5c6ba;
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.recipe-section {
+  margin-top: 16px;
+}
+
+.recipe-section-title {
+  font-size: 0.84rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #84f8ab;
+  margin-bottom: 8px;
+}
+
+.recipe-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  margin-bottom: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #eaf6ed;
+}
+
+.recipe-row.ok {
+  border: 1px solid rgba(95, 210, 120, 0.2);
+}
+
+.recipe-row.missing {
+  border: 1px solid rgba(220, 90, 90, 0.2);
+  color: #ffcccc;
+}
+
+.recipe-row.token {
+  border: 1px solid rgba(110, 160, 255, 0.16);
+}
+
+.recipe-row.output {
+  border: 1px solid rgba(255, 215, 100, 0.18);
+}
+
+.recipe-row.empty {
+  opacity: 0.8;
+}
+
+.recipe-row-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.recipe-row-right {
+  font-weight: 600;
+}
+
+.recipe-thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: #0f1512;
+  border: 1px solid rgba(121, 255, 176, 0.18);
+}
+
+.recipe-row-title {
+  font-weight: 600;
+}
+
+.recipe-row-sub {
+  font-size: 0.84rem;
+  color: #aebdb0;
+}
+
+.recipe-footer {
+  margin-top: 18px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.recipe-ready {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.recipe-ready.yes {
+  color: #8cffb0;
+}
+
+.recipe-ready.no {
+  color: #ffb0b0;
+}
+
+@media (max-width: 700px) {
+  .recipes-page {
+    padding: 16px;
+  }
+
+  .recipes-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .recipe-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
