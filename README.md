@@ -1,70 +1,62 @@
-# Getting Started with Create React App
+# CleanupCentr Frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+CleanupCentr is a WAX blockchain game and ecosystem focused on restoration, recycling, farming, machines, packs, blends, and on-chain utility NFTs. This frontend powers the main user experience for interacting with the CleanupCentr platform.
 
-## Available Scripts
+## Features
 
-In the project directory, you can run:
+- **Shop** for purchasing project items
+- **Blends** for opening crates and combining resources into new assets
+- **Burn** system for recycling NFTs
+- **Farming** gameplay with plots, seeds, compost, and harvesting
+- **Machines** for resource processing and future automation
+- **Guide** for helping users understand the ecosystem
+- **Encyclopedia** for browsing project assets and collections
+- Wallet integration through **Anchor / WAX session login**
+- Music player integration for supported NFT audio content
 
-### `npm start`
+## Current Gameplay Systems
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+### Blends
+Users can:
+- open crates
+- combine NFTs and tokens
+- receive loot-based outputs
+- execute blend recipes directly from the frontend
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+### Farming
+Users can:
+- manage plots
+- plant seeds
+- water and harvest crops
+- use compost and tools
+- interact with farm-based energy systems
 
-### `npm test`
+### Machines
+Users can:
+- interact with project machines
+- process resources
+- participate in future manufacturing-style gameplay loops
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## Tech Stack
 
-### `npm run build`
+- **React**
+- **Create React App**
+- **React Router**
+- **WAX / Anchor wallet session integration**
+- **AtomicAssets**
+- Custom backend APIs for:
+  - blend data
+  - bag assets
+  - machine data
+  - shop data
+  - farming data
+  - collection metadata
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## Project Structure
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+```bash
+src/
+  components/
+  hooks/
+  services/
+  assets/
