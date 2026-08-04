@@ -102,6 +102,7 @@ const BurnRoom = ({ accountName, onClose }) => {
   const [nftSort, setNftSort] = useState('NEWEST');
   const [nftPageSize, setNftPageSize] = useState(48);
   const [nftPage, setNftPage] = useState(1);
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   const schemaOptions = useMemo(() => {
     const set = new Set();
@@ -765,7 +766,7 @@ const BurnRoom = ({ accountName, onClose }) => {
         >
           {/* FILTER BAR (mobile-friendly grid) */}
           <div
-            className="burnroom-filterbar"
+            className={`burnroom-filterbar ${mobile && !showMobileFilters ? 'mobile-collapsed' : ''}`}
             style={{
               display: 'grid',
               gridTemplateColumns: mobile ? '1fr 1fr' : '1fr 160px 160px 160px 110px',
@@ -787,6 +788,19 @@ const BurnRoom = ({ accountName, onClose }) => {
               }}
             />
 
+            {mobile && (
+              <button
+                className="burnroom-filter-toggle"
+                type="button"
+                onClick={() => setShowMobileFilters((open) => !open)}
+                aria-expanded={showMobileFilters}
+              >
+                {showMobileFilters ? 'Hide filters' : 'Filters'}
+                {!showMobileFilters && (nftCollection !== 'ALL' || nftSchema !== 'ALL' || nftSort !== 'NEWEST')
+                  ? ' • Active'
+                  : ''}
+              </button>
+            )}
             <select
               value={nftCollection}
               onChange={(e) => setNftCollection(e.target.value)}

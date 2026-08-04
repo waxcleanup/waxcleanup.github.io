@@ -64,11 +64,11 @@ export default function PlayerResourceBar() {
 
   return (
     <section className="player-resource-bar" aria-label="Player resources">
+      <div className="player-account" title={`WAX account: ${account}`}>
+        <span className="player-resource-name">ACCOUNT</span>
+        <strong>{account}</strong>
+      </div>
       <div className="player-resource-scroll">
-        <div className="player-account" title={`WAX account: ${account}`}>
-          <span className="player-resource-name">ACCOUNT</span>
-          <strong>{account}</strong>
-        </div>
         <ResourceChip name="WAX" resource={resources.wax} className="resource-wax" />
         <CapacityChip
           name="RAM"

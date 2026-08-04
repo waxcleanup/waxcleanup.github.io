@@ -250,18 +250,122 @@
   padding-bottom: 14px; /* was 10px */
 }
 
+.burnroom-filter-toggle {
+  display: none;
+}
+
 @media (max-width: 600px) {
+  .modal-content.burn-room {
+    width: calc(100vw - 16px);
+    max-width: calc(100vw - 16px);
+    min-width: 0;
+  }
+
+  .modal-content.burn-room .modal-body,
+  .modal-content.burn-room .burnroom-filterbar,
+  .modal-content.burn-room .burnroom-pagination,
+  .modal-content.burn-room .burnroom-nft-scroll {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .modal-content.burn-room .burnroom-filterbar input,
+  .modal-content.burn-room .burnroom-filterbar select {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .burnroom-filter-toggle {
+    display: block;
+    grid-column: 1 / -1;
+    min-height: 34px;
+    padding: 6px 10px;
+    color: #ffbe8f;
+    background: rgba(255, 106, 26, 0.08);
+    border: 1px solid rgba(255, 106, 26, 0.32);
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .burnroom-filterbar.mobile-collapsed > select {
+    display: none;
+  }
+
   .modal-content.burn-room .nft-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+    gap: 6px;
   }
 
   .modal-content.burn-room .nft-card {
     min-width: 0;
+    padding: 6px;
     overflow: hidden;
+  }
+
+  .modal-content.burn-room .nft-image {
+    width: 100%;
+    height: 82px;
+    margin-bottom: 4px;
+    object-fit: contain;
+  }
+
+  .modal-content.burn-room .nft-info {
+    padding: 2px 0;
+  }
+
+  .modal-content.burn-room .nft-name {
+    margin: 3px 0 5px;
+    font-size: 13px;
+    line-height: 1.15;
+  }
+
+  .modal-content.burn-room .nft-meta {
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 5px;
+    font-size: 10px;
+  }
+
+  .modal-content.burn-room .rule-badge {
+    padding: 2px 5px;
+    font-size: 8px;
+    letter-spacing: 0.04em;
+  }
+
+  .modal-content.burn-room .nft-economics {
+    margin: 5px 0;
+    padding: 5px;
+    border-radius: 8px;
+  }
+
+  .modal-content.burn-room .nft-economics p {
+    gap: 4px;
+    margin: 2px 0;
+    font-size: 10.5px;
+  }
+
+  .modal-content.burn-room .nft-economics .value {
+    overflow-wrap: anywhere;
+  }
+
+  .modal-content.burn-room .nft-cap {
+    margin: 4px 0;
+    font-size: 10px;
+  }
+
+  .modal-content.burn-room .nft-asset-id {
+    display: none;
   }
 
   .modal-content.burn-room .nft-card button {
     width: 100%;
+    min-height: 30px;
+    padding: 5px 4px;
+    font-size: 11px;
   }
 }

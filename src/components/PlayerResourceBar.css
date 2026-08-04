@@ -161,8 +161,65 @@
 
 @media (max-width: 640px) {
   .player-resource-bar {
+    flex-wrap: wrap;
     gap: 6px;
     padding: 6px 8px;
+  }
+
+  .player-account {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: calc(100% - 76px);
+    min-height: 32px;
+    padding: 5px 8px;
+    overflow: hidden;
+  }
+
+  .player-account strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .player-resource-actions {
+    flex: 0 0 auto;
+    margin-left: auto;
+  }
+
+  .player-resource-scroll {
+    order: 3;
+    flex: 1 0 100%;
+    width: 100%;
+    padding: 5px 1px 1px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .player-resource-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  .player-resource-chip {
+    min-height: 28px;
+    padding: 3px 7px;
+    scroll-snap-align: start;
+  }
+
+  .player-resource-chip strong {
+    font-size: 0.74rem;
+  }
+
+  .player-resource-name {
+    font-size: 0.59rem;
+  }
+
+  .player-capacity-chip {
+    min-width: 82px;
+  }
+
+  .player-energy-chip {
+    min-width: 126px;
   }
 
   .player-resource-error {
