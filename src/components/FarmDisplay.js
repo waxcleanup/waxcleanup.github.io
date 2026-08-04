@@ -118,7 +118,7 @@ export default function FarmDisplay({
                 onUnstakeFarm={() => onUnstakeFarm && onUnstakeFarm(farm)}
                 onStakeCell={() => onStakeCell && onStakeCell(farm.asset_id)}
                 onUnstakeCell={() => onUnstakeCell && onUnstakeCell(farm.asset_id)}
-                onRechargeFarm={() => onRechargeFarm && onRechargeFarm(farm.asset_id)}
+                onRechargeFarm={() => onRechargeFarm && onRechargeFarm(farm)}
                 allowFarmStake={true}
                 allowCellStake={true}
                 onPlantSlot={onPlantSlot}

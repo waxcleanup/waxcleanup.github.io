@@ -33,6 +33,14 @@ function safeDateLabel(created_at) {
   if (Number.isNaN(d.getTime())) return null;
   return d.toLocaleDateString();
 }
+function formatAssetLabel(value, symbol) {
+  const parts = String(value ?? 0).trim().split(/\s+/).filter(Boolean);
+  while (parts.length && parts[parts.length - 1].toUpperCase() === symbol) {
+    parts.pop();
+  }
+  return `${parts.join(' ') || '0'} ${symbol}`;
+}
+
 
 /**
  * FarmCard displays a single farm with optional farm-level and battery-level
@@ -77,8 +85,9 @@ export default function FarmCard({
 
   const imgSrc = resolveIpfsImageSrc(image);
 
+  const rewardPoolLabel = formatAssetLabel(reward_pool, 'CINDER');
   return (
-    <div className="farm-card compact">
+    <div className={`farm-card compact ${allowFarmStake ? 'owner-farm-card' : ''}`}>
       {imgSrc ? (
         <img
           src={imgSrc}
@@ -98,30 +107,35 @@ export default function FarmCard({
           🌾 {name || (asset_id ? `Farm #${String(asset_id).slice(-5)}` : 'Farm')}
         </h3>
 
-        <p>
-          <strong>Status:</strong> {statusLabel}
-        </p>
+        <div className="farm-status-row">
+          <span className={`farm-status-badge ${staked ? 'is-staked' : ''}`}>
+            {statusLabel}
+          </span>
+          {asset_id && <span className="farm-asset-label">Asset #{asset_id}</span>}
+        </div>
 
-        {createdLabel && (
-          <p>
-            <strong>Created:</strong> {createdLabel}
-          </p>
-        )}
-
-        <p>
-          <strong>Energy:</strong> ⚡ {farm_energy ?? 0}
-        </p>
-
-        <p>
-          <strong>Reward Pool:</strong> {reward_pool ?? 0} CINDER
-        </p>
-
-        {/* Only show battery line if this is your farm card */}
-        {allowFarmStake && staked && (
-          <p>
-            <strong>Battery:</strong> {cell_asset_id ? `🔋 ${cell_asset_id}` : 'None'}
-          </p>
-        )}
+        <div className="farm-stat-grid">
+          <div className="farm-stat">
+            <span>Farm Energy</span>
+            <strong>⚡ {farm_energy ?? 0}</strong>
+          </div>
+          <div className="farm-stat">
+            <span>Reward Pool</span>
+            <strong>{rewardPoolLabel}</strong>
+          </div>
+          {createdLabel && (
+            <div className="farm-stat">
+              <span>Created</span>
+              <strong>{createdLabel}</strong>
+            </div>
+          )}
+          {allowFarmStake && staked && (
+            <div className="farm-stat">
+              <span>Battery</span>
+              <strong>{cell_asset_id ? `🔋 ${cell_asset_id}` : 'Not equipped'}</strong>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="farm-actions">
@@ -129,12 +143,14 @@ export default function FarmCard({
           (staked ? (
             <button
               onClick={() => onUnstakeFarm && onUnstakeFarm(farm)}
+              className="farm-action-danger"
               disabled={isPending(`farm-${asset_id}`)}
             >
               Unstake Farm
             </button>
           ) : (
             <button
+              className="farm-action-primary"
               onClick={() => onStakeFarm && onStakeFarm(farm)}
               disabled={isPending(`farm-${asset_id}`)}
             >
@@ -147,7 +163,7 @@ export default function FarmCard({
           staked &&
           (cell_asset_id ? (
             <button
-              className="unstake-btn"
+              className="farm-action-danger"
               onClick={() => onUnstakeCell && onUnstakeCell(asset_id)}
               disabled={isPending(`cell-un-${asset_id}`)}
             >
@@ -155,7 +171,7 @@ export default function FarmCard({
             </button>
           ) : (
             <button
-              className="stake-btn"
+              className="farm-action-secondary"
               onClick={() => onStakeCell && onStakeCell(asset_id)}
               disabled={isPending(`cell-${asset_id}`)}
             >
@@ -165,7 +181,7 @@ export default function FarmCard({
 
         {canRecharge && (
           <button
-            className="stake-btn"
+            className="farm-action-primary"
             onClick={() => onRechargeFarm && onRechargeFarm(String(asset_id))}
             disabled={isPending(`recharge-${String(asset_id)}`)}
           >

@@ -281,3 +281,178 @@
   width: 100%;
 }
 
+
+/* Owner dashboard layout: image | farm summary | actions */
+.farm-card.compact.owner-farm-card {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr) minmax(170px, 210px);
+  grid-template-areas:
+    "owner-image owner-info owner-actions"
+    "owner-plots owner-plots owner-plots";
+  gap: 16px;
+  align-items: stretch;
+  padding: 18px;
+}
+
+.owner-farm-card .farm-card-image,
+.owner-farm-card .farm-card-image--empty {
+  grid-area: owner-image;
+  width: 112px;
+  height: 112px;
+}
+
+.owner-farm-card .farm-info {
+  grid-area: owner-info;
+  padding: 2px 0;
+}
+
+.owner-farm-card .farm-actions {
+  grid-area: owner-actions;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  justify-content: center;
+  padding: 10px;
+  border: 1px solid rgba(120, 255, 180, 0.10);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.14);
+}
+
+.owner-farm-card .farm-actions button {
+  width: 100%;
+}
+
+.owner-farm-card .farm-plots-section {
+  grid-area: owner-plots;
+}
+
+.farm-status-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.farm-status-badge,
+.farm-asset-label {
+  display: inline-flex;
+  align-items: center;
+  min-height: 25px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.farm-status-badge {
+  color: #d7e2dc;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.farm-status-badge.is-staked {
+  color: #8dffc1;
+  background: rgba(34, 197, 94, 0.13);
+  border-color: rgba(34, 197, 94, 0.28);
+}
+
+.farm-asset-label {
+  max-width: 100%;
+  color: rgba(225, 240, 232, 0.72);
+  background: rgba(0, 0, 0, 0.16);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.farm-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(130px, 1fr));
+  gap: 8px;
+}
+
+.farm-stat {
+  min-width: 0;
+  padding: 9px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.farm-stat span {
+  display: block;
+  margin-bottom: 3px;
+  color: rgba(210, 230, 218, 0.58);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.farm-stat strong {
+  display: block;
+  color: rgba(244, 255, 248, 0.94);
+  font-size: 0.82rem;
+  overflow-wrap: anywhere;
+}
+
+.farm-actions .farm-action-primary {
+  color: #102016;
+  background: linear-gradient(180deg, #64ef9f, #28b96b);
+}
+
+.farm-actions .farm-action-secondary {
+  background: linear-gradient(180deg, #2f6e49, #204b34);
+}
+
+.farm-actions .farm-action-danger {
+  color: #ffd9d5;
+  background: linear-gradient(180deg, rgba(135, 48, 42, 0.9), rgba(83, 31, 28, 0.95));
+  border-color: rgba(255, 112, 102, 0.28);
+}
+
+@media (max-width: 820px) {
+  .farm-card.compact.owner-farm-card {
+    grid-template-columns: 92px minmax(0, 1fr);
+    grid-template-areas:
+      "owner-image owner-info"
+      "owner-actions owner-actions"
+      "owner-plots owner-plots";
+    padding: 14px;
+  }
+
+  .owner-farm-card .farm-card-image,
+  .owner-farm-card .farm-card-image--empty {
+    width: 92px;
+    height: 92px;
+  }
+
+  .owner-farm-card .farm-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .farm-card.compact.owner-farm-card {
+    grid-template-columns: 72px minmax(0, 1fr);
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .owner-farm-card .farm-card-image,
+  .owner-farm-card .farm-card-image--empty {
+    width: 72px;
+    height: 72px;
+  }
+
+  .farm-stat-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .owner-farm-card .farm-actions {
+    grid-template-columns: 1fr;
+    padding: 8px;
+  }
+}

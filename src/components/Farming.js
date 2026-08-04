@@ -9,6 +9,7 @@ import FarmDisplay from './FarmDisplay';
 import SelectCellModal from './SelectCellModal';
 import CharacterLoadout from './CharacterLoadout';
 import BagPanel from './BagPanel';
+import FarmRechargeModal from './FarmRechargeModal';
 import PlayerStatusBar from './PlayerStatusBar';
 import UnequippedTools from './UnequippedTools';
 
@@ -16,6 +17,7 @@ import { stakeFarm, unstakeFarm, rechargeFarm } from '../services/farmActions';
 import { stakeFarmCell, unstakeFarmCell } from '../services/farmCellActions';
 import { rechargeUserEnergy } from '../services/userEnergyActions';
 import { claimSeedRewards } from '../services/rewardActions';
+import { usePlayerResources } from '../hooks/PlayerResourcesContext';
 import { plantSlot } from '../services/plantActions';
 import { unequipTool } from '../services/toolEquipActions';
 
@@ -23,6 +25,7 @@ const PLOTS_FILTER_KEY = 'cc_showMyPlotsOnly';
 
 export default function Farming() {
   const { session } = useSession();
+  const { resources } = usePlayerResources();
   const wallet = session?.actor;
 
   const API = process.env.REACT_APP_API_BASE_URL;
@@ -34,6 +37,7 @@ export default function Farming() {
   const [allFarms, setAllFarms] = useState([]);
   const [pendingAction, setPendingAction] = useState(null);
   const [showCellModal, setShowCellModal] = useState(false);
+  const [rechargeFarmTarget, setRechargeFarmTarget] = useState(null);
   const [selectedFarmId, setSelectedFarmId] = useState(null);
   const [farmError, setFarmError] = useState(null);
 
@@ -328,23 +332,24 @@ export default function Farming() {
   // Recharge FARM energy
   // --------------------------------------------------
   const handleRechargeFarm = useCallback(
-    async (farmId) => {
+    (farm) => {
       if (!wallet) {
         alert('Please connect your wallet first.');
         return;
       }
+      if (!farm?.asset_id) return;
+      setRechargeFarmTarget(farm);
+    },
+    [wallet]
+  );
 
-      const amountStr = window.prompt(
-        'How much CINDER do you want to spend to recharge this farm?',
-        '1.0'
-      );
-      if (!amountStr) return;
-
-      const amount = Number(amountStr);
+  const handleConfirmFarmRecharge = useCallback(
+    async (amount) => {
+      const farmId = rechargeFarmTarget?.asset_id;
       if (!Number.isFinite(amount) || amount <= 0) {
-        alert('Invalid amount.');
-        return;
+        throw new Error('Recharge amount must be greater than zero.');
       }
+      if (!farmId) throw new Error('No farm selected for recharge.');
 
       const qty = `${amount.toFixed(6)} CINDER`;
       const key = `recharge-${String(farmId)}`;
@@ -352,18 +357,18 @@ export default function Farming() {
       try {
         setPendingAction(key);
         await rechargeFarm(wallet, String(farmId), qty);
-
         await pollRefreshFarms({ tries: 6, delayMs: 800 });
         await loadInventory(wallet, { tries: 2, delayMs: 600 });
+        setRechargeFarmTarget(null);
       } catch (err) {
         console.error('Farm recharge failed:', err);
-        alert(err?.message || 'Farm recharge failed.');
+        throw err;
       } finally {
         setPendingAction(null);
         setBagRefreshNonce((n) => n + 1);
       }
     },
-    [wallet, pollRefreshFarms, loadInventory]
+    [wallet, rechargeFarmTarget, pollRefreshFarms, loadInventory]
   );
 
   // --------------------------------------------------
@@ -496,6 +501,17 @@ export default function Farming() {
         onToggleShowMyPlotsOnly={setShowMyPlotsOnly}
         wallet={wallet}
       />
+      {rechargeFarmTarget && (
+        <FarmRechargeModal
+          farm={rechargeFarmTarget}
+          cinderBalance={resources?.cinder?.amount || 0}
+          pending={pendingAction === `recharge-${String(rechargeFarmTarget.asset_id)}`}
+          onConfirm={handleConfirmFarmRecharge}
+          onClose={() => {
+            if (!pendingAction) setRechargeFarmTarget(null);
+          }}
+        />
+      )}
     </div>
   );
 }
