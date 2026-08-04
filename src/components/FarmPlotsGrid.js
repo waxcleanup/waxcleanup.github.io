@@ -9,6 +9,7 @@ import TomatoGrowthSVG from './TomatoGrowthSVG';
 import useSession from '../hooks/useSession';
 import { waterPlot, waterPlots, harvestPlot } from '../services/plotActions';
 import { plantSlot } from '../services/plantActions';
+import { getWaxRpc } from '../services/waxRpcRead';
 import { unstakePlot } from '../services/plotStakeActions';
 
 const IPFS_GATEWAY = (
@@ -81,8 +82,7 @@ export default function FarmPlotsGrid({
 
   const fetchChainTime = useCallback(async () => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_RPC}/v1/chain/get_info`);
-      const data = await response.json();
+      const data = await getWaxRpc('/v1/chain/get_info');
       const headBlockTime = parseEosioTimeMs(data.head_block_time);
       if (headBlockTime != null) setBlockchainTime(headBlockTime);
     } catch {

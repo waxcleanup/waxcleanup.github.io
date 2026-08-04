@@ -1,7 +1,5 @@
 // src/services/repairStatusApi.js
-
-const RPC_URL = (process.env.REACT_APP_RPC || 'https://wax.greymass.com')
-  .replace(/\/+$/, '');
+const RPC_URL = 'https://wax.greymass.com';
 const CONTRACT = 'cleanupcentr';
 const REPAIR_TABLE = 'repairtrack';
 
@@ -13,7 +11,7 @@ export async function getRepairStatus(incineratorId) {
   try {
     res = await fetch(`${RPC_URL}/v1/chain/get_table_rows`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
       body: JSON.stringify({
         json: true,
         code: CONTRACT,

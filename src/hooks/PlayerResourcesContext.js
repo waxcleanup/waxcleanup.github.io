@@ -8,11 +8,11 @@ import React, {
   useState,
 } from 'react';
 import { useSession } from './SessionContext';
+import { postWaxRpc } from '../services/waxRpcRead';
 
 export const PLAYER_RESOURCES_REFRESH_EVENT = 'player-resources-refresh';
 
 const PlayerResourcesContext = createContext(null);
-const RPC = process.env.REACT_APP_RPC;
 
 const EMPTY_RESOURCES = {
   wax: { amount: 0, exact: '0.00000000 WAX' },
@@ -37,24 +37,8 @@ function parseAsset(asset, symbol, precision) {
   };
 }
 
-async function postRpc(path, body) {
-  if (!RPC) throw new Error('WAX RPC is not configured.');
-
-  const response = await fetch(`${RPC}${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-
-  if (!response.ok) {
-    throw new Error(`WAX RPC request failed (${response.status}).`);
-  }
-
-  return response.json();
-}
-
 async function fetchCurrencyBalance(account, code, symbol, precision) {
-  const balances = await postRpc('/v1/chain/get_currency_balance', {
+  const balances = await postWaxRpc('/v1/chain/get_currency_balance', {
     account,
     code,
     symbol,
@@ -64,7 +48,7 @@ async function fetchCurrencyBalance(account, code, symbol, precision) {
 }
 
 async function fetchAccountResources(account) {
-  const data = await postRpc('/v1/chain/get_account', { account_name: account });
+  const data = await postWaxRpc('/v1/chain/get_account', { account_name: account });
 
   return {
     ram: {
@@ -79,7 +63,7 @@ async function fetchAccountResources(account) {
 }
 
 async function fetchUserEnergy(account) {
-  const data = await postRpc('/v1/chain/get_table_rows', {
+  const data = await postWaxRpc('/v1/chain/get_table_rows', {
     json: true,
     code: 'rhythmfarmer',
     scope: 'rhythmfarmer',
