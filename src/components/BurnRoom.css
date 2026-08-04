@@ -250,3 +250,18 @@
   padding-bottom: 14px; /* was 10px */
 }
 
+@media (max-width: 600px) {
+  .modal-content.burn-room .nft-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .modal-content.burn-room .nft-card {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .modal-content.burn-room .nft-card button {
+    width: 100%;
+  }
+}

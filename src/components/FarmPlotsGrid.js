@@ -7,7 +7,7 @@ import FarmSlotModal from './FarmSlotModal';
 import TomatoGrowthSVG from './TomatoGrowthSVG';
 
 import useSession from '../hooks/useSession';
-import { waterPlot, harvestPlot } from '../services/plotActions';
+import { waterPlot, waterPlots, harvestPlot } from '../services/plotActions';
 import { plantSlot } from '../services/plantActions';
 import { unstakePlot } from '../services/plotStakeActions';
 
@@ -69,6 +69,8 @@ export default function FarmPlotsGrid({
   const selectedSlotRef = useRef(null);
 
   const [slotPending, setSlotPending] = useState(null);
+  const [waterAllPending, setWaterAllPending] = useState(false);
+  const waterAllLockRef = useRef(false);
   const [txError, setTxError] = useState(null);
   const [seedStatus, setSeedStatus] = useState(null);
 
@@ -164,7 +166,13 @@ export default function FarmPlotsGrid({
     const key = `water-${plot.plot_asset_id}-${slot.index}`;
     setSlotPending(key);
     try {
-      await waterPlot(wallet, plot.plot_asset_id, slot.index);
+      const result = await waterPlot(wallet, plot.plot_asset_id, slot.index);
+      if (!result.ok) {
+        if (!result.cancelled) {
+          setTxError(result.message || 'Water failed');
+        }
+        return;
+      }
       await fetchPlots();
     } catch (e) {
       setTxError(e?.message || 'Water failed');
@@ -240,6 +248,8 @@ export default function FarmPlotsGrid({
       if (!slot) return null;
       if (slot.state !== 'GROWING') return null;
 
+      if (Number(slot.tick || 0) === 0) return 'READY';
+
       const lastActionMs = parseEosioTimeMs(slot.last_action);
       const cooldownMs = getWaterCooldownMs(slot);
 
@@ -262,6 +272,50 @@ export default function FarmPlotsGrid({
       ? plots.filter((p) => String(p.owner || '') === String(wallet))
       : plots;
 
+  const waterAllTargets = plots.flatMap((plot) => {
+    const isOwner = !!wallet && String(plot.owner || '') === String(wallet);
+    if (!isOwner) return [];
+
+    return (plot.slots || [])
+      .filter((slot) => slot.state === 'GROWING' && getWaterLabel(slot) === 'READY')
+      .map((slot) => ({
+        first: String(plot.plot_asset_id),
+        second: String(slot.index),
+      }));
+  });
+
+  const handleWaterAll = async () => {
+    if (!wallet || waterAllTargets.length === 0 || waterAllLockRef.current) return;
+
+    waterAllLockRef.current = true;
+    setTxError(null);
+    setWaterAllPending(true);
+
+    try {
+      const result = await waterPlots(wallet, waterAllTargets);
+      if (!result.ok) {
+        if (!result.cancelled) {
+          setTxError(result.message || 'Water All failed');
+        }
+        return;
+      }
+
+      await fetchPlots();
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      await fetchPlots();
+      onChanged?.({
+        type: 'plots_watered',
+        farmId,
+        count: waterAllTargets.length,
+      });
+    } catch (e) {
+      setTxError(e?.message || 'Water All failed');
+    } finally {
+      waterAllLockRef.current = false;
+      setWaterAllPending(false);
+    }
+  };
+
   if (loading && !plots.length) {
     return <div className="plots-grid-status">Loading plots…</div>;
   }
@@ -277,6 +331,22 @@ export default function FarmPlotsGrid({
       {showMyPlotsOnly && wallet && !loading && plots.length > 0 && visiblePlots.length === 0 && (
         <div className="plots-grid-status">No plots owned by you in this farm.</div>
       )}
+
+      <div className="plots-water-all-row">
+        <button
+          type="button"
+          className="plots-water-all-btn"
+          onClick={handleWaterAll}
+          disabled={!wallet || waterAllTargets.length === 0 || waterAllPending || Boolean(slotPending)}
+          title={
+            waterAllTargets.length > 0
+              ? `Water ${waterAllTargets.length} ready slot${waterAllTargets.length === 1 ? '' : 's'}`
+              : 'No growing slots are ready to water'
+          }
+        >
+          {waterAllPending ? 'Watering All...' : `Water All (${waterAllTargets.length})`}
+        </button>
+      </div>
 
       <div className="farm-plots-grid">
         {visiblePlots.map((plot) => {
@@ -438,7 +508,13 @@ export default function FarmPlotsGrid({
                             if (!waterReady) return;
                             handleWater(plot, slot);
                           }}
-                          disabled={!isOwner || !wallet || !waterReady || slotPending === waterKey}
+                          disabled={
+                            !isOwner ||
+                            !wallet ||
+                            !waterReady ||
+                            waterAllPending ||
+                            slotPending === waterKey
+                          }
                           title={
                             !isOwner
                               ? 'Only the plot owner can water'

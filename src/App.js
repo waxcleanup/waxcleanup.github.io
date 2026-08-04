@@ -37,7 +37,7 @@ function ProtectedRoute({ session, loading, children }) {
 }
 
 export default function App() {
-  const { session, loading, login } = useSession();
+  const { session, loading, handleLogin } = useSession();
 
   return (
     <>
@@ -48,7 +48,7 @@ export default function App() {
 
         <Route
           path="/shop"
-          element={<ShopPage session={session} onLogin={login} />}
+          element={<ShopPage session={session} onLogin={handleLogin} />}
         />
 
         <Route path="/guide" element={<GuidePage />} />

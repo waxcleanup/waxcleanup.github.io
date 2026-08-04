@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { buyPack } from '../services/shopActions';
+import { usePlayerResources } from '../hooks/PlayerResourcesContext';
 import './ShopPage.css';
 
 const API_BASE =
@@ -60,6 +61,15 @@ function formatPrice(item) {
 function formatTotal(item, qty) {
   const total = Number(item.price || 0) * Number(qty || 0);
   return `${formatNumber(total)} ${item.token || ''}`.trim();
+}
+
+function getTokenBalance(resources, symbol) {
+  const key = String(symbol || '').trim().toLowerCase();
+  const supported = ['wax', 'trash', 'cinder', 'tomatoe', 'bananaz'];
+  if (!supported.includes(key)) return null;
+
+  const amount = Number(resources?.[key]?.amount);
+  return Number.isFinite(amount) ? amount : null;
 }
 
 function mapCategoryToType(category) {
@@ -125,7 +135,7 @@ function DropTableModal({ detail, loading, error, onClose }) {
         className="shop-modal"
         onClick={(e) => e.stopPropagation()}
       >
-        <button className="shop-modal-close" onClick={onClose}>
+        <button className="shop-modal-close" onClick={onClose} type="button">
           ×
         </button>
 
@@ -165,31 +175,35 @@ function DropTableModal({ detail, loading, error, onClose }) {
               </div>
             </div>
 
-            <div className="shop-modal-section">
-              <h3 className="shop-modal-section-title">Guaranteed Drops</h3>
-              <div className="drop-list">
-                {(detail?.guaranteed || []).map((drop) => (
-                  <DropItem
-                    key={`g-${drop.id}`}
-                    item={drop}
-                    showWeight={false}
-                  />
-                ))}
+            {!!detail?.guaranteed?.length && (
+              <div className="shop-modal-section">
+                <h3 className="shop-modal-section-title">Guaranteed Drops</h3>
+                <div className="drop-list">
+                  {detail.guaranteed.map((drop) => (
+                    <DropItem
+                      key={`g-${drop.id}-${drop.template_id}`}
+                      item={drop}
+                      showWeight={false}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
-            <div className="shop-modal-section">
-              <h3 className="shop-modal-section-title">Bonus Drops</h3>
-              <div className="drop-list">
-                {(detail?.bonus || []).map((drop) => (
-                  <DropItem
-                    key={`b-${drop.id}`}
-                    item={drop}
-                    showWeight
-                  />
-                ))}
+            {!!detail?.bonus?.length && (
+              <div className="shop-modal-section">
+                <h3 className="shop-modal-section-title">Bonus Drops</h3>
+                <div className="drop-list">
+                  {detail.bonus.map((drop) => (
+                    <DropItem
+                      key={`b-${drop.id}-${drop.template_id}`}
+                      item={drop}
+                      showWeight
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </>
         )}
       </div>
@@ -197,13 +211,29 @@ function DropTableModal({ detail, loading, error, onClose }) {
   );
 }
 
-function ShopItemCard({ item, isLoggedIn, onBuy, onViewDrops, buying }) {
+function ShopItemCard({
+  item,
+  isLoggedIn,
+  onBuy,
+  onViewDrops,
+  buying,
+  tokenBalance,
+  balanceReady,
+}) {
   const imageUrl = buildIpfsUrl(item.image);
   const soldOut = Boolean(item.is_sold_out);
   const type = mapCategoryToType(item.category);
 
   const maxQty = getMaxQty(item);
   const [qty, setQty] = React.useState(1);
+
+  const totalCost = Number(item.price || 0) * Number(qty || 0);
+  const affordabilityKnown =
+    isLoggedIn && balanceReady && tokenBalance !== null;
+  const insufficientFunds =
+    affordabilityKnown && Number(tokenBalance) < totalCost;
+  const shortfall = Math.max(0, totalCost - Number(tokenBalance || 0));
+  const quantityIncreased = qty > 1;
 
   useEffect(() => {
     setQty((prev) => {
@@ -230,7 +260,11 @@ function ShopItemCard({ item, isLoggedIn, onBuy, onViewDrops, buying }) {
   };
 
   return (
-    <div className={`shop-card ${soldOut ? 'sold-out' : ''}`}>
+    <div
+      className={`shop-card ${soldOut ? 'sold-out' : ''} ${
+        insufficientFunds ? 'insufficient-funds' : ''
+      }`}
+    >
       <div className="shop-card-image-wrap">
         {imageUrl ? (
           <img
@@ -281,14 +315,20 @@ function ShopItemCard({ item, isLoggedIn, onBuy, onViewDrops, buying }) {
         </div>
 
         <div className="shop-qty-section">
-          <span className="shop-meta-label">Quantity</span>
+          <div className="shop-qty-label-row">
+            <span className="shop-meta-label">Quantity</span>
+            {quantityIncreased && (
+              <span className="shop-qty-selected">x{qty} selected</span>
+            )}
+          </div>
 
           <div className="shop-qty-controls">
             <button
               type="button"
-              className="shop-qty-btn"
+              className="shop-qty-btn decrease"
               onClick={decreaseQty}
               disabled={soldOut || buying || qty <= 1}
+              aria-label="Decrease quantity"
             >
               −
             </button>
@@ -305,9 +345,10 @@ function ShopItemCard({ item, isLoggedIn, onBuy, onViewDrops, buying }) {
 
             <button
               type="button"
-              className="shop-qty-btn"
+              className="shop-qty-btn increase"
               onClick={increaseQty}
               disabled={soldOut || buying || qty >= maxQty}
+              aria-label="Increase quantity"
             >
               +
             </button>
@@ -316,8 +357,20 @@ function ShopItemCard({ item, isLoggedIn, onBuy, onViewDrops, buying }) {
 
         <div className="shop-total-row">
           <span className="shop-meta-label">Total</span>
-          <span className="shop-total-value">{formatTotal(item, qty)}</span>
+          <span
+            className={`shop-total-value ${
+              insufficientFunds ? 'insufficient' : quantityIncreased ? 'increased' : ''
+            }`}
+          >
+            {formatTotal(item, qty)}
+          </span>
         </div>
+
+        {insufficientFunds && (
+          <div className="shop-affordability-warning" role="status">
+            Not enough {item.token}. Need {formatNumber(shortfall)} more.
+          </div>
+        )}
 
         <div className="shop-card-actions">
           <button
@@ -332,12 +385,15 @@ function ShopItemCard({ item, isLoggedIn, onBuy, onViewDrops, buying }) {
           <button
             className="shop-buy-btn compact"
             onClick={() => onBuy(item, qty)}
-            disabled={soldOut || buying}
+            disabled={soldOut || buying || insufficientFunds}
+            type="button"
           >
             {soldOut
               ? 'Sold Out'
               : buying
                 ? 'Processing...'
+                : insufficientFunds
+                  ? `Need more ${item.token}`
                 : isLoggedIn
                   ? `Buy ${qty}`
                   : 'Connect Wallet'}
@@ -364,6 +420,8 @@ export default function ShopPage({ session, onLogin }) {
   const navigate = useNavigate();
   const isLoggedIn = !!session;
   const actorName = normalizeActor(session);
+  const { resources, lastUpdated } = usePlayerResources();
+  const balanceReady = Boolean(lastUpdated);
 
   useEffect(() => {
     let mounted = true;
@@ -500,7 +558,7 @@ export default function ShopPage({ session, onLogin }) {
 
           <div className="shop-hero-actions">
             {!isLoggedIn ? (
-              <button className="shop-primary-btn" onClick={onLogin}>
+              <button className="shop-primary-btn" onClick={onLogin} type="button">
                 Connect Wallet
               </button>
             ) : (
@@ -515,6 +573,7 @@ export default function ShopPage({ session, onLogin }) {
           {FILTERS.map((f) => (
             <button
               key={f.key}
+              type="button"
               className={`shop-filter-btn ${filter === f.key ? 'active' : ''}`}
               onClick={() => setFilter(f.key)}
             >
@@ -542,6 +601,8 @@ export default function ShopPage({ session, onLogin }) {
                 onBuy={handleBuy}
                 onViewDrops={handleViewDrops}
                 buying={buying}
+                tokenBalance={getTokenBalance(resources, item.token)}
+                balanceReady={balanceReady}
               />
             ))}
           </div>
@@ -549,7 +610,7 @@ export default function ShopPage({ session, onLogin }) {
       </section>
 
       <section className="shop-footer">
-        <button className="shop-back-btn" onClick={() => navigate('/')}>
+        <button className="shop-back-btn" onClick={() => navigate('/')} type="button">
           ← Back to Home
         </button>
       </section>

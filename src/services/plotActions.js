@@ -74,6 +74,44 @@ export async function waterPlot(owner, plotAssetId, slotIndex) {
   return safeTransact(actions);
 }
 
+export async function waterPlots(owner, targets) {
+  if (!owner) {
+    return { ok: false, cancelled: false, message: 'Missing owner for waterPlots' };
+  }
+
+  if (!Array.isArray(targets) || targets.length === 0) {
+    return { ok: false, cancelled: false, message: 'No plots are ready to water' };
+  }
+
+  const normalizedTargets = targets.map((target) => {
+    const plotAssetId = target?.first ?? target?.plotAssetId;
+    const slotIndex = target?.second ?? target?.slotIndex;
+
+    if (plotAssetId === undefined || plotAssetId === null) {
+      throw new Error('Missing plotAssetId in Water All target');
+    }
+    if (slotIndex === undefined || slotIndex === null) {
+      throw new Error('Missing slotIndex in Water All target');
+    }
+
+    return {
+      first: String(plotAssetId),
+      second: String(slotIndex),
+    };
+  });
+
+  return safeTransact([
+    {
+      account: RHYTHM_FARMER_ACCOUNT,
+      name: 'waterplots',
+      data: {
+        owner,
+        targets: normalizedTargets,
+      },
+    },
+  ]);
+}
+
 export async function harvestPlot(owner, plotAssetId, slotIndex) {
   if (!owner) return { ok: false, cancelled: false, message: 'Missing owner for harvestPlot' };
   if (!plotAssetId && plotAssetId !== 0)

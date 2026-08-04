@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import PropTypes from 'prop-types';
 import { loadFuel, loadEnergy } from '../services/transactionActions';
 
@@ -28,7 +29,7 @@ const IncineratorDetails = ({
 }) => {
   const [showModal, setShowModal] = useState(false);
   const [transactionType, setTransactionType] = useState('');
-  const [amount, setAmount] = useState(0);
+  const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [imgLoaded, setImgLoaded] = useState(true);
@@ -93,52 +94,77 @@ const IncineratorDetails = ({
   };
 
   const handleTransaction = async () => {
+    let completed = false;
+    setErrorMessage('');
     setLoading(true);
     try {
       if (transactionType === 'fuel') {
-        if (amount <= 0 || amount > remainingFuelCapacity) {
-          alert(`Please enter a valid amount (1 - ${remainingFuelCapacity}).`);
-          setLoading(false);
+        const numericAmount = Number(amount);
+        if (
+          !Number.isFinite(numericAmount) ||
+          numericAmount <= 0 ||
+          numericAmount > remainingFuelCapacity
+        ) {
+          setErrorMessage(
+            `Enter a fuel amount between 1 and ${remainingFuelCapacity}.`
+          );
           return;
         }
-        await loadFuel(owner, assetId, amount);
-        alert(`Successfully loaded ${amount} fuel!`);
+        await loadFuel(owner, assetId, numericAmount);
+        alert(`Successfully loaded ${numericAmount} fuel!`);
       } else if (transactionType === 'energy') {
         await loadEnergy(owner, assetId);
         alert('Energy fully loaded!');
       }
 
       await pollIncineratorData();
+      completed = true;
     } catch (error) {
       console.error('[ERROR] Transaction failed:', error);
-      alert(error.message || 'Transaction failed. Please try again.');
+      const rawMessage = String(error?.message || '');
+      const friendlyMessage = rawMessage.toLowerCase().includes('overdrawn balance')
+        ? 'Your wallet does not have enough TRASH for this fuel load. Reduce the amount or add TRASH, then try again.'
+        : rawMessage || 'The transaction could not be completed. Please try again.';
+
+      setErrorMessage(friendlyMessage);
     } finally {
       setLoading(false);
-      setShowModal(false);
-      setAmount(0);
-      setTransactionType('');
-      setErrorMessage('');
+      if (completed) {
+        setShowModal(false);
+        setAmount('');
+        setTransactionType('');
+        setErrorMessage('');
+      }
     }
   };
 
   const handleFuelClick = (e) => {
     e.stopPropagation();
     setTransactionType('fuel');
-    setAmount(0);
+    setAmount('');
     setErrorMessage('');
     setShowModal(true);
   };
 
   const handleFuelInputChange = (e) => {
-    const input = Number(e.target.value);
-    if (input > remainingFuelCapacity) {
-      setAmount(remainingFuelCapacity);
+    const rawValue = e.target.value;
+    if (rawValue === '') {
+      setAmount('');
+      setErrorMessage('');
+      return;
+    }
+
+    const editableValue = rawValue.replace(/^0+(?=\d)/, '');
+    const numericValue = Number(editableValue);
+
+    if (numericValue > remainingFuelCapacity) {
+      setAmount(String(remainingFuelCapacity));
       setErrorMessage(`Maximum fuel load is ${remainingFuelCapacity}.`);
-    } else if (input < 0) {
-      setAmount(0);
+    } else if (numericValue < 0) {
+      setAmount('');
       setErrorMessage('');
     } else {
-      setAmount(input);
+      setAmount(editableValue);
       setErrorMessage('');
     }
   };
@@ -241,14 +267,16 @@ const IncineratorDetails = ({
         </div>
       )}
 
-      {showModal && (
-        <div
-          className="modal-overlay"
-          onClick={(e) => {
-            e.stopPropagation();
-            if (!loading) setShowModal(false);
-          }}
-        >
+      {showModal &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <div
+            className="modal-overlay incinerator-transaction-overlay"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!loading) setShowModal(false);
+            }}
+          >
           <div
             className="modal-content"
             onClick={(e) => e.stopPropagation()}
@@ -267,12 +295,21 @@ const IncineratorDetails = ({
                   max={remainingFuelCapacity}
                   disabled={loading}
                 />
-                {errorMessage && (
-                  <p className="error-message">{errorMessage}</p>
-                )}
               </>
             ) : (
               <p>Loading energy will cost 2 CINDER tokens. Proceed?</p>
+            )}
+
+            {errorMessage && (
+              <div className="incinerator-transaction-error" role="alert">
+                <span className="incinerator-transaction-error-icon" aria-hidden="true">
+                  !
+                </span>
+                <div>
+                  <strong>Transaction not completed</strong>
+                  <p>{errorMessage}</p>
+                </div>
+              </div>
             )}
 
             <div className="modal-buttons">
@@ -290,8 +327,9 @@ const IncineratorDetails = ({
               </button>
             </div>
           </div>
-        </div>
-      )}
+        </div>,
+          document.body
+        )}
     </div>
   );
 };

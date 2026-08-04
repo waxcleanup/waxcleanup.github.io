@@ -104,14 +104,6 @@
   text-shadow: 0 0 18px rgba(0, 255, 153, 0.18);
 }
 
-.homepage-welcome {
-  font-size: 1.05rem;
-  margin: 0.5rem 0 1.25rem;
-  text-align: center;
-  color: var(--text);
-  opacity: 0.95;
-}
-
 /* -----------------------------
    New landing/intro UI
    (used by the enhanced HomePage.js)
@@ -336,53 +328,6 @@
   flex-direction: column;
   align-items: center;
   width: 100%;
-}
-
-/* Account panel */
-.account-info {
-  background: linear-gradient(180deg, rgba(26, 26, 26, 0.86) 0%, rgba(16, 16, 16, 0.72) 100%);
-  border: 1px solid rgba(0, 255, 153, 0.28);
-  border-radius: var(--radius);
-  padding: 1rem 1.1rem;
-  margin: 1rem 0;
-  width: 100%;
-  max-width: 520px;
-  box-shadow:
-    0 0 0 1px rgba(0, 255, 153, 0.06) inset,
-    0 16px 55px rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(10px);
-}
-
-.account-info p {
-  color: rgba(215, 255, 233, 0.9);
-  margin: 0 0 0.75rem 0;
-}
-
-/* Usage bars */
-.usage-bar {
-  margin: 0.75rem 0;
-}
-
-.usage-label {
-  font-weight: 800;
-  margin-bottom: 0.35rem;
-  color: rgba(215, 255, 233, 0.88);
-  font-size: 0.95rem;
-}
-
-.usage-track {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(0, 255, 153, 0.16);
-  border-radius: 999px;
-  height: 16px;
-  width: 100%;
-  overflow: hidden;
-}
-
-.usage-fill {
-  height: 100%;
-  background: linear-gradient(90deg, rgba(0, 255, 136, 0.85), rgba(0, 255, 153, 0.55));
-  transition: width 0.4s ease-in-out;
 }
 
 /* Improve focus accessibility */

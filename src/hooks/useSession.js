@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import sessionKit, { saveSession, clearSession } from '../config/sessionConfig';
 import { useNavigate } from 'react-router-dom';
+import { PLAYER_RESOURCES_REFRESH_EVENT } from './PlayerResourcesContext';
 
 export const TAPOS = {
   blocksBehind: 3, // Adjusted for lower latency
@@ -41,22 +42,18 @@ export const InitTransaction = async (dataTrx) => {
 
     console.log('[DEBUG] Raw transaction response:', transaction);
 
-    // Parse transaction ID from different response formats
-    if (transaction?.resolved?.transaction?.id) {
-      return {
-        transactionId: transaction.resolved.transaction.id,
-        actions: actions,
-      };
+    const transactionId =
+      transaction?.resolved?.transaction?.id || transaction?.transaction_id;
+
+    if (!transactionId) {
+      throw new Error('Transaction failed. No transaction ID returned.');
     }
 
-    if (transaction?.transaction_id) {
-      return {
-        transactionId: transaction.transaction_id,
-        actions: actions,
-      };
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event(PLAYER_RESOURCES_REFRESH_EVENT));
     }
 
-    throw new Error('Transaction failed. No transaction ID returned.');
+    return { transactionId, actions };
   } catch (error) {
     console.error('[ERROR] Transaction failed with full details:', error.response || error);
 

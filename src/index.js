@@ -6,6 +6,7 @@ import App from './App';
 import reportWebVitals from './reportWebVitals';
 import { BrowserRouter } from 'react-router-dom';
 import { SessionProvider } from './hooks/SessionContext';
+import { PlayerResourcesProvider } from './hooks/PlayerResourcesContext';
 import { SkinProvider } from './hooks/SkinContext';
 
 // Restore original path after GitHub Pages 404 redirect
@@ -19,11 +20,13 @@ const root = ReactDOM.createRoot(document.getElementById('root'));
 
 root.render(
   <SessionProvider>
-    <SkinProvider>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    </SkinProvider>
+    <PlayerResourcesProvider>
+      <SkinProvider>
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </SkinProvider>
+    </PlayerResourcesProvider>
   </SessionProvider>
 );
 

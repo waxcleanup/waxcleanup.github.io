@@ -193,14 +193,14 @@ export default function BagPanel({
   const [filterText, setFilterText] = useState('');
   const [sortMode, setSortMode] = useState('newest');
   const [collapsed, setCollapsed] = useState({
-    seeds: false,
-    compost: false,
-    tools: false,
-    cores: false,
-    plots: false,
-    packs: false,
-    farms: false,
-    other: false,
+    seeds: true,
+    compost: true,
+    tools: true,
+    cores: true,
+    plots: true,
+    packs: true,
+    farms: true,
+    other: true,
   });
 
   const [plotModalOpen, setPlotModalOpen] = useState(false);

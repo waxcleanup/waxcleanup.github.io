@@ -5,6 +5,7 @@ import { useSession } from '../hooks/SessionContext';
 import { useSkin } from '../hooks/SkinContext';
 import MusicPlayerMini from './MusicPlayerMini';
 import SkinSelector from './SkinSelector';
+import PlayerResourceBar from './PlayerResourceBar';
 import logo from '../assets/cleanupcentr.png';
 import './NavBar.css';
 
@@ -15,7 +16,8 @@ export default function NavBar() {
   const isLoggedIn = !!session;
 
   return (
-    <header>
+    <>
+      <header>
       <nav className="nav-bar">
         <div className="nav-logo">
           <img
@@ -134,6 +136,8 @@ export default function NavBar() {
           <MusicPlayerMini />
         </div>
       )}
-    </header>
+      </header>
+      {isLoggedIn && <PlayerResourceBar />}
+    </>
   );
 }

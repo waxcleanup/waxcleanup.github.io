@@ -3,14 +3,14 @@ import { InitTransaction } from '../hooks/useSession';
 
 /**
  * Stake a Farm Cell to a farm.
- * Memo format: "Stake Cell:<farm_id>:<asset_id>:<template_id>"
+ * Memo format: "stake:farmcell:<farm_id>"
  */
-export const stakeFarmCell = async (accountName, farm_id, asset_id, template_id) => {
-  if (!farm_id || !asset_id || !template_id) {
-    throw new Error('Missing farm_id, asset_id, or template_id for Farm Cell staking.');
+export const stakeFarmCell = async (accountName, farm_id, asset_id) => {
+  if (!farm_id || !asset_id) {
+    throw new Error('Missing farm_id or asset_id for Farm Cell staking.');
   }
 
-  const memo = `Stake Cell:${farm_id}:${asset_id}:${template_id}`;
+  const memo = `stake:farmcell:${farm_id}`;
 
   const dataTrx = {
     actions: [

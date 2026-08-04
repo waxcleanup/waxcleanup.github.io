@@ -138,6 +138,63 @@
   margin-bottom: 8px;
 }
 
+.recipe-outputs {
+  border: 1px solid rgba(255, 215, 100, 0.16);
+  border-radius: 12px;
+  background: rgba(255, 215, 100, 0.035);
+  overflow: hidden;
+}
+
+.recipe-outputs-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 12px;
+  color: #f3d981;
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.recipe-outputs-toggle::-webkit-details-marker {
+  display: none;
+}
+
+.recipe-outputs-toggle::before {
+  content: '+';
+  color: #ffd764;
+  font-size: 1rem;
+}
+
+.recipe-outputs[open] .recipe-outputs-toggle::before {
+  content: '-';
+}
+
+.recipe-outputs-action {
+  margin-left: auto;
+  color: #aebdb0;
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+}
+
+.recipe-outputs[open] .recipe-outputs-action {
+  font-size: 0;
+}
+
+.recipe-outputs[open] .recipe-outputs-action::after {
+  content: 'Hide';
+  font-size: 0.7rem;
+}
+
+.recipe-outputs-content {
+  padding: 0 10px 4px;
+}
+
 .recipe-row {
   display: flex;
   justify-content: space-between;

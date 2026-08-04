@@ -3,7 +3,6 @@
    Clean, DRY & responsive
    (🔥 Burn Center Theme - Red/Orange + dropdown readability fix)
    + RPG Enhancement Layer
-   + FIXED: User Balances container truly centered (no duplicates / no overrides)
    ✅ UPDATED: Proposals table can expand + readable + no forced squeeze
    ✅ UPDATED: Burnable NFT card text hierarchy (Mint/Rule/Cap cleaned up)
    ======================= */
@@ -204,6 +203,44 @@ tbody tr:nth-child(odd), .incinerator-table tbody tr:nth-child(odd){ background:
   position: fixed; inset:0; padding:8px; z-index:1000;
   display:flex; align-items:center; justify-content:center;
   background: rgba(0,0,0,.70);
+}
+.modal-overlay.incinerator-transaction-overlay{
+  z-index:100003;
+}
+.incinerator-transaction-error{
+  display:flex;
+  align-items:flex-start;
+  gap:12px;
+  margin-top:14px;
+  padding:12px 14px;
+  text-align:left;
+  color:#ffe7df;
+  background:linear-gradient(135deg, rgba(120,22,8,.72), rgba(45,12,8,.92));
+  border:1px solid rgba(255,106,58,.7);
+  border-radius:10px;
+  box-shadow:inset 0 0 18px rgba(255,69,0,.08), 0 8px 24px rgba(0,0,0,.28);
+}
+.incinerator-transaction-error-icon{
+  flex:0 0 28px;
+  width:28px;
+  height:28px;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  color:#1a0905;
+  background:#ff6a3a;
+  font-weight:900;
+  box-shadow:0 0 14px rgba(255,106,58,.45);
+}
+.incinerator-transaction-error strong{
+  display:block;
+  color:#fff;
+  margin-bottom:4px;
+}
+.incinerator-transaction-error p{
+  margin:0;
+  color:#ffd2c4;
+  line-height:1.4;
 }
 .modal-content{
   background: linear-gradient(180deg, rgba(26,18,14,.98), rgba(12,11,10,.98));
@@ -677,56 +714,6 @@ tbody tr:hover{ background: rgba(255,69,0,.08); }
 select{
   background: linear-gradient(180deg, rgba(255,106,26,.12), rgba(0,0,0,.25));
   color: #fff;
-}
-
-/* =========================
-   USER BALANCES (FIXED)
-   - Container centered
-   - Text centered
-   - No duplicates / no overrides
-   ========================= */
-
-.balances-section{
-  /* center the card itself */
-  margin: 18px auto;
-  width: min(92vw, 640px);
-
-  /* UI panel look */
-  background: linear-gradient(180deg, rgba(255,106,26,.08), rgba(0,0,0,.22));
-  border: 1px solid rgba(255,69,0,.18);
-  border-radius: 14px;
-  box-shadow:
-    inset 0 0 0 1px rgba(255,106,26,.08),
-    0 10px 28px rgba(0,0,0,.45);
-
-  padding: 16px 18px;
-
-  /* center inner content */
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-}
-
-.balances-section h3{
-  margin: 0 0 12px;
-  color: var(--highlight-color);
-  letter-spacing: .06em;
-  text-transform: uppercase;
-}
-
-.balances-section p{
-  margin: 4px 0;
-  font-size: 15px;
-  color: var(--text);
-  text-shadow: 0 0 6px rgba(255,69,0,.35);
-}
-
-.balances-section p::before{
-  content: "▸ ";
-  color: var(--accent);
-  font-weight: 900;
 }
 
 .nft-slot-meta { width: 100%; }

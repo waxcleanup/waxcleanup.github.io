@@ -1,13 +1,24 @@
 // src/components/GuidePage.js
 import React from 'react';
+import { Link } from 'react-router-dom';
 import './GuidePage.css';
 
-function Section({ title, children }) {
+function Section({ id, title, children, defaultOpen = false }) {
+  const [open, setOpen] = React.useState(defaultOpen);
+
   return (
-    <section className="guide-section">
-      <h3>{title}</h3>
+    <details
+      id={id}
+      className="guide-section"
+      open={open}
+      onToggle={(event) => setOpen(event.currentTarget.open)}
+    >
+      <summary className="guide-section-summary">
+        <h3>{title}</h3>
+        <span className="guide-section-toggle">{open ? 'Hide' : 'Show'}</span>
+      </summary>
       <div className="guide-content">{children}</div>
-    </section>
+    </details>
   );
 }
 
@@ -32,6 +43,14 @@ function Step({ number, title, children }) {
   );
 }
 
+function GuideRouteLink({ to, children }) {
+  return (
+    <Link className="guide-link-button" to={to}>
+      {children}
+    </Link>
+  );
+}
+
 export default function GuidePage() {
   return (
     <div className="guide-page">
@@ -44,6 +63,68 @@ export default function GuidePage() {
           economy.
         </p>
       </div>
+
+      <nav className="guide-toc" aria-label="Guide contents">
+        <strong>Jump to:</strong>
+        <a href="#quick-start">Quick Start</a>
+        <a href="#farming-start">Start Farming</a>
+        <a href="#onchain-farming">On-Chain Rules</a>
+        <a href="#burn-center">Burning</a>
+        <a href="#energy-system">Energy</a>
+        <a href="#machines">Machines</a>
+        <a href="#blends">Blends</a>
+        <a href="#troubleshooting">Troubleshooting</a>
+      </nav>
+
+      <Section id="quick-start" title="🚀 New Player Quick Start" defaultOpen>
+        <div className="guide-highlight">
+          Follow these steps in order to complete your first farming loop. You
+          will approve WAX transactions in Anchor whenever an NFT or token moves
+          into the game contract.
+        </div>
+
+        <Step number="1" title="Connect Anchor and Check WAX Resources">
+          Connect your WAX account. The resource bar shows your account, liquid
+          WAX, RAM, CPU, game tokens, and personal energy. WAX pays network
+          resource costs; keep enough CPU and RAM available to sign actions.
+        </Step>
+
+        <Step number="2" title="Get a Farming or Starter Pack">
+          Open the Shop, compare the guaranteed and possible drops, check that
+          your token balance covers the selected quantity, and purchase the pack.
+        </Step>
+
+        <Step number="3" title="Open the Pack in Your Farming Bag">
+          Go to Farming, expand Bag → Packs, and open the pack. Loot is
+          randomized and may take several seconds to appear after the Anchor
+          transaction is confirmed.
+        </Step>
+
+        <Step number="4" title="Prepare Farming Assets">
+          You need a Plot, at least one seed, compost, personal energy, farm
+          energy, an equipped Watering tool, and an equipped Harvesting tool.
+          You may use an available global farm or stake your own Farm NFT.
+        </Step>
+
+        <Step number="5" title="Stake and Equip">
+          Stake the Plot into a farm. Deposit each tool from Bag → Tools, then
+          equip it from Staked Tools into its matching Watering or Harvesting
+          slot. Deposit compost from Bag → Compost.
+        </Step>
+
+        <Step number="6" title="Plant, Water, and Harvest">
+          Plant one seed, water immediately for the first tick, return when the
+          seed cooldown expires, and use Water All for every eligible slot.
+          Harvest after all required watering ticks are complete, then claim
+          accrued rewards from the Farming page.
+        </Step>
+
+        <div className="guide-link-row guide-link-grid">
+          <GuideRouteLink to="/shop">Open Shop</GuideRouteLink>
+          <GuideRouteLink to="/farming">Open Farming</GuideRouteLink>
+          <GuideRouteLink to="/collections">Open Encyclopedia</GuideRouteLink>
+        </div>
+      </Section>
 
       <Section title="🌍 What is CleanupCentr?">
         <p>
@@ -86,7 +167,192 @@ export default function GuidePage() {
         </div>
       </Section>
 
-      <Section title="🔥 Burn Center">
+      <Section id="farming-start" title="🌾 What You Need to Start Farming">
+        <p>
+          A Farming Pack is a convenient way to begin collecting farming items,
+          but opening one does not automatically create a working farm. Pack
+          contents can vary, so use <strong>View Drops</strong> in the Shop to
+          see its guaranteed and possible rewards before buying.
+        </p>
+
+        <div className="guide-highlight">
+          <strong>Minimum farming path:</strong> connect your wallet, open your
+          pack, prepare a Plot and seeds, make sure you have energy, then stake
+          and equip the tools required to water and harvest.
+        </div>
+
+        <div className="guide-grid">
+          <Card title="Farming Pack">
+            Buy a farming or starter pack from the Shop, then open it from
+            Farming → Bag → Packs. The contents may provide seeds, compost,
+            tools, plots, or other farming resources depending on its drop table.
+          </Card>
+
+          <Card title="A Plot">
+            A Plot provides planting slots. Stake your Plot from Farming → Bag →
+            Plots and select an available global farm or one of your own farms.
+          </Card>
+
+          <Card title="Seeds">
+            Seeds are required to plant a crop. Open seed packs when needed and
+            check the Seeds group in your Bag before trying to plant.
+          </Card>
+
+          <Card title="Energy">
+            Farming actions consume energy. Energy cells increase your personal
+            capacity, and CINDER is used to recharge personal or farm energy.
+          </Card>
+
+          <Card title="Farming Tools">
+            The loadout has separate Watering and Harvesting tool slots. Tools
+            must first be staked from your Bag and then equipped in the matching
+            slot before they can support the farming cycle.
+          </Card>
+
+          <Card title="Compost">
+            Compost is a farming input used by supported planting, recipe, and
+            progression systems. Deposit compost from the Compost group in your
+            Farming Bag when the activity requires it.
+          </Card>
+        </div>
+
+        <div className="guide-subsection">
+          <h4>Do I need to own a Farm NFT?</h4>
+          <p>
+            Not always. You can stake a Plot into an available global farm. If
+            you own a Farm NFT, stake it under <strong>Your Farms</strong>. A
+            farm battery and farm energy help support your own farm
+            infrastructure, but they are separate from the Plot, seeds, and
+            personal tool loadout.
+          </p>
+        </div>
+
+        <div className="guide-subsection">
+          <h4>Farming Tool Setup</h4>
+          <Step number="1" title="Find the Tool in Your Bag">
+            Open Farming, expand the Tools group in the Bag, and confirm whether
+            it is a Watering or Harvesting tool.
+          </Step>
+
+          <Step number="2" title="Stake the Tool">
+            Select the tool’s stake action and approve the Anchor transaction.
+            After indexing completes, it appears in the Staked Tools section.
+          </Step>
+
+          <Step number="3" title="Equip the Correct Slot">
+            Equip watering tools in the Watering slot and harvesting tools in
+            the Harvesting slot. A tool in the wrong slot cannot replace the
+            tool required by the action.
+          </Step>
+
+          <Step number="4" title="Check Energy and Begin">
+            Confirm that your personal energy is available, plant a seed in your
+            Plot, use Water or Water All when a slot is ready, and harvest after
+            the crop reaches its goal.
+          </Step>
+        </div>
+
+        <div className="guide-highlight">
+          <strong>Before planting, check:</strong> Plot staked, seed available,
+          required compost deposited, personal energy charged, Watering tool
+          equipped, and Harvesting tool equipped.
+        </div>
+      </Section>
+
+      <Section id="onchain-farming" title="⛓️ Current On-Chain Farming Rules">
+        <p>
+          These values come from the live <strong>rhythmfarmer</strong> contract
+          configuration on WAX. They are current settings, not permanent
+          promises: contract administrators can update configured templates,
+          capacities, ratios, and seed metadata.
+        </p>
+
+        <div className="guide-grid">
+          <Card title="Plant Cost">
+            Planting consumes 1 seed, 1 deposited compost, 2 personal energy,
+            and 1 energy from the farm currently hosting the Plot.
+          </Card>
+
+          <Card title="Water Cost">
+            Each successful watering consumes 2 personal energy and 1 farm
+            energy. An equipped watering tool is mandatory.
+          </Card>
+
+          <Card title="Harvest Cost">
+            Harvesting consumes 2 personal energy and 1 farm energy. The crop
+            must be READY and an equipped harvesting tool is mandatory.
+          </Card>
+
+          <Card title="Energy Recharge">
+            The live rate is 1.000000 CINDER for 2 energy. Recharge cannot exceed
+            the remaining capacity of the personal cell or farm battery.
+          </Card>
+
+          <Card title="Current Plot">
+            The configured Common Plot template currently provides 1 planting
+            slot. Plot capacity is controlled by on-chain template metadata.
+          </Card>
+
+          <Card title="Current Cells">
+            The configured Simple Core adds 250 personal energy capacity. The
+            configured Farm Cell adds 90,000 farm energy capacity.
+          </Card>
+        </div>
+
+        <div className="guide-subsection">
+          <h4>Current Seed Timing and Base Yield</h4>
+          <div className="guide-table-wrap">
+            <table className="guide-data-table">
+              <thead>
+                <tr>
+                  <th>Seed</th>
+                  <th>Waters</th>
+                  <th>Cooldown</th>
+                  <th>Minimum Time</th>
+                  <th>Base Yield</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Basic Tomato Seed</td>
+                  <td>14</td>
+                  <td>8 hours</td>
+                  <td>About 4 days 8 hours</td>
+                  <td>440,000 TOMATOE</td>
+                </tr>
+                <tr>
+                  <td>Tomato E Seed</td>
+                  <td>21</td>
+                  <td>8 hours</td>
+                  <td>About 6 days 16 hours</td>
+                  <td>1,000,000 TOMATOE</td>
+                </tr>
+                <tr>
+                  <td>Enhanced Tomato Seed</td>
+                  <td>28</td>
+                  <td>8 hours</td>
+                  <td>About 9 days</td>
+                  <td>1,340,000 TOMATOE</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p className="guide-note">
+            The first watering is allowed immediately after planting. The
+            minimum times above count the remaining 8-hour intervals and assume
+            every watering happens as soon as it becomes available.
+          </p>
+        </div>
+
+        <div className="guide-highlight">
+          <strong>Water All:</strong> only growing slots that are ready are sent
+          to the contract. Ineligible or cooling-down slots are skipped. Make
+          sure enough personal and farm energy exists for every target because
+          an energy failure rejects the transaction.
+        </div>
+      </Section>
+
+      <Section id="burn-center" title="🔥 Burn Center">
         <p>
           The Burn Center is one of the most important systems in CleanupCentr.
           It is where players use <strong>Incinerators</strong> to burn supported
@@ -104,6 +370,29 @@ export default function GuidePage() {
           <strong>Core burn loop:</strong> TRASH fuels Incinerators, Incinerators
           create CINDER, and CINDER is used to buy energy that powers both
           Incinerators and farm energy systems.
+        </div>
+
+        <div className="guide-subsection">
+          <h4>Before You Burn</h4>
+          <ul className="guide-checklist">
+            <li>The NFT must match an approved template or schema burn rule.</li>
+            <li>An Incinerator must be assigned to the same Burn Console slot.</li>
+            <li>The Incinerator must have enough TRASH fuel.</li>
+            <li>The Incinerator must have enough internal energy.</li>
+            <li>Durability must be greater than zero.</li>
+            <li>The Incinerator cannot have an active repair timer.</li>
+          </ul>
+          <p>
+            The Burn button uses the same validation immediately before the
+            wallet transaction. If the NFT does not include custom economics,
+            the current frontend fallback is 10,000 TRASH fuel and 1
+            Incinerator energy. Always use the values shown by the Burn Room for
+            the selected NFT.
+          </p>
+        </div>
+
+        <div className="guide-link-row">
+          <GuideRouteLink to="/burn">Open Burn Center</GuideRouteLink>
         </div>
 
         <ul>
@@ -157,7 +446,7 @@ export default function GuidePage() {
         </div>
       </Section>
 
-     <Section title="⚡ Energy System">
+     <Section id="energy-system" title="⚡ Energy System">
        <p>
          Energy is one of the core resources that ties CleanupCentr together. It is
          what powers active production across multiple systems in the game.
@@ -168,6 +457,35 @@ export default function GuidePage() {
          energy. That energy is used to run key gameplay systems and keep production
          moving.
        </p>
+
+       <div className="guide-grid">
+         <Card title="Personal Energy">
+           Personal energy belongs to your account and pays your share of
+           farming actions. A configured Simple Core currently adds 250 maximum
+           personal energy.
+         </Card>
+
+         <Card title="Farm Energy">
+           Farm energy belongs to the farm hosting the Plot. A configured Farm
+           Cell currently adds 90,000 maximum farm energy. On a global farm, its
+           owner is responsible for maintaining this supply.
+         </Card>
+
+         <Card title="Recharge Rate">
+           Personal and farm recharge controls are separate, but both currently
+           use CINDER at the live rate of 1 CINDER for 2 energy.
+         </Card>
+
+         <Card title="Capacity Protection">
+           The contract rejects an over-capacity recharge. A personal cell
+           cannot be unstaked if current energy would exceed the remaining
+           capacity, and a farm cell cannot be removed until farm energy is zero.
+         </Card>
+       </div>
+
+       <div className="guide-link-row">
+         <GuideRouteLink to="/farming">Manage Farming Energy</GuideRouteLink>
+       </div>
 
        <ul>
          <li>CINDER is converted into usable energy</li>
@@ -194,7 +512,7 @@ export default function GuidePage() {
   <ul>
     <li><strong>Plots</strong> represent farming capacity</li>
     <li><strong>Compost</strong> is used as a planting input</li>
-    <li><strong>Tools</strong> are used for harvesting and interaction</li>
+    <li><strong>Tools</strong> are equipped separately for watering and harvesting</li>
     <li><strong>Energy</strong> powers farming systems</li>
   </ul>
 
@@ -206,15 +524,16 @@ export default function GuidePage() {
     </p>
 
     <ul>
-      <li>Basic seeds produce standard resources</li>
-      <li>Advanced seeds can increase yield efficiency</li>
-      <li>Hybrid seeds may produce multiple outputs</li>
-      <li>Rare seeds can unlock special rewards or drops</li>
+      <li>Each seed template defines its own watering-tick requirement</li>
+      <li>Each completed seed credits its configured base TOMATOE yield</li>
+      <li>All currently configured seeds use an eight-hour watering interval</li>
+      <li>The first watering tick is available immediately after planting</li>
     </ul>
 
     <p>
-      Yield is influenced by multiple factors including seed type, tool quality,
-      and energy input.
+      In the current contract, harvest yield comes from the seed template's
+      configured base yield. The equipped tools authorize the action, while
+      energy is consumed to perform it; neither currently multiplies the yield.
     </p>
   </div>
 
@@ -245,7 +564,7 @@ export default function GuidePage() {
   </p>
 </Section>
 
-      <Section title="⚙️ Machines">
+      <Section id="machines" title="⚙️ Machines">
         <p>
           Machines are production assets that process inputs into outputs over
           time. They are one of the most important systems for scaling beyond the
@@ -265,6 +584,10 @@ export default function GuidePage() {
           reward players who plan ahead, manage inputs well, and build around
           production efficiency.
         </p>
+
+        <div className="guide-link-row">
+          <GuideRouteLink to="/machines">Open Machines</GuideRouteLink>
+        </div>
       </Section>
 
       <Section title="📦 Packs">
@@ -285,9 +608,34 @@ export default function GuidePage() {
           provide the first materials needed to start participating in the
           ecosystem.
         </p>
+
+        <div className="guide-subsection">
+          <h4>Opening a Pack</h4>
+          <ol>
+            <li>Buy the pack in Shop and approve the Anchor transaction.</li>
+            <li>Open Farming and expand the Packs group in your Bag.</li>
+            <li>Select Open and approve the NFT transfer to the game contract.</li>
+            <li>Wait for the Bag to poll the indexed inventory and reveal new items.</li>
+          </ol>
+          <p>
+            Seed packs grant configured seed quantities. Other crates can use a
+            blend recipe and randomized loot table, including weighted rewards
+            or a blank outcome. Always inspect View Drops before purchasing.
+          </p>
+        </div>
+
+        <div className="guide-highlight">
+          If Anchor confirms the transaction but loot is not visible yet, do not
+          submit the same pack again. Wait a few seconds and use the Farming or
+          Bag refresh control while AtomicAssets and the backend finish indexing.
+        </div>
+
+        <div className="guide-link-row">
+          <GuideRouteLink to="/shop">Browse Packs</GuideRouteLink>
+        </div>
       </Section>
 
-      <Section title="🔄 Blends">
+      <Section id="blends" title="🔄 Blends">
         <p>
           Blending is how players turn inputs into upgraded or transformed
           assets. It is one of the main progression systems in the game.
@@ -304,6 +652,10 @@ export default function GuidePage() {
           materials and make progression feel like building rather than just
           collecting.
         </p>
+
+        <div className="guide-link-row">
+          <GuideRouteLink to="/recipes">Open Blends</GuideRouteLink>
+        </div>
       </Section>
 
       <Section title="💰 Resources & Economy">
@@ -366,39 +718,53 @@ export default function GuidePage() {
         </div>
       </Section>
 
-      <Section title="🚀 Getting Started">
-        <Step number="1" title="Get Your First Assets">
-          Start with packs, burnable NFTs, or an Incinerator so you can begin
-          participating in the game economy.
-        </Step>
-
-        <Step number="2" title="Learn the Burn Loop">
-          Use the Burn Center to understand how TRASH fuels Incinerators, how
-          burning creates CINDER, and how CINDER supports energy.
-        </Step>
-
-        <Step number="3" title="Build Toward Farming">
-          Collect compost, plots, and tools so you can begin creating a more
-          stable production setup.
-        </Step>
-
-        <Step number="4" title="Expand Into Machines">
-          Once you have enough materials and supporting systems, begin using
-          machines for larger-scale production.
-        </Step>
-
-        <Step number="5" title="Reinvest and Scale">
-          Keep cycling your resources back into the game so your production
-          network becomes stronger over time.
-        </Step>
+      <Section id="troubleshooting" title="🧰 Troubleshooting">
+        <div className="guide-grid">
+          <Card title="Transaction Succeeded, Item Missing">
+            AtomicAssets or backend indexing can lag behind the blockchain.
+            Wait a few seconds and refresh the relevant page before submitting
+            the same action again.
+          </Card>
+          <Card title="Cannot Plant">
+            Confirm that the plot belongs to the selected farm, its slot is
+            empty, one seed is available, one compost is deposited, and both
+            personal and farm energy can cover the action.
+          </Card>
+          <Card title="Cannot Water">
+            Equip a Watering tool. The first tick is immediate; later ticks are
+            available only after the seed's eight-hour cooldown. Water All skips
+            plots that are not eligible yet.
+          </Card>
+          <Card title="Cannot Harvest">
+            The crop must show Ready after every watering tick, and a Harvesting
+            tool must be equipped. Harvest also requires personal and farm energy.
+          </Card>
+          <Card title="Cannot Recharge">
+            Current recharge costs 1 CINDER and grants 2 energy, up to the
+            relevant capacity. Make sure CINDER is available and the personal or
+            farm energy storage is not already full.
+          </Card>
+          <Card title="Anchor or Resource Error">
+            Reopen Anchor, confirm the correct account, and check WAX CPU and RAM
+            in the resource bar. A rejected or expired wallet request does not
+            complete the game action.
+          </Card>
+        </div>
+        <div className="guide-highlight">
+          Read the final Anchor or contract error before retrying. Avoid repeated
+          clicks while a transaction or inventory refresh is still processing.
+        </div>
       </Section>
 
-      <Section title="📚 Use the Encyclopedia">
+      <Section id="encyclopedia" title="📚 Use the Encyclopedia">
         <p>
           The Encyclopedia is where you can learn more about the NFTs and assets
           that make up the CleanupCentr ecosystem. Use it to understand what each
           item does, where it fits, and how it supports the larger game loop.
         </p>
+        <div className="guide-link-row">
+          <GuideRouteLink to="/collections">Open Encyclopedia</GuideRouteLink>
+        </div>
       </Section>
     </div>
   );

@@ -1,23 +1,19 @@
 // src/components/HomePage.js
-import React, { useEffect, useMemo, useState } from 'react';
-import { JsonRpc } from 'eosjs';
+import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSession } from '../hooks/SessionContext';
 import logo from '../assets/cleanupcentr.png';
 import MessageBoard from './MessageBoard';
 import './HomePage.css';
 
-const rpc = new JsonRpc('https://api.wax.alohaeos.com');
-
 export default function HomePage() {
-  const { session, handleLogin, handleLogout } = useSession();
-  const [accountInfo, setAccountInfo] = useState(null);
+  const { session, handleLogin } = useSession();
   const navigate = useNavigate();
 
   const LINKS = useMemo(() => {
-    const neftyCollectionUrl =
-      process.env.REACT_APP_NEFTY_COLLECTION_URL ||
-      'https://neftyblocks.com/collection/cleanupcentr';
+    const atomicHubCollectionUrl =
+      process.env.REACT_APP_ATOMICHUB_COLLECTION_URL ||
+      'https://wax.atomichub.io/explorer/collection/wax-mainnet/cleanupcentr';
 
     const discordInviteUrl =
       process.env.REACT_APP_DISCORD_INVITE_URL ||
@@ -30,41 +26,12 @@ export default function HomePage() {
       process.env.REACT_APP_TWITTER_URL || 'https://x.com/TheCleanUpCentr';
 
     return {
-      neftyCollectionUrl,
+      atomicHubCollectionUrl,
       discordInviteUrl,
       telegramUrl,
       twitterUrl,
     };
   }, []);
-
-  useEffect(() => {
-    if (session?.permissionLevel?.actor) {
-      const actor = String(session.permissionLevel.actor);
-      rpc.get_account(actor)
-        .then((res) => setAccountInfo(res))
-        .catch((err) => console.error('Failed to fetch account info:', err));
-    } else {
-      setAccountInfo(null);
-    }
-  }, [session]);
-
-  const renderUsageBar = (used, max, label) => {
-    const safeMax = Number(max || 0);
-    const safeUsed = Number(used || 0);
-    const percent =
-      safeMax > 0 ? Math.min((safeUsed / safeMax) * 100, 100).toFixed(2) : '0.00';
-
-    return (
-      <div className="usage-bar">
-        <div className="usage-label">
-          {label}: {safeUsed} / {safeMax}
-        </div>
-        <div className="usage-track">
-          <div className="usage-fill" style={{ width: `${percent}%` }} />
-        </div>
-      </div>
-    );
-  };
 
   const openLink = (url) => {
     if (!url) return;
@@ -92,10 +59,10 @@ export default function HomePage() {
 
           <button
             className="homepage-link-button"
-            onClick={() => openLink(LINKS.neftyCollectionUrl)}
-            title="View official collections on NeftyBlocks"
+            onClick={() => openLink(LINKS.atomicHubCollectionUrl)}
+            title="View the CleanupCentr collection on AtomicHub"
           >
-            View Collections (NeftyBlocks)
+            View Collection (AtomicHub)
           </button>
 
           <button
@@ -133,10 +100,6 @@ export default function HomePage() {
     </section>
   );
 
-  const actor = session?.permissionLevel?.actor
-    ? String(session.permissionLevel.actor)
-    : null;
-
   return (
     <div className="homepage-container">
       <MessageBoard />
@@ -146,8 +109,8 @@ export default function HomePage() {
         <h1 className="homepage-title">TheCleanupCentr</h1>
       </header>
 
-      <section className="homepage-primary">
-        {!session ? (
+      {!session && (
+        <section className="homepage-primary">
           <div className="homepage-login">
             <button
               onClick={() => handleLogin('anchor')}
@@ -156,38 +119,8 @@ export default function HomePage() {
               Login
             </button>
           </div>
-        ) : (
-          <div className="homepage-wallet">
-            <p className="homepage-welcome">
-              Welcome, <strong>{actor}</strong>!
-            </p>
-
-            {accountInfo && (
-              <div className="account-info compact">
-                <p>
-                  <strong>Balance:</strong>{' '}
-                  {accountInfo.core_liquid_balance || '0.00000000 WAX'}
-                </p>
-
-                {renderUsageBar(
-                  accountInfo.cpu_limit?.used,
-                  accountInfo.cpu_limit?.max,
-                  'CPU'
-                )}
-                {renderUsageBar(
-                  accountInfo.ram_usage,
-                  accountInfo.ram_quota,
-                  'RAM'
-                )}
-              </div>
-            )}
-
-            <button onClick={handleLogout} className="homepage-logout-button">
-              Log out
-            </button>
-          </div>
-        )}
-      </section>
+        </section>
+      )}
 
       <ProjectIntro />
     </div>

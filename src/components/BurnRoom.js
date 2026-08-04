@@ -77,6 +77,8 @@ const BurnRoom = ({ accountName, onClose }) => {
   const [repairError, setRepairError] = useState('');
 
   const [isProcessing, setIsProcessing] = useState(false);
+  const burningAssetIdsRef = useRef(new Set());
+  const [burningAssetIds, setBurningAssetIds] = useState(() => new Set());
   const imgCache = useRef(new Map());
 
   // ✅ caps modal state
@@ -211,25 +213,16 @@ const BurnRoom = ({ accountName, onClose }) => {
   }, []);
 
   // ---------- parse helpers (backend may return string formats) ----------
-  const parseCurrent = (v) => {
+  const parseCurrent = useCallback((v) => {
     if (v == null) return 0;
 
-    // "70000/100000"
-    if (typeof v === 'string' && v.includes('/')) {
-      const left = v.split('/')[0];
-      const n = parseInt(String(left).replace(/[^\d]/g, ''), 10);
-      return Number.isFinite(n) ? n : 0;
-    }
-
-    // "70000.000 TRASH" or "70000.000"
-    if (typeof v === 'string') {
-      const n = parseInt(String(v).replace(/[^\d]/g, ''), 10);
-      return Number.isFinite(n) ? n : 0;
-    }
-
-    const n = Number(v);
+    const current = typeof v === 'string' && v.includes('/') ? v.split('/')[0] : v;
+    const n =
+      typeof current === 'string'
+        ? parseFloat(current.replace(/[^\d.-]/g, ''))
+        : Number(current);
     return Number.isFinite(n) ? n : 0;
-  };
+  }, []);
 
   // ✅ Get required burn costs per NFT (matches Burn Deck behavior)
   const getRequiredCosts = useCallback((nft) => {
@@ -246,38 +239,49 @@ const BurnRoom = ({ accountName, onClose }) => {
     };
   }, []);
 
-  // ✅ Find first equipped incinerator that can burn THIS nft (per-NFT gating)
-  const getFirstBurnableIncineratorForNFT = useCallback(
-    (nft) => {
-      const equipped = (slots || []).filter((s) => s?.asset_id);
-      if (equipped.length === 0) {
-        return { slotIndex: -1, inc: null, disabled: true, label: 'Assign an incinerator to burn' };
+  const getBurnValidation = useCallback(
+    (nft, inc) => {
+      if (!nft) return { canBurn: false, label: 'Assign an NFT to burn' };
+      if (!inc?.asset_id) {
+        return { canBurn: false, label: 'Assign an incinerator to burn' };
+      }
+
+      if (Number(repairTimers?.[inc.asset_id]) > 0) {
+        return { canBurn: false, label: 'Repair in progress' };
+      }
+
+      if (parseCurrent(inc.durability) <= 0) {
+        return { canBurn: false, label: 'No durability remaining' };
       }
 
       const { requiredFuel, requiredEnergy } = getRequiredCosts(nft);
-
-      for (let i = 0; i < (slots || []).length; i++) {
-        const inc = slots[i];
-        if (!inc?.asset_id) continue;
-
-        // repair in progress blocks use
-        const t = repairTimers?.[inc.asset_id];
-        if (t && t > 0) continue;
-
-        const fuel = parseCurrent(inc.fuel);
-        const energy = parseCurrent(inc.energy);
-        const durability = parseCurrent(inc.durability);
-
-        if (durability <= 0) continue;
-        if (fuel < requiredFuel) continue;
-        if (energy < requiredEnergy) continue;
-
-        return { slotIndex: i, inc, disabled: false, label: 'Burn NFT' };
+      if (parseCurrent(inc.fuel) < requiredFuel) {
+        return { canBurn: false, label: 'Not enough fuel' };
+      }
+      if (parseCurrent(inc.energy) < requiredEnergy) {
+        return { canBurn: false, label: 'Not enough energy' };
       }
 
-      return { slotIndex: -1, inc: null, disabled: true, label: 'Not enough fuel or energy' };
+      return { canBurn: true, label: 'Burn NFT' };
     },
-    [slots, repairTimers, getRequiredCosts]
+    [getRequiredCosts, parseCurrent, repairTimers]
+  );
+
+  const burnStates = useMemo(
+    () =>
+      (nftSlots || []).map((nft, index) => {
+        const validation = getBurnValidation(nft, slots?.[index]);
+        const assetId = nft?.asset_id == null ? '' : String(nft.asset_id);
+        const isBurning = Boolean(assetId && burningAssetIds.has(assetId));
+
+        return {
+          ...validation,
+          canBurn: validation.canBurn && !isBurning,
+          isBurning,
+          label: isBurning ? 'Burning…' : validation.label,
+        };
+      }),
+    [nftSlots, slots, getBurnValidation, burningAssetIds]
   );
 
   // ✅ fetch burn-status for ALL slotted incinerators
@@ -547,7 +551,22 @@ const BurnRoom = ({ accountName, onClose }) => {
   const handleBurnNFT = async (idx) => {
     const nft = nftSlots[idx];
     const inc = slots[idx];
-    if (!nft || !inc) return alert('Assign both NFT and incinerator');
+    const assetId = nft?.asset_id == null ? '' : String(nft.asset_id);
+
+    if (!assetId || burningAssetIdsRef.current.has(assetId)) return;
+
+    const validation = getBurnValidation(nft, inc);
+    if (!validation.canBurn) {
+      alert(validation.label);
+      return;
+    }
+
+    burningAssetIdsRef.current.add(assetId);
+    setBurningAssetIds((prev) => {
+      const next = new Set(prev);
+      next.add(assetId);
+      return next;
+    });
 
     try {
       setBurnMessage('Burn initiated…');
@@ -568,6 +587,12 @@ const BurnRoom = ({ accountName, onClose }) => {
       console.error('[ERROR] Burn failed:', err);
       setBurnMessage('Burn failed.');
     } finally {
+      burningAssetIdsRef.current.delete(assetId);
+      setBurningAssetIds((prev) => {
+        const next = new Set(prev);
+        next.delete(assetId);
+        return next;
+      });
       setTimeout(() => setMessageVisible(false), 10000);
     }
   };
@@ -591,9 +616,8 @@ const BurnRoom = ({ accountName, onClose }) => {
       return prev.map((s, idx) => (idx === i ? nft : s));
     });
 
-    // select + open console on mobile so they see the deck update
+    // Keep the assigned NFT selected without forcing the console open.
     setSelectedNFT(nft);
-    if (isMobileWidth()) setShowConsole(true);
   }, []);
 
   const onIncineratorSelect = async (inc) => {
@@ -900,7 +924,7 @@ const BurnRoom = ({ accountName, onClose }) => {
                 onNFTClick={onNFTClickOpenConsole}
                 loading={loadingNFTs}
                 nftSlots={nftSlots}
-                slots={slots}
+                burnStates={burnStates}
                 onAssignNFT={handleAssignNFTToDeck}
                 onRemoveNFT={handleRemoveNFTFromSlot}
                 onBurnNFT={handleBurnNFT}
@@ -1062,7 +1086,7 @@ const BurnRoom = ({ accountName, onClose }) => {
 
                   <NFTSlots
                     nftSlots={nftSlots}
-                    slots={slots}
+                    burnStates={burnStates}
                     onBurn={handleBurnNFT}
                     onRemoveNFT={handleRemoveNFTFromSlot}
                   />

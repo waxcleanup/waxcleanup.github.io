@@ -12,7 +12,6 @@ import {
   fetchTemplates,
   fetchTemplateDetails,
   syncCollectionData,
-  fetchUserBalances,
   fetchOpenProposals,
   fetchApprovedCollections,
   fetchSchemaBurns,
@@ -55,10 +54,6 @@ const BurnCenter = () => {
   const [approvedSchemas, setApprovedSchemas] = useState([]); // schemaburns + schemcaps
 
   const [isBurnRoomOpen, setIsBurnRoomOpen] = useState(false);
-
-  const [waxBalance, setWaxBalance] = useState('0.00000000');
-  const [trashBalance, setTrashBalance] = useState('0.00000000');
-  const [cinderBalance, setCinderBalance] = useState('0.00000000');
 
   const [proposals, setProposals] = useState([]);
 
@@ -119,21 +114,6 @@ const BurnCenter = () => {
     setPagination((prev) => ({ ...prev, currentPage: 1 }));
     setCollections([]);
   }, [searchTerm]);
-
-  useEffect(() => {
-    const fetchBalancesNow = async () => {
-      if (!session?.actor) return;
-      try {
-        const { wax, trash, cinder } = await fetchUserBalances(session.actor);
-        setWaxBalance(wax);
-        setTrashBalance(trash);
-        setCinderBalance(cinder);
-      } catch (err) {
-        console.error('Error fetching user balances:', err);
-      }
-    };
-    fetchBalancesNow();
-  }, [session?.actor]);
 
   // ✅ MUST pass the account so backend can compute has_my_stake / my_staked_str / my_vote_for
   const reloadOpenProposals = async () => {
@@ -398,20 +378,8 @@ const BurnCenter = () => {
     setIsPopupOpen((v) => !v);
   };
 
-  const toggleBurnRoom = async () => {
+  const toggleBurnRoom = () => {
     setIsBurnRoomOpen((v) => !v);
-
-    // refresh balances when closing burn room
-    if (isBurnRoomOpen && session?.actor) {
-      try {
-        const { wax, trash, cinder } = await fetchUserBalances(session.actor);
-        setWaxBalance(wax);
-        setTrashBalance(trash);
-        setCinderBalance(cinder);
-      } catch (err) {
-        console.error('Error updating user balances:', err);
-      }
-    }
   };
 
   const filteredAndSortedTemplates = React.useMemo(() => {
@@ -459,14 +427,6 @@ const BurnCenter = () => {
 
       {session && (
         <>
-          {/* ✅ Centered via CSS (no inline margin overrides) */}
-          <div className="balances-section">
-            <h3>User Balances</h3>
-            <p>WAX: {waxBalance}</p>
-            <p>TRASH: {trashBalance}</p>
-            <p>CINDER: {cinderBalance}</p>
-          </div>
-
           {/* ✅ Approved Templates ABOVE Burn Room button */}
           <div style={{ textAlign: 'center', margin: '0 auto 18px' }}>
             <button

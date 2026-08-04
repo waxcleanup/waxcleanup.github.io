@@ -256,6 +256,45 @@ export default function RecipesPage() {
           <div className="recipes-grid">
             {sortedRecipes.map((recipe) => {
               const actionText = getRecipeActionText(recipe);
+              const hasNftOutputs = Boolean(recipe.nft_outputs?.length);
+              let outputMinimum = 0;
+              let outputMaximum = 0;
+
+              if (hasNftOutputs) {
+                const exactCount = recipe.nft_outputs.reduce(
+                    (total, output) => total + Math.max(0, Number(output.qty || 0)),
+                    0
+                  );
+                outputMinimum = exactCount;
+                outputMaximum = exactCount;
+              } else if (recipe.has_loot) {
+                const outcomesBySlot = new Map();
+
+                (recipe.loot_outputs || []).forEach((output) => {
+                  const slotKey = String(output.slot ?? 0);
+                  const outcomes = outcomesBySlot.get(slotKey) || [];
+                  outcomes.push(output);
+                  outcomesBySlot.set(slotKey, outcomes);
+                });
+
+                outcomesBySlot.forEach((outcomes) => {
+                  const minimums = outcomes.map((output) =>
+                    Math.max(0, Number(output.qty_min || 0))
+                  );
+                  const maximums = outcomes.map((output) =>
+                    Math.max(0, Number(output.qty_max ?? output.qty_min ?? 0))
+                  );
+
+                  outputMinimum += Math.min(...minimums);
+                  outputMaximum += Math.max(...maximums);
+                });
+              }
+
+              const outputRange =
+                outputMinimum === outputMaximum
+                  ? String(outputMaximum)
+                  : `${outputMinimum}-${outputMaximum}`;
+              const outputUnit = `NFT${outputMaximum === 1 ? '' : 's'}`;
 
               return (
                 <div className="recipe-card" key={recipe.recipe_id}>
@@ -303,29 +342,36 @@ export default function RecipesPage() {
                     )}
                   </div>
 
-                  <div className="recipe-section">
-                    <div className="recipe-section-title">Outputs</div>
+                  <details className="recipe-section recipe-outputs">
+                    <summary className="recipe-outputs-toggle">
+                      <span>Outputs ({outputRange} {outputUnit})</span>
+                      <span className="recipe-outputs-action" aria-hidden="true">
+                        Show
+                      </span>
+                    </summary>
 
-                    {recipe.nft_outputs?.length ? (
-                      recipe.nft_outputs.map((output, idx) => (
-                        <OutputRow
-                          key={`${recipe.recipe_id}-out-${idx}`}
-                          output={output}
-                        />
-                      ))
-                    ) : recipe.has_loot ? (
-                      [...(recipe.loot_outputs || [])]
-                        .sort((a, b) => Number(a.slot || 0) - Number(b.slot || 0))
-                        .map((output, idx) => (
+                    <div className="recipe-outputs-content">
+                      {recipe.nft_outputs?.length ? (
+                        recipe.nft_outputs.map((output, idx) => (
+                          <OutputRow
+                            key={`${recipe.recipe_id}-out-${idx}`}
+                            output={output}
+                          />
+                        ))
+                      ) : recipe.has_loot ? (
+                        [...(recipe.loot_outputs || [])]
+                          .sort((a, b) => Number(a.slot || 0) - Number(b.slot || 0))
+                          .map((output, idx) => (
                           <LootRow
                             key={`${recipe.recipe_id}-loot-${idx}`}
                             output={output}
                           />
-                        ))
-                    ) : (
-                      <div className="recipe-row output">No outputs</div>
-                    )}
-                  </div>
+                          ))
+                      ) : (
+                        <div className="recipe-row output">No outputs</div>
+                      )}
+                    </div>
+                  </details>
 
                   <div className="recipe-footer">
                     <div className={`recipe-ready ${recipe.can_blend ? 'yes' : 'no'}`}>

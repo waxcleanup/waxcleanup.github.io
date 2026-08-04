@@ -1,5 +1,46 @@
 /* src/components/FarmPlotsGrid.css */
 
+.plots-water-all-row {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0.5rem 0;
+}
+
+.plots-water-all-btn {
+  padding: 0.55rem 1rem;
+  border: 1px solid rgba(59, 130, 246, 0.65);
+  border-radius: 999px;
+  color: #dbeafe;
+  background:
+    linear-gradient(180deg, rgba(37, 99, 235, 0.92), rgba(30, 64, 175, 0.92));
+  box-shadow:
+    0 8px 18px rgba(30, 64, 175, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+  transition:
+    transform 140ms ease,
+    border-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.plots-water-all-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(147, 197, 253, 0.95);
+  box-shadow:
+    0 11px 22px rgba(30, 64, 175, 0.38),
+    0 0 14px rgba(59, 130, 246, 0.2);
+}
+
+.plots-water-all-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
 .farm-plots-grid {
   display: grid;
 

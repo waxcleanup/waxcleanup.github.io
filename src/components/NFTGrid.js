@@ -11,24 +11,6 @@ const resolveIpfsUrl = (val) => {
   return `https://ipfs.io/ipfs/${val}`;
 };
 
-const toNumber = (v) => {
-  if (v == null) return 0;
-  const n = parseFloat(String(v).replace(/[^\d.]/g, ''));
-  return Number.isFinite(n) ? n : 0;
-};
-
-const canIncineratorBurn = (inc, nft) => {
-  if (!inc || !nft) return false;
-
-  const requiredFuel = toNumber(nft.trash_fee || 0);
-  const requiredEnergy = toNumber(nft.energy_cost || 0);
-
-  const availableFuel = toNumber(inc.fuel || 0);
-  const availableEnergy = toNumber(inc.energy || 0);
-
-  return availableFuel >= requiredFuel && availableEnergy >= requiredEnergy && availableEnergy > 0;
-};
-
 const NFTGrid = ({
   burnableNFTs = [],
   selectedNFT,
@@ -39,7 +21,7 @@ const NFTGrid = ({
   onBurnNFT,        // ✅ expects (slotIndex) => burns from deck
 
   nftSlots = [],
-  slots = [],
+  burnStates = [],
 
   loading = false,
 }) => {
@@ -74,10 +56,9 @@ const NFTGrid = ({
           const assignedIndex = assigned ? getAssignedIndex(nft.asset_id) : -1;
 
           // ✅ IMPORTANT: burn is tied to the SAME slot index
-          const matchedInc = assignedIndex >= 0 ? slots?.[assignedIndex] : null;
-
-          const hasIncEquipped = !!matchedInc?.asset_id;
-          const canBurn = assigned && hasIncEquipped && canIncineratorBurn(matchedInc, nft);
+          const burnState = assignedIndex >= 0 ? burnStates?.[assignedIndex] : null;
+          const canBurn = Boolean(assigned && burnState?.canBurn);
+          const isBurning = Boolean(burnState?.isBurning);
 
           return (
             <div
@@ -142,28 +123,12 @@ const NFTGrid = ({
 
                         if (assignedIndex < 0) return;
 
-                        if (!hasIncEquipped) {
-                          alert('Equip an incinerator in the same slot as this NFT.');
-                          return;
-                        }
-
-                        if (!canIncineratorBurn(matchedInc, nft)) {
-                          alert('Not enough fuel/energy on the incinerator in this slot.');
-                          return;
-                        }
-
                         // ✅ burn via existing deck flow
                         onBurnNFT(assignedIndex);
                       }}
-                      title={
-                        canBurn
-                          ? `Burn using slot ${assignedIndex + 1} incinerator (${matchedInc.asset_id})`
-                          : !hasIncEquipped
-                          ? 'Equip an incinerator in this same slot'
-                          : 'Not enough fuel/energy in this slot'
-                      }
+                      title={burnState?.label || 'Burn unavailable'}
                     >
-                      {canBurn ? 'Burn NFT' : !hasIncEquipped ? 'Assign incinerator to this slot' : 'Not enough fuel/energy'}
+                      {isBurning ? 'Burning…' : burnState?.label || 'Burn unavailable'}
                     </button>
 
                     {/* ✅ Remove from deck */}
@@ -199,7 +164,7 @@ NFTGrid.propTypes = {
   onBurnNFT: PropTypes.func,   // ✅ expects (slotIndex)
 
   nftSlots: PropTypes.array,
-  slots: PropTypes.array,
+  burnStates: PropTypes.array,
 
   loading: PropTypes.bool,
 };

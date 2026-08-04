@@ -83,8 +83,7 @@ export const unstakeFarm = async (accountName, asset_id) => {
 /**
  * Recharge a farm by sending CINDER to the farm contract.
  *
- * Transfer memo format: "Recharge Farm:<farm_id>"
- * Backend listener will call: chargefarm(farm_id, qty)
+ * Transfer memo format: "charge:farm:<farm_id>"
  *
  * amount can be:
  *  - a number (recommended)
@@ -99,7 +98,7 @@ export const rechargeFarm = async (accountName, farm_id, amount) => {
   if (farm_id == null || farm_id === '') throw new Error('Missing farm_id');
 
   const farmIdStr = String(farm_id);
-  const memo = `Recharge Farm:${farmIdStr}`;
+  const memo = `charge:farm:${farmIdStr}`;
 
   let quantity;
 
