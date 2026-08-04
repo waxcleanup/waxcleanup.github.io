@@ -427,6 +427,28 @@
 
 /* Mobile */
 @media (max-width: 600px) {
+  .farming-container {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    padding-right: 8px;
+    padding-left: 8px;
+    overflow-x: clip;
+  }
+
+  .farming-content {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    padding-right: 4px;
+    padding-left: 4px;
+  }
+
+  .farming-content > * {
+    box-sizing: border-box;
+    min-width: 0;
+    max-width: 100%;
+  }
   .farm-card-grid.compact-global-farms {
     flex-direction: column;
     overflow-x: hidden;
