@@ -1,52 +1,34 @@
 // src/services/repairStatusApi.js
 
-const normalizeApiBase = () => {
-  const raw = (process.env.REACT_APP_API_BASE_URL || '').replace(/\/+$/, '');
-  if (!raw) return '';
-
-  const hasProtocol = /^https?:\/\//i.test(raw);
-  return hasProtocol ? raw : `https://${raw}`;
-};
-
-const withCleanupPrefix = (base) => {
-  if (!base) return '';
-  if (/\/cleanup$/i.test(base)) return base;
-  return `${base}/cleanup`;
-};
-
-const looksLikeNoRepair = (json) => {
-  const msg = (json?.message || json?.error || json?.msg || '')
-    .toString()
-    .toLowerCase();
-
-  return (
-    msg.includes('no repair') ||
-    msg.includes('not repairing') ||
-    msg.includes('no active') ||
-    msg.includes('nothing to finalize') ||
-    msg.includes('not found')
-  );
-};
+const RPC_URL = (process.env.REACT_APP_RPC || 'https://wax.greymass.com')
+  .replace(/\/+$/, '');
+const CONTRACT = 'cleanupcentr';
+const REPAIR_TABLE = 'repairtrack';
 
 export async function getRepairStatus(incineratorId) {
-  const base = withCleanupPrefix(normalizeApiBase());
-  if (!base) {
-    return null;
-  }
-
   const id = String(incineratorId || '').trim();
   if (!id) return null;
 
-  const url = `${base}/repair-status/${encodeURIComponent(id)}`;
-
   let res;
   try {
-    res = await fetch(url, { method: 'GET' });
+    res = await fetch(`${RPC_URL}/v1/chain/get_table_rows`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        json: true,
+        code: CONTRACT,
+        scope: CONTRACT,
+        table: REPAIR_TABLE,
+        lower_bound: id,
+        upper_bound: id,
+        limit: 1,
+      }),
+    });
   } catch {
     return null;
   }
 
-  if (res.status === 404) return null;
+  if (!res.ok) return null;
 
   let json = null;
   try {
@@ -55,13 +37,11 @@ export async function getRepairStatus(incineratorId) {
     return null;
   }
 
-  if (json?.success === false && looksLikeNoRepair(json)) return null;
 
-  if (!res.ok) return null;
+  const row = Array.isArray(json?.rows) ? json.rows[0] : null;
 
-  const data = json?.data ?? json;
+  if (!row || String(row.incinerator_id) !== id) return null;
+  if (!row.repair_time || !row.repair_points) return null;
 
-  if (!data || (!data.repair_time && !data.repair_points)) return null;
-
-  return data;
+  return row;
 }
