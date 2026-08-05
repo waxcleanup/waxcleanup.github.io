@@ -150,10 +150,17 @@ export default function EnergyCellSection({ cells, accountName, onRefresh, toolP
     try {
       await rechargeUserEnergy(numeric);
 
-      // ✅ refresh FIRST so UI can show updated energy
-      await safeRefresh();
+      // Poll briefly because the backend may still return the pre-transaction
+      // energy value while its on-chain index catches up.
+      for (let attempt = 0; attempt < 6; attempt += 1) {
+        if (attempt > 0) {
+          // eslint-disable-next-line no-await-in-loop
+          await new Promise((resolve) => setTimeout(resolve, 700));
+        }
+        // eslint-disable-next-line no-await-in-loop
+        await safeRefresh();
+      }
 
-      // ✅ close after refresh
       setShowModal(false);
     } catch (err) {
       setModalError(err?.message || "Recharge failed.");

@@ -492,3 +492,18 @@
   opacity: 0.95;
 }
 
+
+/* Compact energy system */
+.ecs-wrap { position:relative; padding:16px; }
+.ecs-header { margin-bottom:12px; }
+.ecs-body { grid-template-columns:minmax(0,1fr) 230px; }
+.ecs-socket { min-height:0; padding:12px; }
+.ecs-busSvg { height:138px; opacity:.62; }
+.ecs-coreCard { grid-template-columns:72px minmax(0,1fr); min-height:82px; padding:10px; }
+.ecs-coreImgWrap { width:70px; height:70px; }
+.ecs-coreHint { margin-top:5px; }
+.ecs-controls { justify-content:center; padding:12px; }
+.ecs-note { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:0; }
+.ecs-noteText { margin-top:0; font-size:12px; }
+@media (max-width:880px) { .ecs-body { grid-template-columns:1fr; } .ecs-controls { display:grid; grid-template-columns:1fr 1fr; } .ecs-note,.ecs-error { grid-column:1/-1; } }
+@media (max-width:520px) { .ecs-header { align-items:flex-start; } .ecs-subtitle { max-width:190px; } .ecs-meter { gap:6px; } .ecs-ring { width:54px; height:54px; } .ecs-controls { grid-template-columns:1fr; } .ecs-note,.ecs-error { grid-column:auto; } }

@@ -181,3 +181,8 @@
     grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
   }
 }
+/* Refined available-tool panel */
+.unequipped-tools-panel { box-sizing:border-box; padding:16px; }
+.unequipped-tools-header { align-items:center; margin-bottom:12px; }
+.unequipped-tools-actor { padding:6px 10px; border:1px solid rgba(126,231,164,.15); border-radius:999px; background:rgba(4,18,11,.32); font-size:.72rem; }
+.unequipped-tools-state { padding:22px 14px; border:1px dashed rgba(137,231,173,.16); border-radius:12px; background:rgba(0,0,0,.12); }

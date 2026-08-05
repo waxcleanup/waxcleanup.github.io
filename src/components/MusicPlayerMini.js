@@ -1,207 +1,269 @@
 // src/components/MusicPlayerMini.js
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import TrackDetailsModal from './TrackDetailsModal';
 import '../styles/Skins.css';
 import './MusicPlayerMini.css';
 
-// ✅ Use env like the rest of the app
-const API_BASE = (process.env.REACT_APP_API_BASE_URL || '')
-  .replace(/\/+$/, '');
-
-const IPFS_GATEWAY = (process.env.REACT_APP_IPFS_GATEWAY || '')
-  .replace(/\/+$/, '');
-
+const API_BASE = (process.env.REACT_APP_API_BASE_URL || '').trim().replace(/\/+$/, '');
+const IPFS_GATEWAY = (process.env.REACT_APP_IPFS_GATEWAY || '').trim().replace(/\/+$/, '');
 const PLAYLIST_SIZE = 15;
-const PER_PAGE = 25;
+const VOLUME_KEY = 'cleanupcentr_music_volume';
 
-function resolveMediaUrl(hash) {
-  return hash.startsWith('http') ? hash : `${IPFS_GATEWAY}/${hash}`;
+function resolveMediaUrl(value) {
+  const source = String(value || '').trim();
+  if (!source) return '';
+  if (/^https?:\/\//i.test(source)) return source;
+  const hash = source.replace(/^ipfs:\/\//i, '').replace(/^\/+/, '');
+  return `${IPFS_GATEWAY}/${hash}`;
 }
 
 function formatTime(seconds) {
-  if (!seconds || isNaN(seconds)) return '0:00';
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60).toString().padStart(2, '0');
-  return `${m}:${s}`;
+  if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
+  const minutes = Math.floor(seconds / 60);
+  const remainder = Math.floor(seconds % 60).toString().padStart(2, '0');
+  return `${minutes}:${remainder}`;
 }
 
-async function getTotalCount() {
-  let total = 0, page = 1;
-  while (true) {
-    const res  = await fetch(`${API_BASE}/waxmusic/audio/latest?limit=${PER_PAGE}&page=${page}`);
-    const json = await res.json();
-    const count = json.meta.count;
-    total += count;
-    if (count < PER_PAGE) break;
-    page++;
+function initialVolume() {
+  try {
+    const saved = Number(window.localStorage.getItem(VOLUME_KEY));
+    return Number.isFinite(saved) && saved >= 0 && saved <= 1 ? saved : 0.8;
+  } catch {
+    return 0.8;
   }
-  return total;
-}
-
-function pickRandomIndices(total, N) {
-  const s = new Set();
-  while (s.size < Math.min(N, total)) {
-    s.add(Math.floor(Math.random() * total));
-  }
-  return [...s];
-}
-
-function idxToPageOffset(idx) {
-  return {
-    page: Math.floor(idx / PER_PAGE) + 1,
-    offset: idx % PER_PAGE,
-  };
-}
-
-async function fetchTrackAt(idx) {
-  const { page, offset } = idxToPageOffset(idx);
-  const res  = await fetch(`${API_BASE}/waxmusic/audio/latest?limit=${PER_PAGE}&page=${page}`);
-  const json = await res.json();
-  return json.data[offset];
 }
 
 export default function MusicPlayerMini() {
-  const [playlist, setPlaylist]         = useState([]);
+  const [playlist, setPlaylist] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [currentTime, setCurrentTime]   = useState(0);
-  const [duration, setDuration]         = useState(0);
-  const [isPlaying, setIsPlaying]       = useState(false);
-  const [showDetails, setShowDetails]   = useState(false);
-  const [volume, setVolume]             = useState(0.8);
-  const audioRef                        = useRef(null);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
+  const [volume, setVolume] = useState(initialVolume);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [playbackNotice, setPlaybackNotice] = useState('');
+  const audioRef = useRef(null);
+  const playIntentRef = useRef(false);
+  const failedTrackCountRef = useRef(0);
 
-  // Load 15 random tracks on mount
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const total   = await getTotalCount();
-        const indices = pickRandomIndices(total, PLAYLIST_SIZE);
-        const tracks  = await Promise.all(indices.map(i => fetchTrackAt(i)));
-        if (mounted) setPlaylist(tracks.filter(Boolean));
-      } catch (err) {
-        console.error('Error loading playlist:', err);
+  const loadPlaylist = useCallback(async (signal) => {
+    setLoading(true);
+    setLoadError('');
+    try {
+      const response = await fetch(
+        `${API_BASE}/waxmusic/audio/random?limit=${PLAYLIST_SIZE}`,
+        { signal }
+      );
+      if (!response.ok) throw new Error(`Music API returned ${response.status}`);
+
+      const payload = await response.json();
+      const tracks = Array.isArray(payload?.data)
+        ? payload.data.filter((track) => track?.ipfs_hash)
+        : [];
+      if (!tracks.length) throw new Error('No playable tracks were returned');
+
+      setPlaylist(tracks);
+      setCurrentIndex(0);
+      failedTrackCountRef.current = 0;
+    } catch (error) {
+      if (error?.name !== 'AbortError') {
+        console.error('Error loading playlist:', error);
+        setLoadError('Music is temporarily unavailable.');
       }
-    })();
-    return () => { mounted = false; };
+    } finally {
+      if (!signal?.aborted) setLoading(false);
+    }
   }, []);
 
-  // When currentIndex or isPlaying changes
+  useEffect(() => {
+    const controller = new AbortController();
+    loadPlaylist(controller.signal);
+    return () => controller.abort();
+  }, [loadPlaylist]);
+
+  const item = playlist[currentIndex] || {};
+  const mediaUrl = resolveMediaUrl(item.ipfs_hash);
+
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio) return;
+    if (!audio || !mediaUrl) return;
 
-    audio.load();
     setCurrentTime(0);
     setDuration(0);
+    setPlaybackNotice('');
+    audio.load();
+  }, [mediaUrl]);
 
-    const onLoaded = () => {
-      setDuration(isNaN(audio.duration) ? 0 : audio.duration);
-      if (isPlaying) audio.play().catch(() => {});
-    };
-    audio.addEventListener('loadedmetadata', onLoaded);
-    return () => audio.removeEventListener('loadedmetadata', onLoaded);
-  }, [currentIndex, isPlaying]);
-
-  // Attach playback event listeners
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio) return;
-    audio.volume = volume;
+    if (audio) audio.volume = volume;
+    try {
+      window.localStorage.setItem(VOLUME_KEY, String(volume));
+    } catch {
+      // Storage may be disabled; playback still works.
+    }
+  }, [volume]);
 
-    const onTime  = () => setCurrentTime(audio.currentTime);
-    const onPlay  = () => setIsPlaying(true);
-    const onPause = () => setIsPlaying(false);
-    const onEnd   = () => handleNext();
+  const advance = useCallback((direction, preservePlayback = playIntentRef.current) => {
+    if (!playlist.length) return;
+    playIntentRef.current = preservePlayback;
+    setCurrentIndex((index) => (
+      direction > 0
+        ? (index + 1) % playlist.length
+        : (index - 1 + playlist.length) % playlist.length
+    ));
+  }, [playlist.length]);
 
-    audio.addEventListener('timeupdate', onTime);
-    audio.addEventListener('play', onPlay);
-    audio.addEventListener('pause', onPause);
-    audio.addEventListener('ended', onEnd);
-
-    return () => {
-      audio.removeEventListener('timeupdate', onTime);
-      audio.removeEventListener('play', onPlay);
-      audio.removeEventListener('pause', onPause);
-      audio.removeEventListener('ended', onEnd);
-    };
-  }, [volume, playlist.length]);
-
-  // Controls
-  const handleNext = () => {
-    setIsPlaying(false);
-    setCurrentIndex(i => (i + 1 < playlist.length ? i + 1 : 0));
-  };
-  const handlePrev = () => {
-    setIsPlaying(false);
-    setCurrentIndex(i => (i - 1 < 0 ? playlist.length - 1 : i - 1));
-  };
-  const togglePlay = () => {
+  const togglePlay = async () => {
     const audio = audioRef.current;
     if (!audio) return;
-    isPlaying ? audio.pause() : audio.play().catch(() => {});
-  };
-  const handleVolumeChange = e => {
-    const vol = parseFloat(e.target.value);
-    setVolume(vol);
-    if (audioRef.current) audioRef.current.volume = vol;
+
+    if (isPlaying) {
+      playIntentRef.current = false;
+      audio.pause();
+      return;
+    }
+
+    playIntentRef.current = true;
+    setPlaybackNotice('');
+    try {
+      await audio.play();
+    } catch (error) {
+      playIntentRef.current = false;
+      setPlaybackNotice('Playback could not start. Try again.');
+    }
   };
 
-  // Rendering
-  const item = playlist[currentIndex] || {};
-  if (!item.ipfs_hash) return null;
-  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+  const handleLoadedMetadata = async () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    setDuration(Number.isFinite(audio.duration) ? audio.duration : 0);
+
+    if (playIntentRef.current) {
+      try {
+        await audio.play();
+      } catch {
+        playIntentRef.current = false;
+        setPlaybackNotice('Playback could not start. Try again.');
+      }
+    }
+  };
+
+  const handleTrackError = () => {
+    if (!playlist.length) return;
+    failedTrackCountRef.current += 1;
+
+    if (failedTrackCountRef.current < playlist.length) {
+      setPlaybackNotice('Track unavailable — skipping.');
+      advance(1, playIntentRef.current);
+    } else {
+      playIntentRef.current = false;
+      setIsPlaying(false);
+      setPlaybackNotice('No tracks in this playlist could be played.');
+    }
+  };
+
+  const handleSeek = (event) => {
+    const audio = audioRef.current;
+    const nextTime = Number(event.target.value);
+    if (!audio || !Number.isFinite(nextTime)) return;
+    audio.currentTime = nextTime;
+    setCurrentTime(nextTime);
+  };
+
+  if (loading && !playlist.length) {
+    return <div className="mini-player mini-player-state">Loading music…</div>;
+  }
+
+  if (loadError && !playlist.length) {
+    return (
+      <div className="mini-player mini-player-state mini-player-error">
+        <span>{loadError}</span>
+        <button type="button" onClick={() => loadPlaylist()}>Retry</button>
+      </div>
+    );
+  }
+
+  if (!mediaUrl) return null;
 
   return (
     <>
       <div className="mini-player">
-        {item.img && (
-          <img
-            className="mini-cover"
-            src={resolveMediaUrl(item.img)}
-            alt={item.title}
-            onClick={() => setShowDetails(true)}
-          />
-        )}
+        <button
+          type="button"
+          className="mini-cover-button"
+          onClick={() => setShowDetails(true)}
+          aria-label="Show track details"
+        >
+          {item.img ? (
+            <img className="mini-cover" src={resolveMediaUrl(item.img)} alt="" />
+          ) : (
+            <span className="mini-cover-placeholder" aria-hidden="true">♫</span>
+          )}
+        </button>
 
         <div className="mini-info">
-          <div className="mini-title">{item.title}</div>
-          <div className="mini-author">{item.author}</div>
+          <div className="mini-title" title={item.title}>{item.title || 'Untitled'}</div>
+          <div className="mini-author">{item.author || item.collection || 'Unknown artist'}</div>
+          <div className="mini-track-meta">{item.collection} · Template #{item.template_id}</div>
         </div>
 
-        <div className="mini-meta">
-          <div><strong>Collection:</strong> {item.collection}</div>
-          <div><strong>Template ID:</strong> {item.template_id}</div>
+        <audio
+          ref={audioRef}
+          src={mediaUrl}
+          preload="metadata"
+          onLoadedMetadata={handleLoadedMetadata}
+          onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime)}
+          onPlay={() => {
+            failedTrackCountRef.current = 0;
+            setIsPlaying(true);
+            setPlaybackNotice('');
+          }}
+          onPause={() => setIsPlaying(false)}
+          onEnded={() => advance(1, true)}
+          onError={handleTrackError}
+        />
+
+        <div className="mini-controls" aria-label="Music controls">
+          <button type="button" onClick={() => advance(-1)} aria-label="Previous track">‹</button>
+          <button type="button" className="mini-play-button" onClick={togglePlay} aria-label={isPlaying ? 'Pause' : 'Play'}>
+            {isPlaying ? 'Ⅱ' : '▶'}
+          </button>
+          <button type="button" onClick={() => advance(1)} aria-label="Next track">›</button>
+          <button type="button" className="mini-details-button" onClick={() => setShowDetails(true)}>Details</button>
         </div>
 
-        <audio ref={audioRef} src={resolveMediaUrl(item.ipfs_hash)} hidden />
-
-        <div className="mini-controls">
-          <button onClick={handlePrev}>Prev</button>
-          <button onClick={togglePlay}>{isPlaying ? 'Pause' : 'Play'}</button>
-          <button onClick={handleNext}>Next</button>
-          <button onClick={() => setShowDetails(true)}>Details</button>
+        <div className="mini-timeline">
+          <input
+            className="mini-seek"
+            type="range"
+            min="0"
+            max={duration || 0}
+            step="0.1"
+            value={Math.min(currentTime, duration || 0)}
+            onChange={handleSeek}
+            aria-label="Track position"
+            style={{ '--mini-progress': `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
+          />
+          <span>{formatTime(currentTime)} / {formatTime(duration)}</span>
         </div>
 
         <div className="mini-volume">
-          <label htmlFor="volume-slider">Vol</label>
+          <span aria-hidden="true">{volume === 0 ? '🔇' : '🔊'}</span>
           <input
-            id="volume-slider"
             type="range"
             min="0"
             max="1"
             step="0.01"
             value={volume}
-            onChange={handleVolumeChange}
+            onChange={(event) => setVolume(Number(event.target.value))}
+            aria-label="Volume"
           />
         </div>
 
-        <div className="mini-progress-container">
-          <div className="mini-progress" style={{ width: `${progress}%` }} />
-          <div className="mini-time-overlay">
-            {formatTime(currentTime)} / {formatTime(duration)}
-          </div>
-        </div>
+        {playbackNotice && <div className="mini-playback-notice" role="status">{playbackNotice}</div>}
       </div>
 
       {showDetails && (

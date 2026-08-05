@@ -112,7 +112,7 @@ export default function UnequippedTools({ actor, onChanged }) {
         </div>
 
         <div className="unequipped-tools-actor">
-          actor: <span className="mono">{String(actor || '—')}</span>
+          Account <span className="mono">{String(actor || '—')}</span>
         </div>
       </div>
 
@@ -126,7 +126,7 @@ export default function UnequippedTools({ actor, onChanged }) {
 
       {!loading && !error && tools.length === 0 && (
         <div className="unequipped-tools-state">
-          No unequipped staked tools found.
+          No additional tools are available. Stake a farming tool to equip it here.
         </div>
       )}
 
@@ -180,7 +180,7 @@ export default function UnequippedTools({ actor, onChanged }) {
         </div>
       )}
 
-      {raw && (
+      {raw && process.env.NODE_ENV === 'development' && (
         <details className="unequipped-tools-debug">
           <summary>Debug payload</summary>
           <pre>{JSON.stringify(raw, null, 2)}</pre>

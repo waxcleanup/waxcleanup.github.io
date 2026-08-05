@@ -25,7 +25,7 @@ const PLOTS_FILTER_KEY = 'cc_showMyPlotsOnly';
 
 export default function Farming() {
   const { session } = useSession();
-  const { resources } = usePlayerResources();
+  const { resources, refreshResources } = usePlayerResources();
   const wallet = session?.actor;
 
   const API = process.env.REACT_APP_API_BASE_URL;
@@ -153,8 +153,12 @@ export default function Farming() {
       for (let attempt = 0; attempt < tries; attempt++) {
         try {
           const results = await Promise.allSettled([
-            axios.get(`${API}/inventory/${account}`),
-            axios.get(`${API}/userenergy/${account}`),
+            axios.get(`${API}/inventory/${account}`, {
+              params: { _: Date.now() },
+            }),
+            axios.get(`${API}/userenergy/${account}`, {
+              params: { _: Date.now() },
+            }),
           ]);
 
           const invOk = results[0].status === 'fulfilled';
@@ -376,11 +380,30 @@ export default function Farming() {
   // --------------------------------------------------
   const handleClaimRewards = async () => {
     if (!wallet) return;
+    const previousRewards = JSON.stringify(playerStatus?.rewards ?? null);
+
     try {
       setClaimingRewards(true);
       await claimSeedRewards(wallet);
-      const res = await axios.get(`${API}/api/player/${wallet}/status`);
-      setPlayerStatus(res.data);
+
+      for (let attempt = 0; attempt < 8; attempt += 1) {
+        if (attempt > 0) {
+          // Give the backend indexer time to observe the confirmed transaction.
+          // eslint-disable-next-line no-await-in-loop
+          await new Promise((resolve) => setTimeout(resolve, 800));
+        }
+
+        // eslint-disable-next-line no-await-in-loop
+        const res = await axios.get(`${API}/api/player/${wallet}/status`, {
+          params: { _: Date.now() },
+        });
+        setPlayerStatus(res.data);
+        setPlayerStatusError(null);
+
+        if (JSON.stringify(res.data?.rewards ?? null) !== previousRewards) break;
+      }
+
+      await refreshResources();
     } catch (err) {
       console.error('Error claiming rewards:', err);
       setPlayerStatusError('Failed to claim rewards');

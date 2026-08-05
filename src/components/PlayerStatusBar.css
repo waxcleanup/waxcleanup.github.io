@@ -182,3 +182,21 @@
   }
 }
 
+
+/* Compact farming resource dashboard */
+.player-status-bar { display:grid; grid-template-columns:minmax(150px,.7fr) minmax(150px,.7fr) minmax(300px,1.6fr); gap:10px; padding:12px; background:linear-gradient(135deg,rgba(10,24,18,.96),rgba(8,15,25,.96)); border-color:rgba(104,230,153,.18); }
+.player-status-divider { display:none; }
+.player-status-item { position:relative; justify-content:center; min-height:52px; padding:10px 12px 10px 42px; border:1px solid rgba(150,240,183,.1); border-radius:12px; background:rgba(255,255,255,.025); }
+.player-status-item::before { position:absolute; left:13px; top:50%; transform:translateY(-50%); font-size:1.15rem; }
+.player-status-item:nth-of-type(1)::before { content:"🌱"; }
+.player-status-item:nth-of-type(2)::before { content:"♻️"; }
+.player-status-label { color:rgba(210,238,220,.62); font-size:.64rem; font-weight:800; letter-spacing:.09em; }
+.player-status-value { color:#f4fff7; font-size:.95rem; font-weight:800; }
+.player-status-item--rewards { flex-direction:row; padding-left:46px; border-color:rgba(255,183,71,.2); background:linear-gradient(135deg,rgba(81,39,9,.2),rgba(255,255,255,.025)); }
+.player-status-item--rewards::before { content:"🎁"; }
+.player-status-claim-btn { min-width:90px; padding:8px 16px; }
+@media (max-width:760px) { .player-status-bar { grid-template-columns:repeat(2,minmax(0,1fr)); align-items:stretch; } .player-status-item--rewards { grid-column:1/-1; width:auto; } }
+@media (max-width:420px) { .player-status-bar { grid-template-columns:1fr; } .player-status-item--rewards { grid-column:auto; } }
+
+.player-status-item:first-child::before { content:"🌱"; }
+.player-status-divider + .player-status-item::before { content:"♻️"; }
