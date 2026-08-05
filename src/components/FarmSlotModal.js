@@ -8,6 +8,7 @@ export default function FarmSlotModal({
   farmId, // kept for future use / display
   plot,
   slot,
+  loading = false,
   onClose,
 }) {
   if (!plot || !slot) return null;
@@ -39,6 +40,12 @@ export default function FarmSlotModal({
         </div>
 
         <div className="slot-modal-body">
+          {loading && (
+            <div className="slot-modal-note" role="status">
+              Refreshing plot data...
+            </div>
+          )}
+
           {/* SVG preview */}
           {state !== 'EMPTY' && (
             <div className="slot-modal-plant">

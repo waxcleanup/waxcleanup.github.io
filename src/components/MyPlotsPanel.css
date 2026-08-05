@@ -1,0 +1,60 @@
+.my-plots-panel {
+  margin: 20px 0;
+  padding: 16px;
+  border: 1px solid rgba(90, 235, 145, 0.18);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(17, 38, 25, 0.94), rgba(8, 24, 15, 0.96));
+}
+.my-plots-heading { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+.my-plots-heading h2 { margin: 0; color: #39ed8e; }
+.my-plots-heading p { margin: 4px 0 0; color: rgba(220, 240, 226, 0.62); font-size: 0.78rem; }
+.my-plots-total { padding: 6px 10px; border-radius: 999px; background: rgba(55, 230, 135, 0.1); color: #83f4b5; font-weight: 800; white-space: nowrap; }
+.my-plots-filters { display: grid; grid-template-columns: minmax(140px, 200px) minmax(180px, 1fr) auto; gap: 10px; margin: 14px 0 8px; align-items: end; }
+.my-plots-filters label { display: grid; gap: 4px; color: rgba(220, 240, 226, 0.68); font-size: 0.7rem; font-weight: 800; }
+.my-plots-filters select, .my-plots-filters input[type='text'], .my-plots-filters input:not([type]) { min-width: 0; padding: 9px; border: 1px solid rgba(120, 255, 180, 0.18); border-radius: 9px; background: rgba(0, 0, 0, 0.25); color: #eefaf2; }
+.my-plots-water-filter { display: flex !important; grid-auto-flow: column; align-items: center; padding: 9px 11px; border: 1px solid rgba(80, 175, 255, 0.2); border-radius: 9px; }
+.my-plots-page-summary { color: rgba(205, 230, 214, 0.58); font-size: 0.72rem; margin-bottom: 10px; }
+.my-plots-message { padding: 18px; text-align: center; color: rgba(225, 242, 231, 0.7); }
+.my-plots-message.error { color: #ff9d95; }
+.my-plots-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(245px, 1fr)); gap: 10px; }
+.my-plot-card { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 10px; padding: 10px; border: 1px solid rgba(255, 255, 255, 0.07); border-radius: 11px; background: rgba(0, 0, 0, 0.16); min-width: 0; }
+.my-plot-card img, .my-plot-image-empty { width: 64px; height: 64px; border-radius: 9px; object-fit: cover; background: rgba(255, 255, 255, 0.04); }
+.my-plot-info { display: grid; gap: 3px; min-width: 0; }
+.my-plot-info strong { color: #e9fff1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.my-plot-info > span { color: rgba(213, 233, 219, 0.58); font-size: 0.67rem; overflow-wrap: anywhere; }
+.my-plot-states { display: flex; flex-wrap: wrap; gap: 5px; }
+.my-plot-states b { font-size: 0.62rem; color: rgba(190, 245, 210, 0.75); }
+.my-plots-pagination { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 14px; }
+.my-plots-pagination button { padding: 7px 12px; border-radius: 8px; border: 1px solid rgba(80, 230, 140, 0.22); background: rgba(25, 85, 50, 0.7); color: #effff5; cursor: pointer; }
+.my-plots-pagination button:disabled { opacity: 0.45; cursor: not-allowed; }
+.my-plots-pagination span { color: rgba(220, 240, 226, 0.7); font-size: 0.75rem; }
+@media (max-width: 640px) {
+  .my-plots-panel { padding: 11px; }
+  .my-plots-heading { align-items: flex-start; }
+  .my-plots-filters { grid-template-columns: 1fr; }
+  .my-plots-grid { grid-template-columns: 1fr; }
+}
+
+
+.farmer-search { display: grid; gap: 5px; margin: 14px 0 9px; color: rgba(220, 240, 226, 0.68); font-size: 0.72rem; font-weight: 800; }
+.farmer-search input { padding: 9px 11px; border: 1px solid rgba(120, 255, 180, 0.18); border-radius: 9px; background: rgba(0, 0, 0, 0.25); color: #eefaf2; }
+.farmer-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 7px; max-height: 210px; overflow-y: auto; padding: 2px 2px 8px; }
+.farmer-list button { display: grid; gap: 3px; padding: 9px; text-align: left; border: 1px solid rgba(120, 255, 180, 0.12); border-radius: 9px; background: rgba(0, 0, 0, 0.18); color: #eafff1; cursor: pointer; }
+.farmer-list button:hover, .farmer-list button.is-selected { border-color: rgba(55, 235, 135, 0.55); background: rgba(35, 120, 70, 0.22); }
+.farmer-list button span { color: rgba(205, 230, 214, 0.6); font-size: 0.66rem; }
+.selected-farmer-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.07); color: #74f0a9; }
+.selected-farmer-row button { padding: 5px 9px; border: 1px solid rgba(255,255,255,0.12); border-radius: 7px; background: rgba(0,0,0,0.2); color: #eafff1; cursor: pointer; }
+@media (max-width: 640px) { .farmer-list { grid-template-columns: 1fr; max-height: 240px; } }
+
+
+.farmer-leaderboard { margin: 14px 0; padding: 11px; border: 1px solid rgba(255, 195, 70, 0.16); border-radius: 11px; background: rgba(0,0,0,0.14); }
+.leaderboard-header { display: flex; justify-content: space-between; gap: 8px; color: #f1fff6; }
+.leaderboard-header span { color: rgba(215,235,220,0.55); font-size: 0.68rem; }
+.leaderboard-tabs { display: flex; flex-wrap: wrap; gap: 5px; margin: 9px 0; }
+.leaderboard-tabs button { padding: 5px 8px; border: 1px solid rgba(120,255,180,0.13); border-radius: 7px; background: rgba(0,0,0,0.2); color: rgba(225,245,232,0.72); cursor: pointer; }
+.leaderboard-tabs button.is-active { color: #102418; background: #4fe18e; }
+.leaderboard-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 5px; }
+.leaderboard-list button { display: grid; grid-template-columns: 30px minmax(0,1fr) auto; gap: 6px; align-items: center; padding: 7px; border: 1px solid rgba(255,255,255,0.06); border-radius: 7px; background: rgba(0,0,0,0.16); color: #eafff1; cursor: pointer; text-align: left; }
+.leaderboard-list button:hover { border-color: rgba(80,235,145,0.4); }
+.leaderboard-rank { color: #ffc85b; font-weight: 900; }
+.leaderboard-list b { color: #79efad; }

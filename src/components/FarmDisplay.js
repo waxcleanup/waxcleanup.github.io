@@ -1,6 +1,7 @@
 // src/components/FarmDisplay.js
 import React, { useMemo } from 'react';
 import FarmCard from './FarmCard';
+import MyPlotsPanel from './MyPlotsPanel';
 import './FarmDisplay.css';
 
 export default function FarmDisplay({
@@ -16,11 +17,14 @@ export default function FarmDisplay({
   onChanged,
   refreshNonce,
 
-  // ✅ plot filter toggle state + setter (moved here so we can place UI above Global Farms)
-  showMyPlotsOnly = false,
-  onToggleShowMyPlotsOnly, // (next: pass setShowMyPlotsOnly from Farming.js)
   wallet, // (next: pass wallet from Farming.js to disable toggle if not connected)
 }) {
+  const walletAccount = (() => {
+    if (!wallet) return '';
+    if (typeof wallet === 'string') return wallet;
+    const rendered = typeof wallet.toString === 'function' ? wallet.toString() : '';
+    return rendered && rendered !== '[object Object]' ? rendered : '';
+  })();
   const globalMap = useMemo(() => {
     return (allFarms || []).reduce((map, f) => {
       map[String(f.asset_id)] = f;
@@ -96,9 +100,6 @@ export default function FarmDisplay({
   // ✅ Only show the section if global farms actually exist
   const showGlobalSection = globalLoaded && globalCount > 0;
 
-  const canToggle = typeof onToggleShowMyPlotsOnly === 'function';
-  const toggleDisabled = !wallet || !canToggle;
-
   return (
     <div className="farm-display">
       <section className="your-farms">
@@ -124,7 +125,6 @@ export default function FarmDisplay({
                 onPlantSlot={onPlantSlot}
                 onChanged={onChanged}
                 refreshNonce={refreshNonce}
-                showMyPlotsOnly={showMyPlotsOnly}
                 wallet={wallet}
               />
             ))}
@@ -134,21 +134,10 @@ export default function FarmDisplay({
         )}
       </section>
 
+      <MyPlotsPanel refreshNonce={refreshNonce} />
+
       {showGlobalSection && (
         <section className="global-farms">
-          {/* ✅ MOVE TOGGLE HERE (right above Global Farms list) */}
-          <div className="plots-filter-row">
-            <label className="plots-filter-toggle">
-              <input
-                type="checkbox"
-                checked={showMyPlotsOnly}
-                onChange={(e) => onToggleShowMyPlotsOnly?.(e.target.checked)}
-                disabled={toggleDisabled}
-              />
-              Show only my plots
-            </label>
-          </div>
-
           <h2>Global Farms</h2>
 
           {availableFarms.length > 0 ? (
@@ -164,7 +153,8 @@ export default function FarmDisplay({
                   onPlantSlot={onPlantSlot}
                   onChanged={onChanged}
                   refreshNonce={refreshNonce}
-                  showMyPlotsOnly={showMyPlotsOnly}
+                  plotOwnerFilter={walletAccount}
+                  requirePlotOwnerFilter={true}
                   wallet={wallet}
                 />
               ))}

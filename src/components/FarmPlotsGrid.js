@@ -57,7 +57,8 @@ export default function FarmPlotsGrid({
   farmId,
   onChanged,
   refreshNonce,
-  showMyPlotsOnly = false, // ✅ filter toggle
+  showMyPlotsOnly = false,
+  ownerFilter = '', // ✅ filter toggle
 }) {
   const { session } = useSession();
   const wallet = session?.actor;
@@ -68,6 +69,7 @@ export default function FarmPlotsGrid({
 
   const [selectedSlot, setSelectedSlot] = useState(null);
   const selectedSlotRef = useRef(null);
+  const [plotDetailsLoading, setPlotDetailsLoading] = useState(false);
 
   const [slotPending, setSlotPending] = useState(null);
   const [waterAllPending, setWaterAllPending] = useState(false);
@@ -111,11 +113,13 @@ export default function FarmPlotsGrid({
 
     setLoading(true);
     try {
-      const res = await axios.get(
-        `${process.env.REACT_APP_API_BASE_URL}/api/farms/${farmId}/plots`
-      );
+      const res = ownerFilter
+        ? await axios.get(`${process.env.REACT_APP_API_BASE_URL}/api/plots/owner/${ownerFilter}`, {
+            params: { farmId, page: 1, limit: 100 },
+          })
+        : await axios.get(`${process.env.REACT_APP_API_BASE_URL}/api/farms/${farmId}/plots`);
 
-      const newPlots = res.data.plots || [];
+      const newPlots = ownerFilter ? (res.data.items || []) : (res.data.plots || []);
       setPlots(newPlots);
       setError(null);
       return newPlots;
@@ -126,12 +130,50 @@ export default function FarmPlotsGrid({
     } finally {
       setLoading(false);
     }
-  }, [farmId]);
+  }, [farmId, ownerFilter]);
 
   useEffect(() => {
     fetchPlots();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [farmId, refreshNonce]);
+
+  const openSlotDetails = useCallback(async (plot, slot) => {
+    const payload = { farmId, plot, slot };
+    selectedSlotRef.current = payload;
+    setSelectedSlot(payload);
+    setPlotDetailsLoading(true);
+
+    try {
+      const res = await axios.get(
+        `${process.env.REACT_APP_API_BASE_URL}/api/plots/${plot.plot_asset_id}`
+      );
+      const refreshedPlot = res.data?.plot;
+      const refreshedSlot = refreshedPlot?.slots?.find(
+        (candidate) => Number(candidate.index) === Number(slot.index)
+      );
+      const current = selectedSlotRef.current;
+      if (
+        refreshedPlot &&
+        refreshedSlot &&
+        String(current?.plot?.plot_asset_id) === String(plot.plot_asset_id) &&
+        Number(current?.slot?.index) === Number(slot.index)
+      ) {
+        const refreshedPayload = { farmId, plot: refreshedPlot, slot: refreshedSlot };
+        selectedSlotRef.current = refreshedPayload;
+        setSelectedSlot(refreshedPayload);
+      }
+    } catch (error) {
+      console.warn('Could not refresh individual plot details:', error);
+    } finally {
+      const current = selectedSlotRef.current;
+      if (
+        String(current?.plot?.plot_asset_id) === String(plot.plot_asset_id) &&
+        Number(current?.slot?.index) === Number(slot.index)
+      ) {
+        setPlotDetailsLoading(false);
+      }
+    }
+  }, [farmId]);
 
   // --------------------------------------------------
   // Seed inventory
@@ -267,8 +309,9 @@ export default function FarmPlotsGrid({
   );
 
   // ✅ Filter plots (renders only user's plots when toggle enabled)
-  const visiblePlots =
-    showMyPlotsOnly && wallet
+  const visiblePlots = ownerFilter
+    ? plots.filter((plot) => String(plot.owner || '') === String(ownerFilter))
+    : showMyPlotsOnly && wallet
       ? plots.filter((p) => String(p.owner || '') === String(wallet))
       : plots;
 
@@ -330,6 +373,10 @@ export default function FarmPlotsGrid({
 
       {showMyPlotsOnly && wallet && !loading && plots.length > 0 && visiblePlots.length === 0 && (
         <div className="plots-grid-status">No plots owned by you in this farm.</div>
+      )}
+
+      {ownerFilter && !loading && visiblePlots.length === 0 && (
+        <div className="plots-grid-status">No plots owned by {ownerFilter} in this farm.</div>
       )}
 
       <div className="plots-water-all-row">
@@ -408,11 +455,7 @@ export default function FarmPlotsGrid({
                     <div
                       key={slot.index}
                       className={`plot-slot plot-slot-${String(slot.state || '').toLowerCase()}`}
-                      onClick={() => {
-                        const payload = { farmId, plot, slot };
-                        selectedSlotRef.current = payload;
-                        setSelectedSlot(payload);
-                      }}
+                      onClick={() => openSlotDetails(plot, slot)}
                       title="Click to view progress"
                     >
                       {(slot.state === 'GROWING' || slot.state === 'READY') && (
@@ -559,7 +602,12 @@ export default function FarmPlotsGrid({
           farmId={selectedSlot.farmId}
           plot={selectedSlot.plot}
           slot={selectedSlot.slot}
-          onClose={() => setSelectedSlot(null)}
+          loading={plotDetailsLoading}
+          onClose={() => {
+            selectedSlotRef.current = null;
+            setSelectedSlot(null);
+            setPlotDetailsLoading(false);
+          }}
         />
       )}
     </>
