@@ -507,3 +507,216 @@
 .ecs-noteText { margin-top:0; font-size:12px; }
 @media (max-width:880px) { .ecs-body { grid-template-columns:1fr; } .ecs-controls { display:grid; grid-template-columns:1fr 1fr; } .ecs-note,.ecs-error { grid-column:1/-1; } }
 @media (max-width:520px) { .ecs-header { align-items:flex-start; } .ecs-subtitle { max-width:190px; } .ecs-meter { gap:6px; } .ecs-ring { width:54px; height:54px; } .ecs-controls { grid-template-columns:1fr; } .ecs-note,.ecs-error { grid-column:auto; } }
+
+/* Energy-first status and recharge experience */
+.ecs-energyHero {
+  display: grid;
+  grid-template-columns: minmax(190px, 1fr) auto minmax(180px, auto);
+  align-items: center;
+  gap: .7rem 1rem;
+  margin-bottom: .75rem;
+  padding: .9rem 1rem;
+  border: 1px solid rgba(78, 225, 137, .3);
+  border-radius: 1rem;
+  background:
+    radial-gradient(circle at 8% 30%, rgba(54, 220, 119, .13), transparent 32%),
+    linear-gradient(135deg, rgba(13, 45, 27, .94), rgba(8, 24, 17, .96));
+}
+
+.ecs-energyIdentity {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+}
+
+.ecs-energyIcon {
+  display: grid;
+  flex: 0 0 auto;
+  width: 2.8rem;
+  height: 2.8rem;
+  place-items: center;
+  border: 1px solid rgba(97, 242, 153, .3);
+  border-radius: .8rem;
+  background: rgba(39, 159, 82, .15);
+  font-size: 1.35rem;
+}
+
+.ecs-energyEyebrow {
+  color: rgba(207, 237, 217, .65);
+  font-size: .66rem;
+  font-weight: 900;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.ecs-energyValue {
+  display: flex;
+  align-items: baseline;
+  gap: .35rem;
+  margin-top: .1rem;
+}
+
+.ecs-energyValue strong {
+  color: #effff5;
+  font-size: clamp(1.7rem, 3vw, 2.35rem);
+  line-height: 1;
+}
+
+.ecs-energyValue span {
+  color: rgba(220, 243, 227, .68);
+  font-size: .78rem;
+  font-weight: 800;
+}
+
+.ecs-energyStatus {
+  display: flex;
+  flex-direction: column;
+  color: #79f2a8;
+  font-size: .72rem;
+  text-align: right;
+}
+
+.ecs-energyStatus strong {
+  margin-top: .15rem;
+  color: #effff5;
+  font-size: .95rem;
+}
+
+.ecs-heroRecharge {
+  min-height: 2.65rem;
+  padding: .55rem .9rem;
+  border: 1px solid rgba(83, 238, 144, .45);
+  border-radius: .75rem;
+  background: linear-gradient(180deg, #45da82, #219b59);
+  color: #082313;
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.ecs-heroRecharge:disabled {
+  cursor: not-allowed;
+  opacity: .55;
+}
+
+.ecs-energyTrack {
+  grid-column: 1 / -1;
+  height: .62rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .09);
+}
+
+.ecs-energyTrack span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #29b968, #69ef9d);
+  box-shadow: 0 0 16px rgba(67, 224, 126, .35);
+  transition: width .35s ease;
+}
+
+.ecs-energyFoot {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  gap: .7rem;
+  color: rgba(212, 235, 220, .64);
+  font-size: .7rem;
+}
+
+.ecs-energyFoot strong { color: #f2fff7; }
+
+.ecs-energyHero.is-low,
+.ecs-energyHero.is-critical {
+  border-color: rgba(255, 177, 65, .42);
+  background: linear-gradient(135deg, rgba(74, 43, 10, .9), rgba(28, 20, 11, .96));
+}
+.ecs-energyHero.is-low .ecs-energyTrack span,
+.ecs-energyHero.is-critical .ecs-energyTrack span {
+  background: linear-gradient(90deg, #e77f20, #ffc24a);
+}
+.ecs-energyHero.is-low .ecs-energyStatus,
+.ecs-energyHero.is-critical .ecs-energyStatus { color: #ffc45c; }
+.ecs-energyHero.is-low .ecs-heroRecharge,
+.ecs-energyHero.is-critical .ecs-heroRecharge {
+  border-color: #ffbd4c;
+  background: linear-gradient(180deg, #ffbd4c, #e77b1c);
+  color: #261304;
+}
+
+.ecs-energyHero.is-empty {
+  border-color: rgba(255, 85, 85, .48);
+  background: linear-gradient(135deg, rgba(75, 18, 18, .92), rgba(27, 12, 13, .97));
+}
+.ecs-energyHero.is-empty .ecs-energyTrack span { background: #ef4444; }
+.ecs-energyHero.is-empty .ecs-energyStatus { color: #ff8181; }
+.ecs-energyHero.is-empty .ecs-heroRecharge {
+  border-color: #ff6969;
+  background: linear-gradient(180deg, #ff6767, #c93030);
+  color: white;
+  box-shadow: 0 0 20px rgba(255, 69, 69, .2);
+}
+
+.ecs-header--compact {
+  margin: .1rem 0 .55rem;
+}
+
+.ecs-quickAmounts {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: .45rem;
+  margin: .7rem 0 .2rem;
+}
+
+.ecs-quickAmounts button {
+  padding: .55rem .45rem;
+  border: 1px solid rgba(255, 145, 55, .3);
+  border-radius: .65rem;
+  background: rgba(255, 122, 24, .09);
+  color: #ffd3ac;
+  cursor: pointer;
+  font-size: .73rem;
+  font-weight: 800;
+}
+
+.ecs-quickAmounts button:disabled {
+  cursor: not-allowed;
+  opacity: .38;
+}
+
+.ecs-preview {
+  display: flex;
+  justify-content: space-between;
+  gap: .7rem;
+  padding: .65rem .75rem;
+  border: 1px solid rgba(86, 229, 143, .2);
+  border-radius: .65rem;
+  background: rgba(49, 190, 103, .08);
+}
+
+.ecs-preview strong { color: #8ff3b4; }
+
+@media (max-width: 700px) {
+  .ecs-energyHero {
+    grid-template-columns: 1fr auto;
+    padding: .75rem;
+  }
+  .ecs-energyStatus { text-align: right; }
+  .ecs-heroRecharge { grid-column: 1 / -1; }
+}
+
+@media (max-width: 470px) {
+  .ecs-energyIdentity { gap: .5rem; }
+  .ecs-energyIcon { width: 2.35rem; height: 2.35rem; }
+  .ecs-energyValue strong { font-size: 1.55rem; }
+  .ecs-energyFoot { flex-direction: column; gap: .15rem; }
+  .ecs-quickAmounts { grid-template-columns: 1fr; }
+  .ecs-preview { flex-direction: column; }
+}
+.ecs-corePicker>p{margin:-6px 0 12px;color:rgba(225,238,229,.65);font-size:.8rem}
+.ecs-inputLimit {
+  margin-top: .38rem;
+  color: rgba(222, 235, 226, .58);
+  font-size: .66rem;
+  text-align: right;
+}

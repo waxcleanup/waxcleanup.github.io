@@ -200,3 +200,18 @@
 
 .player-status-item:first-child::before { content:"🌱"; }
 .player-status-divider + .player-status-item::before { content:"♻️"; }
+
+.player-status-value-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:3px}.player-status-value-row .player-status-value{margin-top:0}.player-status-add-btn{padding:5px 9px;border:1px solid rgba(91,232,145,.3);border-radius:8px;background:rgba(34,164,86,.16);color:#83efad;cursor:pointer;font-size:.62rem;font-weight:900;white-space:nowrap}.player-status-add-btn:hover{background:rgba(42,193,101,.26);border-color:rgba(91,232,145,.5)}@media(max-width:420px){.player-status-value-row{width:100%}.player-status-add-btn{margin-left:auto}}
+
+.player-status-inline-error {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .55rem .7rem;
+  border: 1px solid rgba(255, 91, 91, .42);
+  border-radius: .65rem;
+  background: rgba(108, 25, 25, .2);
+  color: #ffb5b5;
+  font-size: .72rem;
+}

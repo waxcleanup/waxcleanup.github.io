@@ -7,16 +7,16 @@ export default function PlayerStatusBar({
   loading,
   onClaimRewards,
   claimingRewards = false,
+  onAddSeeds,
+  onAddCompost,
 }) {
-  if (loading) {
+  if (loading && !status) {
     return <div className="player-status-loading">Loading farming status…</div>;
   }
 
-  if (error) {
-    return <div className="player-status-error">{error}</div>;
+  if (!status) {
+    return error ? <div className="player-status-error">{error}</div> : null;
   }
-
-  if (!status) return null;
 
   const seedTotal = status.seeds?.total ?? 0;
   const compostBalance = status.compost?.balance ?? 0;
@@ -59,16 +59,28 @@ export default function PlayerStatusBar({
 
   return (
     <div className="player-status-bar">
+      {error && (
+        <div className="player-status-inline-error" role="alert">
+          <span>⚠️</span>
+          <span>{error}</span>
+        </div>
+      )}
       <div className="player-status-item">
         <span className="player-status-label">Seeds</span>
-        <span className="player-status-value">{seedTotal}</span>
+        <div className="player-status-value-row">
+          <span className="player-status-value">{seedTotal}</span>
+          <button type="button" className="player-status-add-btn" onClick={onAddSeeds}>Add Seeds</button>
+        </div>
       </div>
 
       <div className="player-status-divider" />
 
       <div className="player-status-item">
         <span className="player-status-label">Compost</span>
-        <span className="player-status-value">{compostBalance}</span>
+        <div className="player-status-value-row">
+          <span className="player-status-value">{compostBalance}</span>
+          <button type="button" className="player-status-add-btn" onClick={onAddCompost}>Add Compost</button>
+        </div>
       </div>
 
       {hasRewards && (

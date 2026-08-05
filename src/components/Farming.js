@@ -5,6 +5,8 @@ import './Farming.css';
 
 import useSession from '../hooks/useSession';
 import Weather from './Weather';
+import EnergyCellSection from './EnergyCellSection';
+import FarmToday from './FarmToday';
 import FarmDisplay from './FarmDisplay';
 import SelectCellModal from './SelectCellModal';
 import CharacterLoadout from './CharacterLoadout';
@@ -12,16 +14,17 @@ import BagPanel from './BagPanel';
 import FarmRechargeModal from './FarmRechargeModal';
 import PlayerStatusBar from './PlayerStatusBar';
 import UnequippedTools from './UnequippedTools';
+import QuickBagPicker from './QuickBagPicker';
 
 import { stakeFarm, unstakeFarm, rechargeFarm } from '../services/farmActions';
 import { stakeFarmCell, unstakeFarmCell } from '../services/farmCellActions';
 import { rechargeUserEnergy } from '../services/userEnergyActions';
+import { depositCompost, depositPack } from '../services/depositActions';
 import { claimSeedRewards } from '../services/rewardActions';
 import { usePlayerResources } from '../hooks/PlayerResourcesContext';
 import { plantSlot } from '../services/plantActions';
 import { unequipTool } from '../services/toolEquipActions';
 
-const PLOTS_FILTER_KEY = 'cc_showMyPlotsOnly';
 
 export default function Farming() {
   const { session } = useSession();
@@ -54,26 +57,11 @@ export default function Farming() {
   const [playerStatusError, setPlayerStatusError] = useState(null);
   const [loadingPlayerStatus, setLoadingPlayerStatus] = useState(false);
   const [claimingRewards, setClaimingRewards] = useState(false);
+  const [quickBagCategory, setQuickBagCategory] = useState(null);
+  const [quickBagPending, setQuickBagPending] = useState(null);
 
   // ✅ force BagPanel to refetch after stake/unstake operations
   const [bagRefreshNonce, setBagRefreshNonce] = useState(0);
-
-  // ✅ plots filter: persists across refresh
-  const [showMyPlotsOnly, setShowMyPlotsOnly] = useState(() => {
-    try {
-      return localStorage.getItem(PLOTS_FILTER_KEY) === '1';
-    } catch {
-      return false;
-    }
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(PLOTS_FILTER_KEY, showMyPlotsOnly ? '1' : '0');
-    } catch {
-      // ignore
-    }
-  }, [showMyPlotsOnly]);
 
   // --------------------------------------------------
   // Global: Weather + All Farms
@@ -412,6 +400,40 @@ export default function Farming() {
     }
   };
 
+  const handleQuickBagAction = async (asset) => {
+    if (!wallet || !quickBagCategory || quickBagPending) return;
+    const assetId = String(asset?.asset_id || '');
+    if (!assetId) return;
+
+    try {
+      setQuickBagPending(assetId);
+      if (quickBagCategory === 'seeds') await depositPack(wallet, assetId);
+      else if (quickBagCategory === 'compost') await depositCompost(wallet, assetId);
+
+      for (let attempt = 0; attempt < 6; attempt += 1) {
+        if (attempt > 0) {
+          // eslint-disable-next-line no-await-in-loop
+          await new Promise((resolve) => setTimeout(resolve, 700));
+        }
+        // eslint-disable-next-line no-await-in-loop
+        const response = await axios.get(`${API}/api/player/${wallet}/status`, {
+          params: { _: Date.now() },
+        });
+        setPlayerStatus(response.data);
+        setPlayerStatusError(null);
+      }
+
+      await loadInventory(wallet, { tries: 2, delayMs: 600 });
+      setBagRefreshNonce((value) => value + 1);
+      setQuickBagCategory(null);
+    } catch (error) {
+      console.error('Quick Field Bag action failed:', error);
+      setPlayerStatusError(error?.message || 'Field Bag action failed');
+    } finally {
+      setQuickBagPending(null);
+    }
+  };
+
   // --------------------------------------------------
   // Child change handlers
   // --------------------------------------------------
@@ -438,6 +460,16 @@ export default function Farming() {
 
   return (
     <div className="farming-container">
+      {inventory && (
+        <EnergyCellSection
+          cells={inventory.cells}
+          accountName={wallet}
+          onRefresh={() => loadInventory(wallet, { tries: 2, delayMs: 600 })}
+          toolPending={toolPending}
+          mode="summary"
+        />
+      )}
+
       <Weather weather={weather} loading={loadingWeather} />
 
       <PlayerStatusBar
@@ -446,57 +478,15 @@ export default function Farming() {
         loading={loadingPlayerStatus}
         onClaimRewards={handleClaimRewards}
         claimingRewards={claimingRewards}
+        onAddSeeds={() => setQuickBagCategory('seeds')}
+        onAddCompost={() => setQuickBagCategory('compost')}
       />
+
+      <FarmToday wallet={wallet} refreshNonce={bagRefreshNonce} />
 
       {farmError && <div className="error">{farmError}</div>}
-
       {inventoryError && <div className="error">{inventoryError}</div>}
       {inventoryWarning && <div className="warning">{inventoryWarning}</div>}
-
-      {inventory && (
-        <CharacterLoadout
-          inventory={inventory}
-          onRechargeEnergy={handleRechargeEnergy}
-          recharging={recharging}
-          onUnequipTool={async (slot) => {
-            if (!wallet || !inventory?.tools?.equipped?.[slot]) return;
-            try {
-              setToolPending(`unequip-${slot}`);
-              await unequipTool({ actor: wallet, slot });
-              await loadInventory(wallet, { tries: 2, delayMs: 600 });
-              setBagRefreshNonce((n) => n + 1);
-            } finally {
-              setToolPending(null);
-            }
-          }}
-          toolPending={toolPending}
-          accountName={wallet}
-          onRefreshInventory={async () => loadInventory(wallet, { tries: 2, delayMs: 600 })}
-        />
-      )}
-
-      <UnequippedTools
-        actor={wallet}
-        onChanged={() => loadInventory(wallet, { tries: 2, delayMs: 600 })}
-      />
-
-      <BagPanel
-        wallet={wallet}
-        farms={allFarms}
-        refreshNonce={bagRefreshNonce}
-        onChanged={handleBagChanged}
-      />
-
-      {showCellModal && (
-        <SelectCellModal
-          cells={farmInfo.cells}
-          onConfirm={handleCellConfirm}
-          onCancel={() => {
-            setShowCellModal(false);
-            setSelectedFarmId(null);
-          }}
-        />
-      )}
 
       <FarmDisplay
         farmInfo={farmInfo}
@@ -520,10 +510,80 @@ export default function Farming() {
         onPlantSlot={plantSlot}
         onChanged={handleFarmChanged}
         refreshNonce={bagRefreshNonce}
-        showMyPlotsOnly={showMyPlotsOnly}
-        onToggleShowMyPlotsOnly={setShowMyPlotsOnly}
         wallet={wallet}
       />
+
+      <details className="farm-game-panel">
+        <summary>
+          <span><b>⚙️ Farm Loadout</b><small>Energy core, equipped tools, and staked equipment</small></span>
+          <span className="farm-game-panel-action">Manage</span>
+        </summary>
+        <div className="farm-game-panel-content">
+          {inventory && (
+            <CharacterLoadout
+              inventory={inventory}
+              onRechargeEnergy={handleRechargeEnergy}
+              recharging={recharging}
+              onUnequipTool={async (slot) => {
+                if (!wallet || !inventory?.tools?.equipped?.[slot]) return;
+                try {
+                  setToolPending(`unequip-${slot}`);
+                  await unequipTool({ actor: wallet, slot });
+                  await loadInventory(wallet, { tries: 2, delayMs: 600 });
+                  setBagRefreshNonce((n) => n + 1);
+                } finally {
+                  setToolPending(null);
+                }
+              }}
+              toolPending={toolPending}
+              accountName={wallet}
+              onRefreshInventory={async () => loadInventory(wallet, { tries: 2, delayMs: 600 })}
+            />
+          )}
+          <UnequippedTools
+            actor={wallet}
+            onChanged={() => loadInventory(wallet, { tries: 2, delayMs: 600 })}
+          />
+        </div>
+      </details>
+
+      <details className="farm-game-panel">
+        <summary>
+          <span><b>🎒 Farm Inventory</b><small>Seeds, compost, plots, packs, and supplies</small></span>
+          <span className="farm-game-panel-action">Open Bag</span>
+        </summary>
+        <div className="farm-game-panel-content">
+          <BagPanel
+            wallet={wallet}
+            farms={allFarms}
+            refreshNonce={bagRefreshNonce}
+            onChanged={handleBagChanged}
+          />
+        </div>
+      </details>
+
+      <QuickBagPicker
+        open={Boolean(quickBagCategory)}
+        wallet={wallet}
+        category={quickBagCategory}
+        title={quickBagCategory === 'seeds' ? 'Choose a Seed Pack' : 'Choose Compost'}
+        actionLabel={quickBagCategory === 'seeds' ? 'Open Seed Pack' : 'Deposit Compost'}
+        pendingAssetId={quickBagPending}
+        onConfirm={handleQuickBagAction}
+        onClose={() => !quickBagPending && setQuickBagCategory(null)}
+      />
+
+      {showCellModal && (
+        <SelectCellModal
+          cells={farmInfo.cells}
+          onConfirm={handleCellConfirm}
+          onCancel={() => {
+            setShowCellModal(false);
+            setSelectedFarmId(null);
+          }}
+        />
+      )}
+
       {rechargeFarmTarget && (
         <FarmRechargeModal
           farm={rechargeFarmTarget}

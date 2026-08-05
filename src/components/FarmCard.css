@@ -555,3 +555,57 @@
     margin-left: 0;
   }
 }
+
+/* Explicit one-row layout for the Global Farm summary */
+.farm-card.compact.global-farm-summary {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr) auto;
+  grid-template-areas: "global-image global-info global-actions";
+  align-items: center;
+  gap: .75rem;
+  padding: .65rem;
+}
+.global-farm-summary .farm-card-image,
+.global-farm-summary .farm-card-image--empty { grid-area: global-image; width: 76px; height: 76px; }
+.global-farm-summary .farm-info {
+  grid-area: global-info;
+  display: grid;
+  grid-template-columns: minmax(150px, auto) auto minmax(220px, 1fr);
+  align-items: center;
+  gap: .65rem;
+  padding: 0;
+}
+.global-farm-summary .farm-title,
+.global-farm-summary .farm-status-row { margin: 0; }
+.global-farm-summary .farm-stat-grid { grid-template-columns: repeat(2, minmax(110px, 1fr)); gap: .4rem; }
+.global-farm-summary .farm-actions { grid-area: global-actions; min-width: 145px; }
+.global-farm-summary .farm-actions:empty { display: none; }
+@media (max-width: 900px) {
+  .global-farm-summary .farm-info { grid-template-columns: 1fr auto; }
+  .global-farm-summary .farm-stat-grid { grid-column: 1 / -1; }
+}
+@media (max-width: 620px) {
+  .farm-card.compact.global-farm-summary {
+    grid-template-columns: 64px minmax(0, 1fr);
+    grid-template-areas: "global-image global-info" "global-actions global-actions";
+  }
+  .global-farm-summary .farm-card-image,
+  .global-farm-summary .farm-card-image--empty { width: 64px; height: 64px; }
+  .global-farm-summary .farm-info { display: block; }
+  .global-farm-summary .farm-status-row { margin: .25rem 0; }
+  .global-farm-summary .farm-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* Breathing room around the shared farm name */
+.global-farm-summary .farm-title {
+  padding: .2rem .8rem .2rem .15rem;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .global-farm-summary .farm-title {
+    margin-bottom: .35rem;
+    padding-right: .35rem;
+  }
+}

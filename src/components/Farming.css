@@ -620,3 +620,45 @@
 
 .weather-dashboard .weather-summary > div:last-child { display:flex; flex-direction:column; align-items:flex-start; justify-content:center; min-width:0; }
 .weather-dashboard .weather-condition { width:100%; padding:0; text-align:left; }
+
+/* Game-oriented collapsible farm management panels */
+.farm-game-panel {
+  margin:14px 0;
+  overflow:hidden;
+  border:1px solid rgba(108,235,155,.18);
+  border-radius:16px;
+  background:linear-gradient(145deg,rgba(14,35,23,.94),rgba(7,18,12,.97));
+}
+.farm-game-panel > summary {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  padding:16px 18px;
+  list-style:none;
+  cursor:pointer;
+  user-select:none;
+}
+.farm-game-panel > summary::-webkit-details-marker { display:none; }
+.farm-game-panel > summary span:first-child { display:grid; gap:3px; }
+.farm-game-panel > summary b { color:#effff5; font-size:.92rem; }
+.farm-game-panel > summary small { color:rgba(205,233,215,.58); font-size:.68rem; }
+.farm-game-panel-action {
+  padding:7px 11px;
+  border:1px solid rgba(92,235,147,.2);
+  border-radius:9px;
+  background:rgba(42,131,75,.16);
+  color:#83f4b2;
+  font-size:.68rem;
+  font-weight:800;
+  white-space:nowrap;
+}
+.farm-game-panel[open] .farm-game-panel-action { color:#ffc96a; border-color:rgba(255,191,70,.22); background:rgba(123,81,12,.15); }
+.farm-game-panel-content { padding:0 12px 12px; border-top:1px solid rgba(255,255,255,.06); }
+.farm-game-panel-content > .loadout-container,
+.farm-game-panel-content > .unequipped-tools-panel,
+.farm-game-panel-content > .bag-panel { margin-left:0; margin-right:0; }
+@media (max-width:520px) {
+  .farm-game-panel > summary { padding:13px; }
+  .farm-game-panel-content { padding:0 7px 8px; }
+}

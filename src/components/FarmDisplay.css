@@ -223,3 +223,289 @@
   }
 }
 
+
+/* Personal farm / community game navigation */
+.farm-view-tabs {
+  position:sticky;
+  top:42px;
+  z-index:20;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:7px;
+  margin:16px 0 12px;
+  padding:6px;
+  border:1px solid rgba(102,235,151,.16);
+  border-radius:14px;
+  background:rgba(7,20,13,.94);
+  backdrop-filter:blur(10px);
+}
+.farm-view-tabs button {
+  padding:11px 14px;
+  border:1px solid transparent;
+  border-radius:10px;
+  background:transparent;
+  color:rgba(211,235,219,.66);
+  font-weight:900;
+  cursor:pointer;
+}
+.farm-view-tabs button.is-active {
+  border-color:rgba(91,238,148,.34);
+  background:linear-gradient(135deg,rgba(35,139,75,.42),rgba(18,76,44,.34));
+  color:#edfff4;
+  box-shadow:0 8px 20px rgba(0,0,0,.2);
+}
+.farm-community-view { animation:farmViewIn .2s ease-out; }
+.your-farms { animation:farmViewIn .2s ease-out; scroll-margin-top:100px; }
+@keyframes farmViewIn { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:none; } }
+@media (max-width:520px) {
+  .farm-view-tabs { top:38px; }
+  .farm-view-tabs button { padding:10px 7px; font-size:.75rem; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .farm-community-view,.your-farms { animation:none; }
+}
+
+/* Shared Global Farm and player-owned field */
+.my-plots-view {
+  display: grid;
+  gap: 1rem;
+  animation: farmViewIn .2s ease-out;
+}
+
+.shared-farm-overview,
+.player-plots-section,
+.farm-community-view {
+  padding: 1rem;
+  border: 1px solid rgba(102, 235, 151, .18);
+  border-radius: 1rem;
+  background: linear-gradient(180deg, rgba(10, 30, 18, .82), rgba(7, 20, 13, .88));
+  box-shadow: 0 16px 36px rgba(0, 0, 0, .28);
+  scroll-margin-top: 100px;
+}
+
+.farm-section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: .85rem;
+}
+
+.farm-section-heading h2 {
+  margin: .12rem 0 .2rem;
+  color: #30ed84;
+}
+
+.farm-section-heading p {
+  margin: 0;
+  color: rgba(215, 239, 223, .7);
+  font-size: .86rem;
+}
+
+.farm-section-kicker {
+  color: #f2b84b;
+  font-size: .67rem;
+  font-weight: 900;
+  letter-spacing: .11em;
+  text-transform: uppercase;
+}
+
+.shared-farm-badge,
+.plot-owner-badge {
+  flex: 0 0 auto;
+  max-width: 42%;
+  overflow: hidden;
+  padding: .42rem .72rem;
+  border: 1px solid rgba(102, 235, 151, .3);
+  border-radius: 999px;
+  background: rgba(29, 112, 61, .25);
+  color: #8ff7b5;
+  font-size: .72rem;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-plots-section {
+  border-color: rgba(242, 184, 75, .22);
+  background:
+    radial-gradient(circle at 15% 0, rgba(242, 184, 75, .08), transparent 35%),
+    linear-gradient(180deg, rgba(15, 31, 18, .88), rgba(7, 20, 13, .9));
+}
+
+.farm-empty-state {
+  padding: 2rem 1rem;
+  border: 1px dashed rgba(102, 235, 151, .22);
+  border-radius: .8rem;
+  color: rgba(215, 239, 223, .68);
+  text-align: center;
+}
+
+@media (max-width: 620px) {
+  .shared-farm-overview,
+  .player-plots-section,
+  .farm-community-view {
+    padding: .7rem;
+  }
+
+  .farm-section-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .shared-farm-badge,
+  .plot-owner-badge {
+    align-self: flex-start;
+    max-width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .my-plots-view { animation: none; }
+}
+
+/* Compact presentation for the shared Global Farm overview only */
+.shared-farm-overview {
+  padding: .72rem;
+}
+
+.shared-farm-overview .farm-section-heading {
+  margin-bottom: .55rem;
+}
+
+.shared-farm-overview .farm-card {
+  grid-template-columns: 76px minmax(0, 1fr) auto;
+  gap: .7rem;
+  padding: .7rem;
+}
+
+.shared-farm-overview .farm-card-image,
+.shared-farm-overview .farm-card-image--empty {
+  width: 76px;
+  height: 76px;
+  border-radius: .7rem;
+}
+
+.shared-farm-overview .farm-title {
+  margin-bottom: .3rem;
+  font-size: .95rem;
+}
+
+.shared-farm-overview .farm-status-row {
+  margin-bottom: .4rem;
+}
+
+.shared-farm-overview .farm-stat-grid {
+  gap: .4rem;
+}
+
+.shared-farm-overview .farm-stat {
+  min-height: 0;
+  padding: .42rem .55rem;
+}
+
+.shared-farm-overview .farm-actions {
+  min-width: 150px;
+  gap: .4rem;
+}
+
+.shared-farm-overview .farm-actions:empty {
+  display: none;
+}
+
+.shared-farm-overview .farm-actions button {
+  padding: .46rem .65rem;
+  font-size: .76rem;
+}
+
+@media (max-width: 780px) {
+  .shared-farm-overview .farm-card {
+    grid-template-columns: 64px minmax(0, 1fr);
+    grid-template-areas:
+      "image info"
+      "actions actions";
+    align-items: center;
+  }
+
+  .shared-farm-overview .farm-card-image,
+  .shared-farm-overview .farm-card-image--empty {
+    width: 64px;
+    height: 64px;
+  }
+
+  .shared-farm-overview .farm-actions {
+    min-width: 0;
+  }
+
+  .shared-farm-overview .farm-actions button {
+    flex: 1 1 130px;
+    max-width: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .shared-farm-overview .farm-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .shared-farm-overview .farm-stat strong {
+    font-size: .75rem;
+  }
+}
+
+/* Keep the Global Farm introduction on one compact line */
+.shared-farm-overview > .farm-section-heading {
+  align-items: center;
+  min-height: 0;
+  margin-bottom: .4rem;
+}
+
+.shared-farm-overview > .farm-section-heading > div {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: .65rem;
+}
+
+.shared-farm-overview > .farm-section-heading .farm-section-kicker,
+.shared-farm-overview > .farm-section-heading h2,
+.shared-farm-overview > .farm-section-heading p {
+  flex: 0 0 auto;
+  margin: 0;
+  line-height: 1.15;
+}
+
+.shared-farm-overview > .farm-section-heading p {
+  min-width: 0;
+  overflow: hidden;
+  flex: 1 1 auto;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+  .shared-farm-overview > .farm-section-heading {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .shared-farm-overview > .farm-section-heading > div {
+    flex-wrap: wrap;
+    gap: .2rem .5rem;
+  }
+
+  .shared-farm-overview > .farm-section-heading p {
+    flex-basis: 100%;
+    font-size: .72rem;
+  }
+}
+
+@media (max-width: 430px) {
+  .shared-farm-overview > .farm-section-heading .farm-section-kicker {
+    display: none;
+  }
+
+  .shared-farm-overview > .farm-section-heading p {
+    display: none;
+  }
+}

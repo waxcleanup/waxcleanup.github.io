@@ -25,6 +25,7 @@ export default function CharacterLoadout({
           accountName={accountName}
           onRefresh={onRefreshInventory}
           toolPending={toolPending}
+          mode="core"
         />
       </div>
 

@@ -67,6 +67,8 @@ export default function FarmCard({
   showMyPlotsOnly = false,
   plotOwnerFilter = '',
   requirePlotOwnerFilter = false, // ✅ NEW: plot filter toggle
+  showPlots = true,
+  summaryLayout = false,
 }) {
   const [plotsExpanded, setPlotsExpanded] = useState(false);
   const [plotSummary, setPlotSummary] = useState(null);
@@ -129,7 +131,7 @@ export default function FarmCard({
   const rewardPoolLabel = formatAssetLabel(reward_pool, 'CINDER');
   const canExpandPlots = !requirePlotOwnerFilter || Boolean(plotOwnerFilter);
   return (
-    <div className={`farm-card compact ${allowFarmStake ? 'owner-farm-card' : ''}`}>
+    <div className={`farm-card compact ${allowFarmStake ? 'owner-farm-card' : ''} ${summaryLayout ? 'global-farm-summary' : ''}`}>
       {imgSrc ? (
         <img
           src={imgSrc}
@@ -234,7 +236,7 @@ export default function FarmCard({
         )}
       </div>
 
-      <div className="farm-plots-section">
+      {showPlots && <div className="farm-plots-section">
         <button
           type="button"
           className={`farm-plots-toggle ${plotsExpanded ? 'is-open' : ''}`}
@@ -274,7 +276,7 @@ export default function FarmCard({
           ownerFilter={plotOwnerFilter} // ✅ NEW
         />
         )}
-      </div>
+      </div>}
     </div>
   );
 }

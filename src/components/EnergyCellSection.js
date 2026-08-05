@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { rechargeUserEnergy } from "../services/userEnergyActions";
 import { stakeUserCell, unstakeUserCell } from "../services/userCellActions";
 import { toIpfsUrl } from "../utils/ipfs";
+import { usePlayerResources } from "../hooks/PlayerResourcesContext";
 import "./EnergyCellSection.css";
 
 const ENERGY_PER_CINDER = 2;
@@ -20,61 +21,11 @@ function useUid(prefix = "uid") {
   return ref.current;
 }
 
-function EnergyRing({ value = 0, max = 0 }) {
-  const pct = max > 0 ? clamp(value / max, 0, 1) : 0;
-
-  const size = 64;
-  const stroke = 6;
-  const r = (size - stroke) / 2;
-  const c = 2 * Math.PI * r;
-  const dash = c * pct;
-
-  const gradId = useUid("ecsRingGrad");
-
-  return (
-    <div className="ecs-ring" title={`${Math.round(pct * 100)}%`}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        <defs>
-          {/* Molten ring gradient */}
-          <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="rgba(255,122,24,0.95)" stopOpacity="1" />
-            <stop offset="0.55" stopColor="rgba(255,179,71,0.85)" stopOpacity="1" />
-            <stop offset="1" stopColor="rgba(107,44,0,0.55)" stopOpacity="1" />
-          </linearGradient>
-        </defs>
-
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          stroke="rgba(255,255,255,0.12)"
-          strokeWidth={stroke}
-          fill="none"
-        />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          stroke={`url(#${gradId})`}
-          strokeWidth={stroke}
-          fill="none"
-          strokeLinecap="round"
-          strokeDasharray={`${dash} ${c - dash}`}
-          transform={`rotate(-90 ${size / 2} ${size / 2})`}
-        />
-      </svg>
-
-      <div className="ecs-ring-center">
-        <div className="ecs-ring-num">{value}</div>
-        <div className="ecs-ring-max">/ {max}</div>
-      </div>
-    </div>
-  );
-}
-
-export default function EnergyCellSection({ cells, accountName, onRefresh, toolPending }) {
+export default function EnergyCellSection({ cells, accountName, onRefresh, toolPending, mode = "combined" }) {
+  const { resources, refreshResources } = usePlayerResources();
   const [showModal, setShowModal] = useState(false);
-  const [amount, setAmount] = useState("1");
+  const [showCorePicker, setShowCorePicker] = useState(false);
+  const [amount, setAmount] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [cellPending, setCellPending] = useState(null);
 
@@ -85,6 +36,7 @@ export default function EnergyCellSection({ cells, accountName, onRefresh, toolP
   // Charge “burst” animation when energy increases
   const [chargePulse, setChargePulse] = useState(false);
   const prevEnergyRef = useRef(null);
+  const liveEnergyRef = useRef(0);
 
   const stakedCells = cells?.staked || [];
   const unstakedCells = cells?.unstaked || [];
@@ -94,8 +46,31 @@ export default function EnergyCellSection({ cells, accountName, onRefresh, toolP
   const max = Number(cells?.max || 0);
   const pct = max > 0 ? clamp(energy / max, 0, 1) : 0;
 
-  const pctLabel = `${Math.round(pct * 100)}%`;
-  const pctWidth = `${Math.round(pct * 100)}%`;
+  const pctNumber = Math.round(pct * 100);
+  const pctLabel = `${pctNumber}%`;
+  const pctWidth = `${pctNumber}%`;
+  const cinderBalance = Number(resources?.cinder?.amount || 0);
+  const remainingCapacity = Math.max(0, max - energy);
+  const cinderToFull = remainingCapacity / ENERGY_PER_CINDER;
+  const isFull = max > 0 && energy >= max;
+  const maxRechargeSpend = Math.max(0, Math.min(cinderBalance, cinderToFull));
+  const enteredRechargeAmount = Number(amount);
+  const rechargeAmountIsValid = Number.isFinite(enteredRechargeAmount) &&
+    enteredRechargeAmount > 0 && enteredRechargeAmount <= maxRechargeSpend;
+  const energyStatus = isFull
+    ? { key: "full", label: "Fully charged" }
+    : pctNumber <= 0
+      ? { key: "empty", label: "Energy empty" }
+      : pctNumber <= 15
+        ? { key: "critical", label: "Critical energy" }
+        : pctNumber <= 35
+          ? { key: "low", label: "Low energy" }
+          : { key: "healthy", label: "Energy healthy" };
+  const rechargeLabel = energyStatus.key === "empty"
+    ? "Energy Empty — Recharge Now"
+    : ["critical", "low"].includes(energyStatus.key)
+      ? "Energy Low — Recharge"
+      : isFull ? "Energy Full" : "Recharge Energy";
 
   const cellImgSrc = useMemo(() => toIpfsUrl(cell?.image), [cell?.image]);
 
@@ -111,6 +86,7 @@ export default function EnergyCellSection({ cells, accountName, onRefresh, toolP
 
   // ✅ Pulse effect when energy increases (after refresh updates the prop)
   useEffect(() => {
+    liveEnergyRef.current = energy;
     if (prevEnergyRef.current === null) {
       prevEnergyRef.current = energy;
       return;
@@ -125,7 +101,7 @@ export default function EnergyCellSection({ cells, accountName, onRefresh, toolP
   const openModal = () => {
     setModalError("");
     setSectionError("");
-    setAmount("1");
+    setAmount(maxRechargeSpend > 0 ? String(Math.min(1, maxRechargeSpend)) : "");
     setShowModal(true);
   };
 
@@ -133,7 +109,7 @@ export default function EnergyCellSection({ cells, accountName, onRefresh, toolP
     if (submitting) return;
     setShowModal(false);
     setModalError("");
-    setAmount("1");
+    setAmount("");
   };
 
   const handleConfirmRecharge = async () => {
@@ -142,7 +118,16 @@ export default function EnergyCellSection({ cells, accountName, onRefresh, toolP
       setModalError("Please enter a valid CINDER amount greater than 0.");
       return;
     }
+    if (numeric > cinderBalance) {
+      setModalError(`Not enough CINDER. Available: ${cinderBalance.toFixed(6)} CINDER.`);
+      return;
+    }
+    if (max > 0 && numeric * ENERGY_PER_CINDER > remainingCapacity + 0.000001) {
+      setModalError(`That exceeds the remaining capacity. Use at most ${cinderToFull.toFixed(6)} CINDER.`);
+      return;
+    }
 
+    const energyBeforeRecharge = energy;
     setSubmitting(true);
     setModalError("");
     setSectionError("");
@@ -158,7 +143,8 @@ export default function EnergyCellSection({ cells, accountName, onRefresh, toolP
           await new Promise((resolve) => setTimeout(resolve, 700));
         }
         // eslint-disable-next-line no-await-in-loop
-        await safeRefresh();
+        await Promise.all([safeRefresh(), refreshResources()]);
+        if (liveEnergyRef.current > energyBeforeRecharge) break;
       }
 
       setShowModal(false);
@@ -186,6 +172,7 @@ export default function EnergyCellSection({ cells, accountName, onRefresh, toolP
       await stakeUserCell(accountName, asset_id, template_id);
 
       await safeRefresh();
+      setShowCorePicker(false);
     } catch (err) {
       setSectionError(err?.message || "Stake failed.");
     } finally {
@@ -221,20 +208,34 @@ export default function EnergyCellSection({ cells, accountName, onRefresh, toolP
   const flowOpacity = 0.18 + pct * 0.55;
 
   return (
-    <section className={`ecs-wrap ${chargePulse ? "ecs-pulse" : ""}`}>
-      <div className="ecs-header">
-        <div>
-          <h3 className="ecs-title">Energy System</h3>
-          <div className="ecs-subtitle">Attach a core to power your loadout. Recharge with CINDER.</div>
-        </div>
-
-        <div className="ecs-meter">
-          <EnergyRing value={energy} max={max} />
-          <div className="ecs-meter-text">
-            <div className="ecs-meter-label">User Energy</div>
-            <div className="ecs-meter-pct">{pctLabel}</div>
+    <section className={`ecs-wrap ecs-wrap--${mode} ${chargePulse ? "ecs-pulse" : ""}`}>
+      {mode !== "core" && <div className={`ecs-energyHero is-${energyStatus.key}`}>
+        <div className="ecs-energyIdentity">
+          <span className="ecs-energyIcon" aria-hidden="true">⚡</span>
+          <div><span className="ecs-energyEyebrow">User Energy</span>
+            <div className="ecs-energyValue"><strong>{energy}</strong><span>/ {max} ENERGY</span></div>
           </div>
         </div>
+        <div className="ecs-energyStatus">
+          <span>{energyStatus.label}</span><strong>{pctLabel} remaining</strong>
+        </div>
+        <button
+          type="button"
+          className="ecs-heroRecharge"
+          onClick={cell ? openModal : () => setShowCorePicker(true)}
+          disabled={disableButtons || (Boolean(cell) && isFull)}
+        >
+          {cell ? rechargeLabel : "Choose Core from Bag"}
+        </button>
+        <div className="ecs-energyTrack" aria-label={`${pctLabel} energy remaining`}><span style={{ width: pctWidth }} /></div>
+        <div className="ecs-energyFoot">
+          <span>Balance: <strong>{cinderBalance.toLocaleString(undefined, { maximumFractionDigits: 6 })} CINDER</strong></span>
+          {!isFull && max > 0 && <span>Full recharge: <strong>{cinderToFull.toFixed(3)} CINDER</strong></span>}
+        </div>
+      </div>}
+      {mode !== "summary" && <>
+      <div className="ecs-header ecs-header--compact">
+        <div><h3 className="ecs-title">Energy Core</h3><div className="ecs-subtitle">Your attached core determines energy capacity.</div></div>
       </div>
 
       <div className="ecs-body">
@@ -371,15 +372,6 @@ export default function EnergyCellSection({ cells, accountName, onRefresh, toolP
         {/* RIGHT: controls */}
         <div className="ecs-controls">
           <button
-            className="ecs-btn ecs-btnPrimary"
-            onClick={openModal}
-            disabled={disableButtons || !cell}
-            title={!cell ? "Stake a core first" : "Recharge energy"}
-          >
-            Recharge User Energy
-          </button>
-
-          <button
             className="ecs-btn ecs-btnOutline"
             onClick={() => cell && handleUnstakeCell(cell.asset_id)}
             disabled={disableButtons || !cell}
@@ -389,15 +381,43 @@ export default function EnergyCellSection({ cells, accountName, onRefresh, toolP
 
           {sectionError && <div className="ecs-error">{sectionError}</div>}
 
-          <div className="ecs-note">
-            <div className="ecs-noteTitle">Rate</div>
-            <div className="ecs-noteText">1 CINDER = {ENERGY_PER_CINDER} Energy</div>
-          </div>
         </div>
       </div>
+      </>}
+
+      {mode !== "core" && showCorePicker && (
+        <div className="ecs-modalBackdrop" onClick={() => !cellPending && setShowCorePicker(false)}>
+          <div className="ecs-modal ecs-corePicker" onClick={(event) => event.stopPropagation()}>
+            <div className="ecs-modalTitle">Choose an Energy Core</div>
+            <p>Select an available core from your Field Bag.</p>
+            {unstakedCells.length ? (
+              <div className="ecs-corePickerGrid">
+                {unstakedCells.map((availableCore) => {
+                  const id = String(availableCore.asset_id || "");
+                  return (
+                    <button
+                      type="button"
+                      key={id}
+                      disabled={Boolean(cellPending)}
+                      onClick={() => handleStakeCell(availableCore)}
+                    >
+                      <img src={toIpfsUrl(availableCore.image) || ""} alt="" />
+                      <span><strong>{availableCore.name || "Energy Core"}</strong><small>#{id}</small></span>
+                      <b>{cellPending === `stake-${id}` ? "Staking…" : "Stake Core"}</b>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : <div className="ecs-error">No unstaked Energy Cores were found in your Field Bag.</div>}
+            <div className="ecs-modalActions">
+              <button className="ecs-btn ecs-btnOutline" onClick={() => setShowCorePicker(false)} disabled={Boolean(cellPending)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal */}
-      {showModal && (
+      {mode !== "core" && showModal && (
         <div className="ecs-modalBackdrop" onClick={closeModal}>
           <div className="ecs-modal" onClick={(e) => e.stopPropagation()}>
             <div className="ecs-modalTitle">Recharge User Energy</div>
@@ -410,25 +430,37 @@ export default function EnergyCellSection({ cells, accountName, onRefresh, toolP
                 </div>
               </div>
               <div className="ecs-modalStat">
-                <div className="ecs-modalLabel">Rate</div>
-                <div className="ecs-modalValue">{ENERGY_PER_CINDER} Energy / 1 CINDER</div>
+                <div className="ecs-modalLabel">CINDER Balance</div>
+                <div className="ecs-modalValue">{cinderBalance.toFixed(6)} CINDER</div>
               </div>
+            </div>
+            <div className="ecs-quickAmounts">
+              {[25, 50].map((energyAmount) => {
+                const cinderAmount = energyAmount / ENERGY_PER_CINDER;
+                return <button type="button" key={energyAmount} disabled={submitting || cinderAmount > cinderBalance || energyAmount > remainingCapacity} onClick={() => setAmount(String(cinderAmount))}>+{energyAmount} Energy</button>;
+              })}
+              <button type="button" disabled={submitting || isFull || cinderToFull > cinderBalance} onClick={() => setAmount(String(Number(cinderToFull.toFixed(6))))}>Fill to Maximum</button>
             </div>
 
             <label className="ecs-modalLabel2">
               CINDER to spend
               <input
                 type="number"
-                min="0"
-                step="0.000001"
+                min={Math.min(1, maxRechargeSpend || 1)}
+                max={maxRechargeSpend}
+                step="1"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 className="ecs-input"
               />
             </label>
 
+            <div className="ecs-inputLimit">
+              Maximum available: {maxRechargeSpend.toFixed(6)} CINDER
+            </div>
+
             {Number(amount) > 0 && (
-              <div className="ecs-preview">+{Number(amount) * ENERGY_PER_CINDER} Energy (estimate)</div>
+              <div className="ecs-preview"><span>+{Number(amount) * ENERGY_PER_CINDER} Energy</span><strong>Projected: {Math.min(max, energy + Number(amount) * ENERGY_PER_CINDER)} / {max}</strong></div>
             )}
 
             {modalError && <div className="ecs-error">{modalError}</div>}
@@ -437,7 +469,7 @@ export default function EnergyCellSection({ cells, accountName, onRefresh, toolP
               <button className="ecs-btn ecs-btnOutline" onClick={closeModal} disabled={submitting}>
                 Cancel
               </button>
-              <button className="ecs-btn ecs-btnPrimary" onClick={handleConfirmRecharge} disabled={submitting}>
+              <button className="ecs-btn ecs-btnPrimary" onClick={handleConfirmRecharge} disabled={submitting || !rechargeAmountIsValid}>
                 {submitting ? "Signing..." : "Confirm"}
               </button>
             </div>

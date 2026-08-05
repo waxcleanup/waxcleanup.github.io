@@ -1,6 +1,7 @@
 // src/components/FarmDisplay.js
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import FarmCard from './FarmCard';
+import FarmPlotsGrid from './FarmPlotsGrid';
 import MyPlotsPanel from './MyPlotsPanel';
 import './FarmDisplay.css';
 
@@ -13,11 +14,9 @@ export default function FarmDisplay({
   onStakeCell,
   onUnstakeCell,
   onRechargeFarm,
-  onPlantSlot,
   onChanged,
   refreshNonce,
-
-  wallet, // (next: pass wallet from Farming.js to disable toggle if not connected)
+  wallet,
 }) {
   const walletAccount = (() => {
     if (!wallet) return '';
@@ -25,143 +24,120 @@ export default function FarmDisplay({
     const rendered = typeof wallet.toString === 'function' ? wallet.toString() : '';
     return rendered && rendered !== '[object Object]' ? rendered : '';
   })();
-  const globalMap = useMemo(() => {
-    return (allFarms || []).reduce((map, f) => {
-      map[String(f.asset_id)] = f;
+
+  const globalMap = useMemo(() => (
+    (allFarms || []).reduce((map, farm) => {
+      map[String(farm.asset_id)] = farm;
       return map;
-    }, {});
-  }, [allFarms]);
-
-  const getGlobal = (assetId) => globalMap[String(assetId)] || {};
-
-  const templateFallbackName = farmInfo?.name || null;
-  const templateFallbackImage = farmInfo?.ipfs || null;
-
-  const ownedIds = useMemo(() => {
-    const s = new Set();
-    (farmInfo?.staked || []).forEach((f) => s.add(String(f.asset_id)));
-    (farmInfo?.unstaked || []).forEach((f) => s.add(String(f.asset_id)));
-    return s;
-  }, [farmInfo]);
+    }, {})
+  ), [allFarms]);
 
   const ownedFarms = useMemo(() => {
-    const staked = (farmInfo?.staked || []).map((f) => {
-      const g = getGlobal(f.asset_id);
+    const fallbackName = farmInfo?.name || null;
+    const fallbackImage = farmInfo?.ipfs || null;
+    const mergeFarm = (farm, staked) => {
+      const globalFarm = globalMap[String(farm.asset_id)] || {};
       return {
-        ...g,
-        asset_id: String(f.asset_id),
-        template_id: f.template_id ?? g.template_id,
-        owner: f.owner ?? g.owner,
-        created_at: f.created_at ?? g.created_at,
-        farm_energy: f.farm_energy ?? g.farm_energy,
-        reward_pool: f.reward_pool ?? g.reward_pool,
-        staked: true,
-        cell_asset_id: f.cell_asset_id || null,
-        name: f.name ?? g.name ?? templateFallbackName,
-        image: f.image ?? g.image ?? templateFallbackImage,
+        ...globalFarm,
+        ...farm,
+        asset_id: String(farm.asset_id),
+        staked,
+        cell_asset_id: staked ? (farm.cell_asset_id || null) : null,
+        name: farm.name ?? globalFarm.name ?? fallbackName,
+        image: farm.image ?? globalFarm.image ?? fallbackImage,
       };
-    });
+    };
 
-    const unstaked = (farmInfo?.unstaked || []).map((f) => {
-      const g = getGlobal(f.asset_id);
-      return {
-        ...g,
-        asset_id: String(f.asset_id),
-        template_id: f.template_id ?? g.template_id,
-        owner: f.owner ?? g.owner,
-        created_at: f.created_at ?? g.created_at,
-        farm_energy: f.farm_energy ?? g.farm_energy,
-        reward_pool: f.reward_pool ?? g.reward_pool,
-        staked: false,
-        cell_asset_id: null,
-        name: f.name ?? g.name ?? templateFallbackName,
-        image: f.image ?? g.image ?? templateFallbackImage,
-      };
-    });
+    return [
+      ...(farmInfo?.staked || []).map((farm) => mergeFarm(farm, true)),
+      ...(farmInfo?.unstaked || []).map((farm) => mergeFarm(farm, false)),
+    ];
+  }, [farmInfo, globalMap]);
 
-    return [...staked, ...unstaked];
-  }, [farmInfo, globalMap, templateFallbackName, templateFallbackImage]);
-
-  const globalLoaded = Array.isArray(allFarms);
-  const globalCount = globalLoaded ? allFarms.length : 0;
-
-  const availableFarms = useMemo(() => {
-    if (!Array.isArray(allFarms)) return [];
-    return allFarms
-      .map((f) => ({
-        ...f,
-        asset_id: String(f.asset_id),
-        staked: false,
-        cell_asset_id: null,
-      }))
-      .filter((f) => !ownedIds.has(String(f.asset_id)));
-  }, [allFarms, ownedIds]);
-
-  // ✅ Only show the section if global farms actually exist
-  const showGlobalSection = globalLoaded && globalCount > 0;
+  const sharedFarmBase = Array.isArray(allFarms) ? allFarms[0] : null;
+  const ownedSharedFarm = sharedFarmBase
+    ? ownedFarms.find((farm) => String(farm.asset_id) === String(sharedFarmBase.asset_id))
+    : ownedFarms[0];
+  const sharedFarm = ownedSharedFarm || sharedFarmBase;
+  const managesSharedFarm = Boolean(ownedSharedFarm);
+  const [activeView, setActiveView] = useState('my-plots');
 
   return (
     <div className="farm-display">
-      <section className="your-farms">
-        <h2>Your Farms</h2>
+      <nav className="farm-view-tabs" aria-label="Farming views">
+        <button type="button" className={activeView === 'my-plots' ? 'is-active' : ''} onClick={() => setActiveView('my-plots')}>
+          🌱 My Plots
+        </button>
+        <button type="button" className={activeView === 'community' ? 'is-active' : ''} onClick={() => setActiveView('community')}>
+          🏘️ Community Plots
+        </button>
+      </nav>
 
-        {farmInfo == null ? (
-          <p>Loading your farms…</p>
-        ) : ownedFarms.length > 0 ? (
-          <div className="farms-grid">
-            {ownedFarms.map((farm) => (
+      {activeView === 'my-plots' && (
+        <div className="my-plots-view">
+          <section className="shared-farm-overview" aria-labelledby="global-farm-title">
+            <div className="farm-section-heading">
+              <div>
+                <span className="farm-section-kicker">Shared world</span>
+                <h2 id="global-farm-title">Global Farm</h2>
+                <p>One community farm powers every farmer's individually owned plots.</p>
+              </div>
+              <span className="shared-farm-badge">Global</span>
+            </div>
+
+            {!Array.isArray(allFarms) ? (
+              <p>Loading the Global Farm…</p>
+            ) : sharedFarm ? (
               <FarmCard
-                key={String(farm.asset_id)}
-                farm={farm}
+                farm={sharedFarm}
                 cellList={farmInfo?.cells || []}
                 pendingAction={pendingAction}
-                onStakeFarm={() => onStakeFarm && onStakeFarm(farm)}
-                onUnstakeFarm={() => onUnstakeFarm && onUnstakeFarm(farm)}
-                onStakeCell={() => onStakeCell && onStakeCell(farm.asset_id)}
-                onUnstakeCell={() => onUnstakeCell && onUnstakeCell(farm.asset_id)}
-                onRechargeFarm={() => onRechargeFarm && onRechargeFarm(farm)}
-                allowFarmStake={true}
-                allowCellStake={true}
-                onPlantSlot={onPlantSlot}
+                onStakeFarm={() => onStakeFarm?.(sharedFarm)}
+                onUnstakeFarm={() => onUnstakeFarm?.(sharedFarm)}
+                onStakeCell={() => onStakeCell?.(sharedFarm.asset_id)}
+                onUnstakeCell={() => onUnstakeCell?.(sharedFarm.asset_id)}
+                onRechargeFarm={() => onRechargeFarm?.(sharedFarm)}
+                allowFarmStake={managesSharedFarm}
+                allowCellStake={managesSharedFarm}
                 onChanged={onChanged}
                 refreshNonce={refreshNonce}
-                wallet={wallet}
+                showPlots={false}
+                summaryLayout={true}
               />
-            ))}
-          </div>
-        ) : (
-          <p>No farms owned.</p>
-        )}
-      </section>
+            ) : (
+              <p>The Global Farm is temporarily unavailable.</p>
+            )}
+          </section>
 
-      <MyPlotsPanel refreshNonce={refreshNonce} />
-
-      {showGlobalSection && (
-        <section className="global-farms">
-          <h2>Global Farms</h2>
-
-          {availableFarms.length > 0 ? (
-            <div className="farms-grid">
-              {availableFarms.map((farm) => (
-                <FarmCard
-                  key={String(farm.asset_id)}
-                  farm={farm}
-                  cellList={farmInfo?.cells || []}
-                  pendingAction={pendingAction}
-                  allowFarmStake={false}
-                  allowCellStake={false}
-                  onPlantSlot={onPlantSlot}
-                  onChanged={onChanged}
-                  refreshNonce={refreshNonce}
-                  plotOwnerFilter={walletAccount}
-                  requirePlotOwnerFilter={true}
-                  wallet={wallet}
-                />
-              ))}
+          <section className="player-plots-section" id="global-farm-section" aria-labelledby="my-plots-title">
+            <div className="farm-section-heading">
+              <div>
+                <span className="farm-section-kicker">Your field</span>
+                <h2 id="my-plots-title">My Plots</h2>
+                <p>{walletAccount ? `Showing only plots owned by ${walletAccount}.` : 'Connect your wallet to load your plots and farming actions.'}</p>
+              </div>
+              {walletAccount && <span className="plot-owner-badge">{walletAccount}</span>}
             </div>
-          ) : (
-            <p>You already own all currently indexed farms.</p>
-          )}
+
+            {walletAccount && sharedFarm?.asset_id ? (
+              <FarmPlotsGrid farmId={sharedFarm.asset_id} ownerFilter={walletAccount} onChanged={onChanged} refreshNonce={refreshNonce} />
+            ) : (
+              <div className="farm-empty-state">{walletAccount ? 'Waiting for the Global Farm…' : 'Connect your wallet to tend your plots.'}</div>
+            )}
+          </section>
+        </div>
+      )}
+
+      {activeView === 'community' && (
+        <section className="farm-community-view" aria-labelledby="community-plots-title">
+          <div className="farm-section-heading">
+            <div>
+              <span className="farm-section-kicker">Farmer directory</span>
+              <h2 id="community-plots-title">Community Plots</h2>
+              <p>Select a farmer to view their plots. Other farmers' plots are read-only.</p>
+            </div>
+          </div>
+          <MyPlotsPanel refreshNonce={refreshNonce} />
         </section>
       )}
     </div>

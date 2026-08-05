@@ -192,16 +192,8 @@ export default function BagPanel({
 
   const [filterText, setFilterText] = useState('');
   const [sortMode, setSortMode] = useState('newest');
-  const [collapsed, setCollapsed] = useState({
-    seeds: true,
-    compost: true,
-    tools: true,
-    cores: true,
-    plots: true,
-    packs: true,
-    farms: true,
-    other: true,
-  });
+  const [activePocket, setActivePocket] = useState('seeds');
+  const [pocketPage, setPocketPage] = useState(1);
 
   const [plotModalOpen, setPlotModalOpen] = useState(false);
   const [plotToStake, setPlotToStake] = useState(null);
@@ -361,10 +353,6 @@ export default function BagPanel({
         assets: (prev.assets || []).filter((a) => a.asset_id !== asset_id),
       };
     });
-  };
-
-  const toggleGroup = (key) => {
-    setCollapsed((p) => ({ ...p, [key]: !p[key] }));
   };
 
   const copyToClipboard = async (text) => {
@@ -582,13 +570,29 @@ export default function BagPanel({
     { key: 'other', label: '📁 Other' },
   ];
 
+  const availableGroups = groupOrder.filter(({ key }) => (grouped[key] || []).length > 0);
+  const selectedPocket = availableGroups.some(({ key }) => key === activePocket)
+    ? activePocket
+    : availableGroups[0]?.key || 'seeds';
+  const selectedPocketMeta = groupOrder.find(({ key }) => key === selectedPocket);
+  const selectedItems = grouped[selectedPocket] || [];
+  const pocketPageSize = 12;
+  const pocketPageCount = Math.max(1, Math.ceil(selectedItems.length / pocketPageSize));
+  const safePocketPage = Math.min(pocketPage, pocketPageCount);
+  const pocketStart = (safePocketPage - 1) * pocketPageSize;
+  const visiblePocketItems = selectedItems.slice(pocketStart, pocketStart + pocketPageSize);
+
   return (
     <div className="bag-panel">
+      <div className="bag-handle" aria-hidden="true" />
       <div className="bag-header-row">
         <div className="bag-header-left">
-          <h3 className="bag-title">🎒 Bag</h3>
+          <div>
+            <span className="bag-kicker">Farmer inventory</span>
+            <h3 className="bag-title">Field Bag</h3>
+          </div>
           <span className="bag-count">
-            {assets.length} item{assets.length === 1 ? '' : 's'}
+            {assets.length} NFT{assets.length === 1 ? '' : 's'}
           </span>
         </div>
 
@@ -596,14 +600,14 @@ export default function BagPanel({
           <input
             className="bag-search"
             value={filterText}
-            onChange={(e) => setFilterText(e.target.value)}
+            onChange={(e) => { setFilterText(e.target.value); setPocketPage(1); }}
             placeholder="Search (name / asset / tpl / type)…"
           />
 
           <select
             className="bag-sort"
             value={sortMode}
-            onChange={(e) => setSortMode(e.target.value)}
+            onChange={(e) => { setSortMode(e.target.value); setPocketPage(1); }}
           >
             <option value="newest">Newest</option>
             <option value="name">Name</option>
@@ -703,167 +707,65 @@ export default function BagPanel({
       )}
 
       {filteredAssets.length > 0 && (
-        <div className="bag-groups">
-          {groupOrder.map(({ key: groupKey, label }) => {
-            const list = grouped[groupKey] || [];
-            if (!list.length) return null;
+        <div className="bag-inventory">
+          <nav className="bag-pocket-tabs" aria-label="Bag pockets">
+            {availableGroups.map(({ key, label }) => (
+              <button key={key} type="button" className={key === selectedPocket ? 'is-active' : ''} onClick={() => { setActivePocket(key); setPocketPage(1); }}>
+                <span>{label}</span><strong>{grouped[key].length}</strong>
+              </button>
+            ))}
+          </nav>
+          <section className={`bag-pocket bag-pocket--${selectedPocket}`}>
+            <div className="bag-pocket-heading">
+              <div><span className="bag-pocket-label">Open pocket</span><h4>{selectedPocketMeta?.label || 'Items'}</h4></div>
+              <span>
+                {selectedItems.length
+                  ? `${pocketStart + 1}–${Math.min(pocketStart + pocketPageSize, selectedItems.length)} of ${selectedItems.length}`
+                  : '0 items'}
+              </span>
+            </div>
+            <div className="bag-grid">
+              {visiblePocketItems.map((asset) => {
+                const typeLabel = asset.nft_type || asset.tool_type || asset.type || asset.schema || '';
+                const unavailable = selectedPocket === 'packs' && asset.can_open === false;
+                return (
+                  <article key={asset.asset_id} className={`bag-item-card bag-item-${selectedPocket} ${pendingAssetId === asset.asset_id ? 'is-pending' : ''}`}>
+                    <div className="bag-item-art">
+                      <NFTImage asset={asset} className="bag-item-image" />
+                      {pendingAssetId === asset.asset_id && <div className="bag-item-processing">Processing…</div>}
+                    </div>
+                    <div className="bag-item-body">
+                      <div className="bag-item-name">{asset.name || `#${asset.asset_id}`}</div>
+                      <div className="bag-item-gameplay">
+                        <span>{typeLabel || selectedPocketMeta?.label}</span>
+                        {asset.recipe_id && <strong>Recipe {asset.recipe_id}</strong>}
+                      </div>
+                      <details className="bag-item-details">
+                        <summary><span>Item details</span><span aria-hidden="true">＋</span></summary>
+                        <div><span>Template ID</span><code>{asset.template_id || '—'}</code></div>
+                        <div><span>Asset ID</span><code>{asset.asset_id}</code></div>
 
-            const isCollapsed = !!collapsed[groupKey];
-
-            return (
-              <div key={groupKey} className="bag-group">
-                <button
-                  className="bag-group-header bag-group-toggle"
-                  onClick={() => toggleGroup(groupKey)}
-                  type="button"
-                >
-                  <div className="bag-group-left">
-                    <h4 className="bag-group-title">{label}</h4>
-                    <span className="bag-group-count">{list.length}</span>
-                  </div>
-                  <div className="bag-group-caret">{isCollapsed ? '▸' : '▾'}</div>
-                </button>
-
-                {!isCollapsed && (
-                  <div className="bag-grid">
-                    {list.map((asset) => {
-                      const typeLabel =
-                        asset.nft_type || asset.tool_type || asset.type || asset.schema || '';
-
-                      const isPackUnavailable =
-                        groupKey === 'packs' && asset.can_open === false;
-
-                      return (
-                        <div
-                          key={asset.asset_id}
-                          className={`bag-item-card bag-item-${groupKey}`}
-                        >
-                          <NFTImage asset={asset} className="bag-item-image" />
-
-                          <div className="bag-item-body">
-                            <div className="bag-item-name">
-                              {asset.name || `#${asset.asset_id}`}
-                            </div>
-
-                            <div className="bag-item-meta">
-                              <span className="bag-item-chip">
-                                Tpl: {asset.template_id}
-                              </span>
-                              <span className="bag-item-chip">
-                                ID: {shortId(asset.asset_id)}
-                              </span>
-                              {typeLabel ? (
-                                <span className="bag-item-tag">{typeLabel}</span>
-                              ) : null}
-                              {groupKey === 'packs' && asset.recipe_id ? (
-                                <span className="bag-item-chip">
-                                  Recipe: {asset.recipe_id}
-                                </span>
-                              ) : null}
-                            </div>
-
-                            <div className="bag-item-minirow">
-                              <button
-                                className="bag-item-mini"
-                                onClick={() => copyToClipboard(asset.asset_id)}
-                                type="button"
-                                title="Copy Asset ID"
-                              >
-                                📋 Copy
-                              </button>
-                            </div>
-
-                            {groupKey === 'tools' && (
-                              <button
-                                className="bag-item-btn bag-item-btn-tool"
-                                disabled={pendingAssetId === asset.asset_id}
-                                onClick={() => handleToolStake(asset)}
-                              >
-                                {pendingAssetId === asset.asset_id
-                                  ? 'Staking…'
-                                  : 'Stake Tool'}
-                              </button>
-                            )}
-
-                            {groupKey === 'cores' && (
-                              <button
-                                className="bag-item-btn bag-item-btn-core"
-                                disabled={pendingAssetId === asset.asset_id}
-                                onClick={() => handleCoreStake(asset)}
-                              >
-                                {pendingAssetId === asset.asset_id
-                                  ? 'Staking…'
-                                  : 'Stake Core'}
-                              </button>
-                            )}
-
-                            {groupKey === 'plots' && (
-                              <button
-                                className="bag-item-btn bag-item-btn-plot"
-                                disabled={pendingAssetId === asset.asset_id}
-                                onClick={() => openStakePlotModal(asset)}
-                              >
-                                {pendingAssetId === asset.asset_id
-                                  ? 'Staking…'
-                                  : farmsLoading
-                                  ? 'Loading farms…'
-                                  : 'Stake Plot'}
-                              </button>
-                            )}
-
-                            {groupKey === 'compost' && (
-                              <button
-                                className="bag-item-btn bag-item-btn-compost"
-                                disabled={pendingAssetId === asset.asset_id}
-                                onClick={() => handleCompostDeposit(asset)}
-                              >
-                                {pendingAssetId === asset.asset_id
-                                  ? 'Depositing…'
-                                  : 'Deposit Compost'}
-                              </button>
-                            )}
-
-                            {groupKey === 'seeds' && (
-                              <button
-                                className="bag-item-btn bag-item-btn-pack"
-                                disabled={pendingAssetId === asset.asset_id}
-                                onClick={() => handleSeedPackOpen(asset)}
-                              >
-                                {pendingAssetId === asset.asset_id
-                                  ? 'Opening…'
-                                  : 'Open Seed Pack'}
-                              </button>
-                            )}
-
-                            {groupKey === 'packs' && (
-                              <button
-                                className="bag-item-btn bag-item-btn-pack"
-                                disabled={
-                                  pendingAssetId === asset.asset_id || isPackUnavailable
-                                }
-                                onClick={() => handleGenericPackOpen(asset)}
-                                title={
-                                  isPackUnavailable
-                                    ? 'This pack cannot be opened yet.'
-                                    : ''
-                                }
-                              >
-                                {pendingAssetId === asset.asset_id
-                                  ? 'Opening…'
-                                  : isPackUnavailable
-                                  ? 'Unavailable'
-                                  : 'Open Pack'}
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                        <button type="button" onClick={() => copyToClipboard(asset.asset_id)}>Copy Asset ID</button>
+                      </details>
+                      {selectedPocket === 'tools' && <button className="bag-item-btn bag-item-btn-tool" disabled={pendingAssetId === asset.asset_id} onClick={() => handleToolStake(asset)}>{pendingAssetId === asset.asset_id ? 'Staking…' : 'Stake Tool'}</button>}
+                      {selectedPocket === 'cores' && <button className="bag-item-btn bag-item-btn-core" disabled={pendingAssetId === asset.asset_id} onClick={() => handleCoreStake(asset)}>{pendingAssetId === asset.asset_id ? 'Staking…' : 'Stake Core'}</button>}
+                      {selectedPocket === 'plots' && <button className="bag-item-btn bag-item-btn-plot" disabled={pendingAssetId === asset.asset_id} onClick={() => openStakePlotModal(asset)}>{pendingAssetId === asset.asset_id ? 'Staking…' : farmsLoading ? 'Loading farms…' : 'Stake Plot'}</button>}
+                      {selectedPocket === 'compost' && <button className="bag-item-btn bag-item-btn-compost" disabled={pendingAssetId === asset.asset_id} onClick={() => handleCompostDeposit(asset)}>{pendingAssetId === asset.asset_id ? 'Depositing…' : 'Deposit Compost'}</button>}
+                      {selectedPocket === 'seeds' && <button className="bag-item-btn bag-item-btn-pack" disabled={pendingAssetId === asset.asset_id} onClick={() => handleSeedPackOpen(asset)}>{pendingAssetId === asset.asset_id ? 'Opening…' : 'Open Seed Pack'}</button>}
+                      {selectedPocket === 'packs' && <button className="bag-item-btn bag-item-btn-pack" disabled={pendingAssetId === asset.asset_id || unavailable} onClick={() => handleGenericPackOpen(asset)} title={unavailable ? 'This pack cannot be opened yet.' : ''}>{pendingAssetId === asset.asset_id ? 'Opening…' : unavailable ? 'Unavailable' : 'Open Pack'}</button>}
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+            {pocketPageCount > 1 && (
+              <nav className="bag-pagination" aria-label={`${selectedPocketMeta?.label || 'Bag'} pages`}>
+                <button type="button" disabled={safePocketPage <= 1} onClick={() => setPocketPage((page) => Math.max(1, page - 1))}>← Previous</button>
+                <span><strong>Page {safePocketPage}</strong> of {pocketPageCount}</span>
+                <button type="button" disabled={safePocketPage >= pocketPageCount} onClick={() => setPocketPage((page) => Math.min(pocketPageCount, page + 1))}>Next →</button>
+              </nav>
+            )}
+          </section>
         </div>
       )}
     </div>
