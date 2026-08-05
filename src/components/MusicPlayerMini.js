@@ -8,6 +8,7 @@ const API_BASE = (process.env.REACT_APP_API_BASE_URL || '').trim().replace(/\/+$
 const IPFS_GATEWAY = (process.env.REACT_APP_IPFS_GATEWAY || '').trim().replace(/\/+$/, '');
 const PLAYLIST_SIZE = 15;
 const VOLUME_KEY = 'cleanupcentr_music_volume';
+const SESSION_KEY = 'cleanupcentr_music_session';
 
 function resolveMediaUrl(value) {
   const source = String(value || '').trim();
@@ -33,20 +34,47 @@ function initialVolume() {
   }
 }
 
+function readPlayerSession() {
+  try {
+    const saved = JSON.parse(window.sessionStorage.getItem(SESSION_KEY));
+    const playlist = Array.isArray(saved?.playlist)
+      ? saved.playlist.filter((track) => track?.ipfs_hash)
+      : [];
+    const savedIndex = Number(saved?.currentIndex);
+    const currentIndex = Number.isInteger(savedIndex) && savedIndex >= 0 && savedIndex < playlist.length
+      ? savedIndex
+      : 0;
+    const savedTime = Number(saved?.currentTime);
+
+    return {
+      playlist,
+      currentIndex,
+      currentTime: Number.isFinite(savedTime) && savedTime > 0 ? savedTime : 0,
+    };
+  } catch {
+    return { playlist: [], currentIndex: 0, currentTime: 0 };
+  }
+}
+
 export default function MusicPlayerMini() {
-  const [playlist, setPlaylist] = useState([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [currentTime, setCurrentTime] = useState(0);
+  const [restoredSession] = useState(readPlayerSession);
+  const [playlist, setPlaylist] = useState(restoredSession.playlist);
+  const [currentIndex, setCurrentIndex] = useState(restoredSession.currentIndex);
+  const [currentTime, setCurrentTime] = useState(restoredSession.currentTime);
   const [duration, setDuration] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [volume, setVolume] = useState(initialVolume);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(restoredSession.playlist.length === 0);
   const [loadError, setLoadError] = useState('');
   const [playbackNotice, setPlaybackNotice] = useState('');
   const audioRef = useRef(null);
   const playIntentRef = useRef(false);
   const failedTrackCountRef = useRef(0);
+  const playlistRef = useRef(restoredSession.playlist);
+  const currentIndexRef = useRef(restoredSession.currentIndex);
+  const currentTimeRef = useRef(restoredSession.currentTime);
+  const resumeTimeRef = useRef(restoredSession.currentTime);
 
   const loadPlaylist = useCallback(async (signal) => {
     setLoading(true);
@@ -66,6 +94,8 @@ export default function MusicPlayerMini() {
 
       setPlaylist(tracks);
       setCurrentIndex(0);
+      currentTimeRef.current = 0;
+      resumeTimeRef.current = 0;
       failedTrackCountRef.current = 0;
     } catch (error) {
       if (error?.name !== 'AbortError') {
@@ -78,10 +108,40 @@ export default function MusicPlayerMini() {
   }, []);
 
   useEffect(() => {
+    if (playlist.length) {
+      setLoading(false);
+      return undefined;
+    }
+
     const controller = new AbortController();
     loadPlaylist(controller.signal);
     return () => controller.abort();
-  }, [loadPlaylist]);
+  }, [loadPlaylist, playlist.length]);
+
+  useEffect(() => {
+    playlistRef.current = playlist;
+    currentIndexRef.current = currentIndex;
+  }, [playlist, currentIndex]);
+
+  useEffect(() => {
+    const saveSession = () => {
+      try {
+        window.sessionStorage.setItem(SESSION_KEY, JSON.stringify({
+          playlist: playlistRef.current,
+          currentIndex: currentIndexRef.current,
+          currentTime: currentTimeRef.current,
+        }));
+      } catch {
+        // Session storage may be disabled.
+      }
+    };
+
+    window.addEventListener('pagehide', saveSession);
+    return () => {
+      saveSession();
+      window.removeEventListener('pagehide', saveSession);
+    };
+  }, []);
 
   const item = playlist[currentIndex] || {};
   const mediaUrl = resolveMediaUrl(item.ipfs_hash);
@@ -90,7 +150,9 @@ export default function MusicPlayerMini() {
     const audio = audioRef.current;
     if (!audio || !mediaUrl) return;
 
-    setCurrentTime(0);
+    const resumeAt = resumeTimeRef.current;
+    setCurrentTime(resumeAt);
+    currentTimeRef.current = resumeAt;
     setDuration(0);
     setPlaybackNotice('');
     audio.load();
@@ -109,6 +171,9 @@ export default function MusicPlayerMini() {
   const advance = useCallback((direction, preservePlayback = playIntentRef.current) => {
     if (!playlist.length) return;
     playIntentRef.current = preservePlayback;
+    resumeTimeRef.current = 0;
+    currentTimeRef.current = 0;
+    setCurrentTime(0);
     setCurrentIndex((index) => (
       direction > 0
         ? (index + 1) % playlist.length
@@ -139,7 +204,16 @@ export default function MusicPlayerMini() {
   const handleLoadedMetadata = async () => {
     const audio = audioRef.current;
     if (!audio) return;
-    setDuration(Number.isFinite(audio.duration) ? audio.duration : 0);
+    const nextDuration = Number.isFinite(audio.duration) ? audio.duration : 0;
+    setDuration(nextDuration);
+
+    if (resumeTimeRef.current > 0 && nextDuration > 0) {
+      const resumeAt = Math.min(resumeTimeRef.current, Math.max(0, nextDuration - 0.25));
+      audio.currentTime = resumeAt;
+      setCurrentTime(resumeAt);
+      currentTimeRef.current = resumeAt;
+      resumeTimeRef.current = 0;
+    }
 
     if (playIntentRef.current) {
       try {
@@ -149,6 +223,22 @@ export default function MusicPlayerMini() {
         setPlaybackNotice('Playback could not start. Try again.');
       }
     }
+  };
+
+  const handlePlaylistEnded = async () => {
+    if (currentIndex < playlist.length - 1) {
+      advance(1, true);
+      return;
+    }
+
+    playIntentRef.current = true;
+    setPlaybackNotice('Loading a fresh playlist…');
+    try {
+      window.sessionStorage.removeItem(SESSION_KEY);
+    } catch {
+      // Session storage may be disabled.
+    }
+    await loadPlaylist();
   };
 
   const handleTrackError = () => {
@@ -171,6 +261,7 @@ export default function MusicPlayerMini() {
     if (!audio || !Number.isFinite(nextTime)) return;
     audio.currentTime = nextTime;
     setCurrentTime(nextTime);
+    currentTimeRef.current = nextTime;
   };
 
   if (loading && !playlist.length) {
@@ -215,14 +306,18 @@ export default function MusicPlayerMini() {
           src={mediaUrl}
           preload="metadata"
           onLoadedMetadata={handleLoadedMetadata}
-          onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime)}
+          onTimeUpdate={(event) => {
+            const nextTime = event.currentTarget.currentTime;
+            setCurrentTime(nextTime);
+            currentTimeRef.current = nextTime;
+          }}
           onPlay={() => {
             failedTrackCountRef.current = 0;
             setIsPlaying(true);
             setPlaybackNotice('');
           }}
           onPause={() => setIsPlaying(false)}
-          onEnded={() => advance(1, true)}
+          onEnded={handlePlaylistEnded}
           onError={handleTrackError}
         />
 
