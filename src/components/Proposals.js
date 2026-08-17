@@ -3,7 +3,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import './Proposals.css';
 import VoteModal from './VoteModal';
 
-const Proposals = ({ proposals, handleVote, handleUnstake }) => {
+const Proposals = ({ proposals, handleVote, handleUnstake, handleExecute, handleClaim }) => {
   const [secondsLeftMap, setSecondsLeftMap] = useState({});
   const gateway =
     process.env.REACT_APP_IPFS_GATEWAY || 'https://maestrobeatz.servegame.com/ipfs';
@@ -72,12 +72,8 @@ const Proposals = ({ proposals, handleVote, handleUnstake }) => {
     return () => clearInterval(interval);
   }, [proposals]);
 
-  // Only show proposals that are still open (based on seconds_left)
-  const visibleProposals = (proposals || []).filter((p) => {
-    const sec = secondsLeftMap[p.prop_id];
-    if (sec == null) return true;
-    return sec > 0;
-  });
+  // Keep the full lifecycle visible: voting, ready to execute, and finalized.
+  const visibleProposals = proposals || [];
 
   const openVoteModal = (proposal, voteFor) => {
     setSelectedProposal(proposal);
@@ -169,6 +165,9 @@ const Proposals = ({ proposals, handleVote, handleUnstake }) => {
               const sec = secondsLeftMap[proposal.prop_id];
               const remainingTime = formatSeconds(sec ?? proposal.seconds_left);
               const votingClosed = remainingTime === 'Voting closed';
+              const status = String(proposal.status || '').toLowerCase();
+              const isVerified = status === 'verified';
+              const isFinal = ['approved', 'rejected', 'revoked'].includes(status);
               const videoUrl = normalizeIPFS(proposal.video);
               const imgUrl = normalizeIPFS(proposal.img);
 
@@ -225,9 +224,7 @@ const Proposals = ({ proposals, handleVote, handleUnstake }) => {
                   <td>{remainingTime}</td>
 
                   <td className="actions">
-                    {votingClosed ? (
-                      <span className="voting-closed">Voting Closed</span>
-                    ) : hasStake(proposal) ? (
+                    {isVerified && !votingClosed && hasStake(proposal) ? (
                       <button
                         className="vote-button vote-unstake"
                         onClick={() => handleUnstake?.(proposal.prop_id)}
@@ -240,7 +237,7 @@ const Proposals = ({ proposals, handleVote, handleUnstake }) => {
                       >
                         Unstake
                       </button>
-                    ) : (
+                    ) : isVerified && !votingClosed ? (
                       <div className="vote-buttons">
                         <button
                           className="vote-button vote-for"
@@ -257,6 +254,24 @@ const Proposals = ({ proposals, handleVote, handleUnstake }) => {
                           Vote Against
                         </button>
                       </div>
+                    ) : hasStake(proposal) && (votingClosed || isFinal) ? (
+                      <button
+                        className="vote-button vote-for"
+                        onClick={() => handleClaim?.(proposal.prop_id)}
+                        type="button"
+                      >
+                        Claim Stake
+                      </button>
+                    ) : isVerified && votingClosed ? (
+                      <button
+                        className="vote-button vote-for"
+                        onClick={() => handleExecute?.(proposal.prop_id)}
+                        type="button"
+                      >
+                        Execute Proposal
+                      </button>
+                    ) : (
+                      <span className="voting-closed">{status || 'Finalized'}</span>
                     )}
                   </td>
                 </tr>

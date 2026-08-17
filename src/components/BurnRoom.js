@@ -15,6 +15,7 @@ import {
   burnNFT,
   unstakeIncinerator,
   repairIncinerator,
+  finalizeRepair,
   setIncineratorSlot,
   clearIncineratorSlot,
 } from '../services/transactionActions';
@@ -533,17 +534,9 @@ const BurnRoom = ({ accountName, onClose }) => {
 
       completedRepairsRef.current.add(id);
 
-      // brief delay so backend/table reflects updated durability
+      // Refresh once, but keep the zero state visible until settlement succeeds.
       setTimeout(async () => {
-        try {
-          await fetchIncineratorData();
-        } finally {
-          setRepairTimers((prev) => {
-            const copy = { ...(prev || {}) };
-            delete copy[id];
-            return copy;
-          });
-        }
+        await fetchIncineratorData();
       }, 1500);
     });
   }, [repairTimers, fetchIncineratorData]);
@@ -684,6 +677,23 @@ const BurnRoom = ({ accountName, onClose }) => {
         return;
       }
       setRepairError(msg);
+    }
+  };
+
+  const handleFinalizeRepair = async (incineratorId) => {
+    try {
+      setIsProcessing(true);
+      setBurnMessage('Confirm repair settlement in your wallet...');
+      setMessageVisible(true);
+      await finalizeRepair(accountName, incineratorId);
+      completedRepairsRef.current.delete(String(incineratorId));
+      await fetchIncineratorData();
+      setBurnMessage('Repair settled on-chain.');
+    } catch (err) {
+      setBurnMessage(err?.message || 'Failed to settle repair.');
+    } finally {
+      setIsProcessing(false);
+      setTimeout(() => setMessageVisible(false), 5000);
     }
   };
 
@@ -1058,7 +1068,19 @@ const BurnRoom = ({ accountName, onClose }) => {
                               )}
 
                               {repairTimers[slot.asset_id] === 0 && (
-                                <p className="repair-timer">✅ Repair complete — refreshing…</p>
+                                <div className="repair-timer">
+                                  <p>Repair timer complete - settlement is ready.</p>
+                                  <button
+                                    type="button"
+                                    disabled={isProcessing}
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      handleFinalizeRepair(slot.asset_id);
+                                    }}
+                                  >
+                                    Finalize Repair
+                                  </button>
+                                </div>
                               )}
                             </>
                           ) : (
@@ -1135,6 +1157,7 @@ const BurnRoom = ({ accountName, onClose }) => {
                   loadEnergy={async () => await fetchIncineratorData()}
                   fetchData={fetchIncineratorData}
                   repairTimers={repairTimers}
+                  onFinalizeRepair={handleFinalizeRepair}
                   onClose={() => setShowIncineratorModal(false)}
                   isProcessing={isProcessing}
                 />

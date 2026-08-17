@@ -18,7 +18,13 @@ import {
 } from '../services/api';
 
 // ✅ updated imports (proposal + vote + unstake)
-import { submitProposal, voteOnProposal, unstakeVote } from '../services/eosActions';
+import {
+  submitProposal,
+  voteOnProposal,
+  unstakeVote,
+  executeProposal,
+  claimProposalStake,
+} from '../services/eosActions';
 
 const BurnCenter = () => {
   const { session } = useSession();
@@ -371,6 +377,28 @@ const BurnCenter = () => {
 
       console.error('Error unstaking FULL:', err);
       alert(`Failed to unstake: ${msg}`);
+    }
+  };
+
+  const handleExecuteProposal = async (propId) => {
+    try {
+      await executeProposal({ propId });
+      alert(`Proposal ${propId} executed successfully.`);
+      await reloadOpenProposals();
+    } catch (err) {
+      const msg = err?.cause?.message || err?.message || String(err);
+      alert(`Failed to execute proposal: ${msg}`);
+    }
+  };
+
+  const handleClaimStake = async (propId) => {
+    try {
+      await claimProposalStake({ voter: session.actor, propId });
+      alert(`Stake for proposal ${propId} claimed successfully.`);
+      await reloadOpenProposals();
+    } catch (err) {
+      const msg = err?.cause?.message || err?.message || String(err);
+      alert(`Failed to claim stake: ${msg}`);
     }
   };
 
@@ -743,7 +771,13 @@ const BurnCenter = () => {
       {session && (
         <div className="proposals-wrapper">
           <div className="proposals-scroll">
-            <Proposals proposals={proposals} handleVote={handleVote} handleUnstake={handleUnstake} />
+            <Proposals
+              proposals={proposals}
+              handleVote={handleVote}
+              handleUnstake={handleUnstake}
+              handleExecute={handleExecuteProposal}
+              handleClaim={handleClaimStake}
+            />
           </div>
         </div>
       )}

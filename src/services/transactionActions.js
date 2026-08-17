@@ -305,24 +305,34 @@ export const unstakeIncinerator = async (accountName, incinerator) => {
 };
 
 /**
- * Finalize a repair by calling the backend route.
+ * Settle an expired repair directly on-chain.
+ * The action is permissionless, but the connected wallet signs the transaction.
  */
 export const finalizeRepair = async (accountName, incineratorId) => {
+  if (!accountName) throw new Error('Please connect a wallet first.');
+
+  const id = String(incineratorId || '').trim();
+  if (!id || id === '0') throw new Error('Invalid incinerator id.');
+
   try {
-    const response = await axios.post(
-      `${process.env.REACT_APP_API_BASE_URL}/finalize-repair`,
-      { user: accountName, incinerator_id: incineratorId }
-    );
+    const result = await InitTransaction({
+      actions: [
+        {
+          account: process.env.REACT_APP_CONTRACT_NAME || 'cleanupcentr',
+          name: 'settlerepair',
+          authorization: [{ actor: accountName, permission: 'active' }],
+          data: { incinerator_id: id },
+        },
+      ],
+    });
 
-    const data = response.data;
-    if (data.success) {
-      return data.result?.transaction_id || data.result?.transactionId || data.result;
+    if (!result?.transactionId) {
+      throw new Error(`Repair settlement failed for incinerator ${id}.`);
     }
-
-    throw new Error(data.error || 'Failed to finalize repair');
+    return result.transactionId;
   } catch (error) {
     console.error('[ERROR] finalizeRepair error:', error.message || error);
-    throw new Error(error.message || 'Failed to finalize repair');
+    throw new Error(error.message || `Failed to settle repair for incinerator ${id}.`);
   }
 };
 

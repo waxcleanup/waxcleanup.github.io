@@ -29,6 +29,7 @@ const IncineratorModal = ({
   loadEnergy,
   fetchData,
   repairTimers = {},
+  onFinalizeRepair,
 }) => {
   const [loadingIncinerators, setLoadingIncinerators] = useState(true);
   const [incineratorError, setIncineratorError] = useState('');
@@ -269,7 +270,19 @@ const IncineratorModal = ({
                           )}
 
                           {seconds === 0 && (
-                            <p className="repair-timer">✅ Repair complete — refreshing…</p>
+                            <div className="repair-timer">
+                              <p>Repair timer complete - settlement is ready.</p>
+                              <button
+                                type="button"
+                                disabled={isLoading}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  onFinalizeRepair(id);
+                                }}
+                              >
+                                Finalize Repair
+                              </button>
+                            </div>
                           )}
 
                           {inc.durability === 500 && (
@@ -348,6 +361,7 @@ IncineratorModal.propTypes = {
   loadEnergy: PropTypes.func.isRequired,
   fetchData: PropTypes.func.isRequired,
   repairTimers: PropTypes.object,
+  onFinalizeRepair: PropTypes.func.isRequired,
 };
 
 export default IncineratorModal;

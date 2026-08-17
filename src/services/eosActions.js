@@ -265,9 +265,40 @@ export const unstakeVote = async ({ voter, propId } = {}) => {
   return InitTransaction({
     actions: [
       {
-        account: DAO_CONTRACT, // cleanupcentr
+        account: DAO_CONTRACT,
         name: 'unstakevote',
-        authorization: [{ actor: voter, permission: 'active' }],
+        data: {
+          voter,
+          prop_id: Number(propId),
+        },
+      },
+    ],
+  });
+};
+
+export const executeProposal = async ({ propId } = {}) => {
+  if (!propId) throw new Error('Missing propId');
+
+  return InitTransaction({
+    actions: [
+      {
+        account: DAO_CONTRACT,
+        name: 'execprop',
+        data: { prop_id: Number(propId) },
+      },
+    ],
+  });
+};
+
+export const claimProposalStake = async ({ voter, propId } = {}) => {
+  if (!voter) throw new Error('Missing voter');
+  if (!propId) throw new Error('Missing propId');
+
+  return InitTransaction({
+    actions: [
+      {
+        account: DAO_CONTRACT,
+        name: 'claimstake',
         data: {
           voter,
           prop_id: Number(propId),
