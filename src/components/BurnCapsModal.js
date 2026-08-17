@@ -1,5 +1,5 @@
 // src/components/BurnCapsModal.js
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import './BurnCapsModal.css';
 
 export default function BurnCapsModal({
@@ -10,6 +10,15 @@ export default function BurnCapsModal({
   error,
   onRefresh,
 }) {
+  const [nowMs, setNowMs] = useState(Date.now());
+
+  useEffect(() => {
+    if (!open) return undefined;
+    setNowMs(Date.now());
+    const timer = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [open]);
+
   if (!open) return null;
 
   const user = burnStatus?.user;
@@ -28,6 +37,15 @@ export default function BurnCapsModal({
   const fmtReset = (iso) =>
     iso ? new Date(iso).toUTCString().replace('GMT', 'UTC') : '—';
 
+  const fmtCountdown = (iso) => {
+    if (!iso) return '--';
+    const seconds = Math.max(0, Math.ceil((new Date(iso).getTime() - nowMs) / 1000));
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return `${hours}h ${minutes}m ${secs}s`;
+  };
+
   const anyCapHit =
     (user?.remaining === 0) || incinerators.some((x) => x?.remaining === 0);
 
@@ -43,7 +61,7 @@ export default function BurnCapsModal({
         </div>
 
         <div className="capsSub">
-          {resetAt ? `Resets: ${fmtReset(resetAt)}` : 'Resets: —'}
+          {resetAt ? `Resets: ${fmtReset(resetAt)} (in ${fmtCountdown(resetAt)})` : 'Resets: —'}
         </div>
 
         {loading && <div className="capsLoading">Loading…</div>}
