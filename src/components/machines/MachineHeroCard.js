@@ -1,10 +1,12 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ATOMIC_ASSETS_BASE } from '../../services/atomicAssetsService';
 import './MachineHeroCard.css';
 
 import {
   buildIpfsUrl,
   formatCountdown,
   getBalanceDisplay,
+  getMachineAssetId,
   getMachineImage,
   getMachineName,
   getMachineRowId,
@@ -69,14 +71,32 @@ export default function MachineHeroCard({
 }) {
   const machineId = getMachineRowId(machine);
   const templateId = getTemplateId(machine);
+  const assetId = getMachineAssetId(machine);
+  const [assetMetadata, setAssetMetadata] = useState(null);
 
   const machineName =
     toPlain(machine?.machine_name) ||
     toPlain(templateNameMap?.[templateId]) ||
     getMachineName(machine);
 
-  const pendingRow =
-    (machinePending || []).find((row) => getMachineRowId(row) === machineId) || null;
+  useEffect(() => {
+    let active = true;
+    setAssetMetadata(null);
+    if (!assetId) return () => { active = false; };
+
+    fetch(`${ATOMIC_ASSETS_BASE}/assets/${assetId}`)
+      .then((response) => response.ok ? response.json() : null)
+      .then((payload) => {
+        if (active) setAssetMetadata(payload?.data || null);
+      })
+      .catch(() => {
+        if (active) setAssetMetadata(null);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [assetId]);
 
   const tokenBalancesForMachine = (machineBalances || []).filter(
     (row) => getMachineRowId(row) === machineId
@@ -107,7 +127,10 @@ export default function MachineHeroCard({
     readyAtSec > 0 &&
     nowSec >= readyAtSec;
 
-  const image = getMachineImage(machine);
+  const image =
+    getMachineImage(machine) ||
+    toPlain(assetMetadata?.data?.img) ||
+    toPlain(assetMetadata?.template?.immutable_data?.img);
   const imageUrl = useMemo(() => buildIpfsUrl(image), [image]);
 
   const statusText = readyToClaim

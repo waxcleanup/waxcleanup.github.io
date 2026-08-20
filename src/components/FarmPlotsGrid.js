@@ -13,12 +13,13 @@ import { getWaxRpc } from '../services/waxRpcRead';
 import { unstakePlot } from '../services/plotStakeActions';
 
 const IPFS_GATEWAY = (
-  process.env.REACT_APP_IPFS_GATEWAY || 'https://ipfs.io/ipfs'
+  process.env.REACT_APP_IPFS_GATEWAY || 'https://maestrobeatz.servegame.com/ipfs'
 ).replace(/\/$/, '');
 
 function toIpfsUrl(image) {
   if (!image) return null;
   const s = String(image).trim();
+  if (s.includes('/ipfs/')) return `${IPFS_GATEWAY}/${s.split('/ipfs/')[1]}`;
   if (/^https?:\/\//i.test(s)) return s;
   if (s.startsWith('ipfs://')) return `${IPFS_GATEWAY}/${s.replace('ipfs://', '')}`;
   if (s.includes('/ipfs/')) return `${IPFS_GATEWAY}/${s.split('/ipfs/')[1]}`;

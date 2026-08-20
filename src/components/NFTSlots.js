@@ -12,11 +12,12 @@ const NFTSlots = ({
 
     // Support full URLs and ipfs://
     if (typeof ipfsHash === 'string') {
+      if (ipfsHash.includes('/ipfs/')) return `https://maestrobeatz.servegame.com/ipfs/${ipfsHash.split('/ipfs/')[1]}`;
       if (ipfsHash.startsWith('http://') || ipfsHash.startsWith('https://')) return ipfsHash;
-      if (ipfsHash.startsWith('ipfs://')) return `https://ipfs.io/ipfs/${ipfsHash.replace('ipfs://', '')}`;
+      if (ipfsHash.startsWith('ipfs://')) return `https://maestrobeatz.servegame.com/ipfs/${ipfsHash.replace('ipfs://', '')}`;
     }
 
-    return `https://ipfs.io/ipfs/${ipfsHash}`;
+    return `https://maestrobeatz.servegame.com/ipfs/${ipfsHash}`;
   };
 
   return (

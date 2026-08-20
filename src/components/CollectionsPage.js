@@ -79,11 +79,15 @@ function getImageUrl(template) {
 
   const raw = String(rawImage);
 
+  const gateway = process.env.REACT_APP_IPFS_GATEWAY || 'https://maestrobeatz.servegame.com/ipfs';
+
+  if (raw.includes('/ipfs/')) {
+    return `${gateway.replace(/\/$/, '')}/${raw.split('/ipfs/')[1]}`;
+  }
+
   if (raw.startsWith('http://') || raw.startsWith('https://')) {
     return raw;
   }
-
-  const gateway = process.env.REACT_APP_IPFS_GATEWAY || 'https://ipfs.io/ipfs';
 
   return `${gateway.replace(/\/$/, '')}/${raw
     .replace(/^ipfs:\/\//, '')

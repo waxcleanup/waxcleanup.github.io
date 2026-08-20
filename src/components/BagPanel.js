@@ -18,10 +18,10 @@ import StakePlotModal from './StakePlotModal';
 // IPFS helper (CID -> URL)
 // -----------------------------
 const IPFS_GATEWAY = (
-  process.env.REACT_APP_IPFS_GATEWAY || 'https://ipfs.io/ipfs'
+  process.env.REACT_APP_IPFS_GATEWAY || 'https://maestrobeatz.servegame.com/ipfs'
 ).replace(/\/$/, '');
 
-const FALLBACK_IPFS_GATEWAY = 'https://ipfs.io/ipfs';
+const FALLBACK_IPFS_GATEWAY = 'https://maestrobeatz.servegame.com/ipfs';
 
 function extractIpfsCid(image) {
   if (!image) return null;
@@ -45,12 +45,10 @@ function toIpfsUrl(image) {
   if (!image) return null;
   const s = String(image).trim();
 
-  if (/^https?:\/\//i.test(s)) return s;
-
   const cid = extractIpfsCid(s);
-  if (!cid) return null;
-
-  return `${IPFS_GATEWAY}/${cid}`;
+  if (cid) return `${IPFS_GATEWAY}/${cid}`;
+  if (/^https?:\/\//i.test(s)) return s;
+  return null;
 }
 
 function buildFallbackImageUrl(image) {

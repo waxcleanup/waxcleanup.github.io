@@ -3,6 +3,10 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import "./ApprovedCollectionsPopup.css";
+import {
+  fetchAlcorTokenValues,
+  fetchAtomicTemplateMarket,
+} from "../services/approvedCollectionsService";
 
 function safeStr(v) {
   if (v === null || v === undefined) return "";
@@ -47,6 +51,29 @@ export default function ApprovedCollectionsPopup({
   const [search, setSearch] = useState("");
   const [sortMode, setSortMode] = useState("template_asc");
   const [copiedId, setCopiedId] = useState(null);
+  const [tokenValues, setTokenValues] = useState(null);
+  const [valuationLoading, setValuationLoading] = useState(true);
+  const [valuationError, setValuationError] = useState("");
+  const [selectedMarketKey, setSelectedMarketKey] = useState("");
+  const [marketByTemplate, setMarketByTemplate] = useState({});
+  const [visibleCount, setVisibleCount] = useState(48);
+
+  useEffect(() => {
+    let active = true;
+    setValuationLoading(true);
+    fetchAlcorTokenValues()
+      .then((data) => {
+        if (!active) return;
+        setTokenValues(data);
+        setValuationError(data ? "" : "Alcor pricing is unavailable.");
+      })
+      .finally(() => {
+        if (active) setValuationLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Reset schema filter when collection changes
   useEffect(() => {
@@ -71,6 +98,10 @@ export default function ApprovedCollectionsPopup({
   }, [templateRows, schemaRows]);
 
   const activeRows = tab === "templates" ? templateRows : schemaRows;
+
+  useEffect(() => {
+    setVisibleCount(48);
+  }, [tab, selectedCollection, selectedSchema, search, sortMode]);
 
   // Collection counts for dropdown
   const collectionCounts = useMemo(() => {
@@ -148,8 +179,8 @@ export default function ApprovedCollectionsPopup({
     return list;
   }, [activeRows, selectedCollection, selectedSchema, search, sortMode, tab]);
 
-  const total = activeRows?.length || 0;
   const shown = filtered.length;
+  const visibleRows = filtered.slice(0, visibleCount);
 
   const copyToClipboard = async (text) => {
     try {
@@ -162,43 +193,111 @@ export default function ApprovedCollectionsPopup({
     }
   };
 
+  const fmtWax = (value) => {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return "--";
+    if (Math.abs(n) < 0.000001 && n !== 0) return n.toExponential(3);
+    return n.toFixed(6);
+  };
+
+  const fmtUpdatedDate = (value) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return safeStr(value);
+    return date.toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
+
+  const calculateTokenValue = (row) => {
+    const reward = Number.parseFloat(fmtAssetAmount(row.cinder_reward, String()));
+    const trashFee = Number.parseFloat(fmtAssetAmount(row.trash_fee, String()));
+    const available = Number.isFinite(reward) && Number.isFinite(trashFee);
+    if (!available) return { available: false, rewardWax: 0, trashWax: 0, netWax: 0 };
+    const rewardWax = reward * Number(tokenValues?.cinder?.wax_per_token || 0);
+    const trashWax = trashFee * Number(tokenValues?.trash?.wax_per_token || 0);
+    return { available: true, rewardWax, trashWax, netWax: rewardWax - trashWax };
+  };
+
+  const toggleTemplateMarket = async (collection, schema, templateId) => {
+    const key = `${collection}:${schema}:${templateId}`;
+    if (selectedMarketKey === key) {
+      setSelectedMarketKey("");
+      return;
+    }
+
+    setSelectedMarketKey(key);
+    if (marketByTemplate[key]) return;
+    setMarketByTemplate((current) => ({ ...current, [key]: { loading: true } }));
+    try {
+      const data = await fetchAtomicTemplateMarket(collection, schema, templateId);
+      setMarketByTemplate((current) => ({ ...current, [key]: { loading: false, ...data } }));
+    } catch (error) {
+      setMarketByTemplate((current) => ({
+        ...current,
+        [key]: { loading: false, error: "Atomic market data is unavailable." },
+      }));
+    }
+  };
+
   const clearFilters = () => {
     setSelectedCollection("");
     setSelectedSchema("");
     setSearch("");
+    setVisibleCount(48);
     setSortMode(tab === "templates" ? "template_asc" : "schema");
   };
 
   return (
     <div className="popup-overlay" onClick={onClose} role="dialog" aria-modal="true">
       <div className="popup-content" onClick={(e) => e.stopPropagation()}>
-        <button className="close-button" onClick={onClose} aria-label="Close">
-          &times;
-        </button>
-
         <div className="popup-header">
           <h3>Approved Burns</h3>
-          <div className="popup-subtitle">
-            Showing <strong>{shown}</strong> of <strong>{total}</strong>
+          <div className="popup-header-meta">
+            <div className="popup-subtitle">
+              Showing <strong>{Math.min(visibleCount, shown)}</strong> of <strong>{shown}</strong>
+            </div>
+            <button className="close-button" onClick={onClose} aria-label="Close">
+              &times;
+            </button>
           </div>
         </div>
 
+        <div className="valuation-summary">
+          {valuationLoading ? (
+            <span>Loading Alcor CINDER/WAX price...</span>
+          ) : tokenValues?.cinder ? (
+            <>
+              <strong>1 CINDER ~ {fmtWax(tokenValues.cinder.wax_per_token)} WAX</strong>
+              <span>
+                Alcor pool #{tokenValues.cinder.pool_id} - updated{" "}
+                {new Date(tokenValues.fetched_at).toLocaleTimeString()}
+              </span>
+              <small>
+                Estimated token value only; NFT market value, slippage, energy, durability,
+                and repair costs are not included.
+              </small>
+            </>
+          ) : (
+            <span className="valuation-error">{valuationError || "Alcor pricing unavailable."}</span>
+          )}
+        </div>
+
         {/* Tabs */}
-        <div className="popup-toolbar" style={{ justifyContent: "space-between" }}>
+        <div className="popup-toolbar popup-tabs" style={{ justifyContent: "space-between" }}>
           <div style={{ display: "flex", gap: 8 }}>
             <button
-              className="popup-clear"
+              className={`popup-clear tab-btn${tab === "templates" ? " active" : ""}`}
               type="button"
               onClick={() => setTab("templates")}
-              style={{ opacity: tab === "templates" ? 1 : 0.6 }}
             >
               Templates
             </button>
             <button
-              className="popup-clear"
+              className={`popup-clear tab-btn${tab === "schemas" ? " active" : ""}`}
               type="button"
               onClick={() => setTab("schemas")}
-              style={{ opacity: tab === "schemas" ? 1 : 0.6 }}
             >
               Schemas
             </button>
@@ -272,17 +371,29 @@ export default function ApprovedCollectionsPopup({
             {tab === "templates" ? "No matching approved templates found." : "No matching approved schemas found."}
           </p>
         ) : (
-          <div className="collections-grid">
-            {filtered.map((row, index) => {
+          <>
+            <div className="collections-grid">
+              {visibleRows.map((row, index) => {
               const col = safeStr(row.collection);
               const sch = safeStr(row.schema);
+              const tokenValue = calculateTokenValue(row);
 
               if (tab === "templates") {
                 const tpl = safeStr(row.template_id);
                 const isCopied = copiedId === tpl;
+                const marketKey = `${col}:${sch}:${tpl}`;
+                const market = marketByTemplate[marketKey];
+                const marketOpen = selectedMarketKey === marketKey;
+                const marketUrl = `https://atomichub.io/market?blockchain=wax-mainnet&collection_name=${encodeURIComponent(col)}&schema_name=${encodeURIComponent(sch)}&template_id=${encodeURIComponent(tpl)}&sort=price&order=asc&symbol=WAX`;
+                const marketPremium = market?.lowestListingWax != null && tokenValue.available
+                  ? market.lowestListingWax - tokenValue.netWax
+                  : null;
 
                 return (
-                  <div key={`${col}:${sch}:${tpl}:${index}`} className="collection-item">
+                  <div
+                    key={`${col}:${sch}:${tpl}:${index}`}
+                    className={`collection-item${marketOpen ? " market-open" : ""}`}
+                  >
                     <div className="collection-top">
                       <div className="collection-line">
                         <span className="label">Collection</span>
@@ -297,11 +408,6 @@ export default function ApprovedCollectionsPopup({
                       <div className="collection-line">
                         <span className="label">Template</span>
                         <span className="value mono">{tpl}</span>
-                      </div>
-
-                      <div className="collection-line">
-                        <span className="label">Enabled</span>
-                        <span className="value">{row.enabled === null || row.enabled === undefined ? "—" : (row.enabled ? "✅" : "❌")}</span>
                       </div>
 
                       <div className="collection-line">
@@ -321,6 +427,23 @@ export default function ApprovedCollectionsPopup({
                         <span className="value mono">{fmtAssetAmount(row.cinder_reward, "—")}</span>
                       </div>
 
+                      {tokenValues?.cinder && tokenValue.available && (
+                        <>
+                          <div className="collection-line valuation-line">
+                            <span className="label">Reward Value</span>
+                            <span className="value mono">~ {fmtWax(tokenValue.rewardWax)} WAX</span>
+                          </div>
+                          <div className="collection-line valuation-line">
+                            <span className="label">TRASH Cost</span>
+                            <span className="value mono">- {fmtWax(tokenValue.trashWax)} WAX</span>
+                          </div>
+                          <div className="collection-line valuation-net">
+                            <span className="label">Net Token Value</span>
+                            <span className="value mono">~ {fmtWax(tokenValue.netWax)} WAX</span>
+                          </div>
+                        </>
+                      )}
+
                       {(row.prop_id !== null && row.prop_id !== undefined) && (
                         <div className="collection-line">
                           <span className="label">Prop</span>
@@ -331,14 +454,22 @@ export default function ApprovedCollectionsPopup({
                       {row.updated_at && (
                         <div className="collection-line">
                           <span className="label">Updated</span>
-                          <span className="value">{safeStr(row.updated_at)}</span>
+                          <span className="value">{fmtUpdatedDate(row.updated_at)}</span>
                         </div>
                       )}
                     </div>
 
                     <div className="collection-actions">
                       <button
-                        className="mini-btn"
+                        className="mini-btn mini-btn-primary"
+                        type="button"
+                        onClick={() => toggleTemplateMarket(col, sch, tpl)}
+                        aria-expanded={marketOpen}
+                      >
+                        {marketOpen ? "Hide Market" : "Check Market"}
+                      </button>
+                      <button
+                        className="mini-btn mini-btn-secondary"
                         type="button"
                         onClick={() => copyToClipboard(tpl)}
                         title="Copy template id"
@@ -346,6 +477,47 @@ export default function ApprovedCollectionsPopup({
                         {isCopied ? "✅ Copied" : "📋 Copy ID"}
                       </button>
                     </div>
+
+                    {marketOpen && (
+                      <div className="template-market-panel">
+                        {market?.loading ? (
+                          <div className="market-loading" aria-label="Loading Atomic market">
+                            <span />
+                            <span />
+                            <span />
+                          </div>
+                        ) : market?.error ? (
+                          <span className="market-error">{market.error}</span>
+                        ) : (
+                          <>
+                            <div className="market-row">
+                              <span>Lowest listing</span>
+                              <strong>
+                                {market?.lowestListingWax == null
+                                  ? "No active WAX listing"
+                                  : `${fmtWax(market.lowestListingWax)} WAX`}
+                              </strong>
+                            </div>
+                            {marketPremium != null && (
+                              <div className={`market-row market-result ${marketPremium > 0 ? "market-loss" : "market-gain"}`}>
+                                <span>
+                                  {marketPremium > 0
+                                    ? "Estimated loss if bought"
+                                    : marketPremium < 0
+                                      ? "Estimated gain if bought"
+                                      : "Estimated break-even"}
+                                </span>
+                                <strong>{fmtWax(Math.abs(marketPremium))} WAX</strong>
+                              </div>
+                            )}
+                            <a href={marketUrl} target="_blank" rel="noreferrer" className="atomic-market-link">
+                              View / Buy on AtomicHub
+                            </a>
+                            <small>Estimate only. NFT attributes and liquidity may affect value.</small>
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               }
@@ -365,11 +537,6 @@ export default function ApprovedCollectionsPopup({
                     <div className="collection-line">
                       <span className="label">Schema</span>
                       <span className="value">{sch}</span>
-                    </div>
-
-                    <div className="collection-line">
-                      <span className="label">Enabled</span>
-                      <span className="value">{row.enabled === null || row.enabled === undefined ? "—" : (row.enabled ? "✅" : "❌")}</span>
                     </div>
 
                     <div className="collection-line">
@@ -399,7 +566,7 @@ export default function ApprovedCollectionsPopup({
                     {row.updated_at && (
                       <div className="collection-line">
                         <span className="label">Updated</span>
-                        <span className="value">{safeStr(row.updated_at)}</span>
+                        <span className="value">{fmtUpdatedDate(row.updated_at)}</span>
                       </div>
                     )}
                   </div>
@@ -416,8 +583,20 @@ export default function ApprovedCollectionsPopup({
                   </div>
                 </div>
               );
-            })}
-          </div>
+              })}
+            </div>
+            {visibleCount < shown && (
+              <div className="load-more-wrap">
+                <button
+                  className="load-more-btn"
+                  type="button"
+                  onClick={() => setVisibleCount((count) => count + 48)}
+                >
+                  Load 48 more
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

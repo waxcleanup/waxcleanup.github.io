@@ -383,3 +383,457 @@
   }
 }
 
+
+.valuation-summary {
+  display: grid;
+  gap: 4px;
+  margin: 10px 0 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  border-radius: 10px;
+  background: rgba(20, 83, 45, 0.18);
+  color: rgba(243, 244, 246, 0.92);
+}
+
+.valuation-summary strong {
+  color: #86efac;
+}
+
+.valuation-summary span,
+.valuation-summary small {
+  font-size: 0.78rem;
+}
+
+.valuation-summary small {
+  color: rgba(229, 231, 235, 0.65);
+}
+
+.valuation-error {
+  color: #fca5a5;
+}
+
+.valuation-line {
+  padding-top: 3px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.valuation-net {
+  margin-top: 2px;
+  padding-top: 5px;
+  border-top: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.valuation-net .label,
+.valuation-net .value {
+  color: #86efac;
+  font-weight: 700;
+}
+
+
+.template-market-panel {
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid rgba(52, 211, 153, 0.35);
+  border-radius: 10px;
+  background: rgba(3, 20, 15, 0.75);
+  display: grid;
+  gap: 8px;
+  font-size: 0.78rem;
+}
+
+.market-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.market-row strong {
+  color: #86efac;
+  text-align: right;
+}
+
+.atomic-market-link {
+  display: inline-flex;
+  justify-content: center;
+  padding: 7px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(52, 211, 153, 0.55);
+  color: #86efac;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.atomic-market-link:hover {
+  background: rgba(52, 211, 153, 0.12);
+}
+
+.template-market-panel small {
+  color: rgba(229, 231, 235, 0.65);
+  line-height: 1.3;
+}
+
+.market-error {
+  color: #fca5a5;
+}
+
+
+.market-result {
+  margin-top: 2px;
+  padding-top: 7px;
+  border-top: 1px solid currentColor;
+  font-weight: 700;
+}
+
+.market-result.market-loss,
+.market-result.market-loss strong {
+  color: #f87171;
+}
+
+.market-result.market-gain,
+.market-result.market-gain strong {
+  color: #86efac;
+}
+
+
+/* Approved Burns modal layout refinements */
+.popup-content,
+.popup-content * {
+  box-sizing: border-box;
+}
+
+.popup-content {
+  width: min(1120px, 96vw);
+  max-height: 92vh;
+  padding: 20px;
+}
+
+.popup-header {
+  align-items: center;
+  min-height: 62px;
+}
+
+.popup-header-meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.close-button {
+  position: static;
+  float: none;
+  flex: 0 0 42px;
+  margin: 0;
+  box-shadow: none;
+}
+
+.popup-tabs {
+  position: static;
+  top: auto;
+  z-index: auto;
+  margin-bottom: 10px;
+  box-shadow: none;
+}
+
+.popup-toolbar:not(.popup-tabs) {
+  top: 62px;
+}
+
+.collections-grid {
+  grid-template-columns: repeat(auto-fill, minmax(245px, 1fr));
+  gap: 16px;
+}
+
+.collection-item {
+  min-width: 0;
+}
+
+.collection-actions {
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.collection-item.market-open {
+  grid-column: span 2;
+  display: block;
+}
+
+.market-open .template-market-panel {
+  margin-top: 10px;
+  min-height: 0;
+}
+
+.load-more-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 20px 0 4px;
+}
+
+.load-more-btn {
+  min-width: 180px;
+  height: 38px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 105, 40, 0.55);
+  background: #141414;
+  color: #f3f4f6;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.load-more-btn:hover {
+  border-color: #ffa500;
+  background: rgba(255, 69, 0, 0.1);
+}
+
+@media (max-width: 700px) {
+  .popup-overlay {
+    padding: 6px;
+    align-items: stretch;
+  }
+
+  .popup-content {
+    width: 100%;
+    max-height: calc(100vh - 12px);
+    padding: 14px;
+  }
+
+  .popup-header {
+    margin: -14px -14px 10px;
+    padding: 10px 12px;
+  }
+
+  .popup-header-meta {
+    gap: 8px;
+  }
+
+  .close-button {
+    position: static;
+    margin: 0;
+  }
+
+  .popup-toolbar:not(.popup-tabs) {
+    top: 58px;
+  }
+
+  .collections-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .collection-item.market-open {
+    display: block;
+  }
+
+  .market-open .template-market-panel {
+    margin-top: 10px;
+    min-height: 0;
+  }
+}
+
+
+/* Visual hierarchy refinements */
+.popup-content {
+  border-width: 1px;
+  box-shadow:
+    0 0 18px rgba(255, 69, 0, 0.2),
+    0 20px 55px rgba(0, 0, 0, 0.72);
+}
+
+.popup-header {
+  position: sticky;
+  top: 0;
+  isolation: isolate;
+}
+
+.valuation-summary {
+  position: relative;
+  z-index: 1;
+  margin: 16px 0 14px;
+  padding: 13px 14px;
+  line-height: 1.4;
+}
+
+.valuation-summary strong {
+  display: block;
+  font-size: 0.96rem;
+  line-height: 1.45;
+}
+
+.popup-tabs {
+  padding: 7px;
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(9, 9, 11, 0.75);
+}
+
+.tab-btn {
+  min-width: 96px;
+  border-color: transparent;
+  color: rgba(229, 231, 235, 0.68);
+}
+
+.tab-btn.active {
+  border-color: rgba(255, 105, 40, 0.72);
+  background: linear-gradient(180deg, rgba(255, 91, 31, 0.24), rgba(255, 69, 0, 0.1));
+  color: #fff7ed;
+  box-shadow: inset 0 0 0 1px rgba(255, 165, 0, 0.08);
+}
+
+.collection-item {
+  border-color: rgba(148, 163, 184, 0.2);
+  background:
+    radial-gradient(120% 110% at 10% 0%, rgba(255, 255, 255, 0.055), transparent 48%),
+    linear-gradient(180deg, rgba(26, 19, 18, 0.96), rgba(10, 13, 20, 0.96));
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.24);
+  overflow: hidden;
+}
+
+.collection-item:hover {
+  border-color: rgba(255, 120, 55, 0.46);
+  filter: none;
+}
+
+.collection-top > .collection-line:first-child {
+  margin: -12px -12px 0;
+  padding: 11px 12px 2px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.collection-top > .collection-line:nth-child(2) {
+  margin: -6px -12px 5px;
+  padding: 6px 12px 10px;
+  border-bottom: 1px solid rgba(255, 105, 40, 0.2);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.collection-top > .collection-line:first-child .value {
+  color: #fff7ed;
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.collection-top > .collection-line:nth-child(2) .value {
+  color: rgba(253, 230, 220, 0.88);
+  font-weight: 650;
+}
+
+.collection-line {
+  align-items: baseline;
+}
+
+.collection-line .label {
+  flex: 0 0 auto;
+  letter-spacing: 0.01em;
+}
+
+.collection-line .value {
+  min-width: 0;
+}
+
+.valuation-line {
+  margin-top: 2px;
+}
+
+.valuation-net {
+  margin: 4px -5px 0;
+  padding: 7px 5px;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  border-radius: 7px;
+  background: rgba(34, 197, 94, 0.07);
+}
+
+.valuation-net .value {
+  font-size: 0.91rem;
+}
+
+.mini-btn-primary {
+  border-color: rgba(255, 105, 40, 0.62);
+  background: linear-gradient(180deg, rgba(255, 91, 31, 0.25), rgba(255, 69, 0, 0.12));
+  color: #fff7ed;
+  font-weight: 750;
+}
+
+.mini-btn-secondary {
+  border-color: rgba(148, 163, 184, 0.24);
+  background: rgba(15, 17, 23, 0.72);
+  color: rgba(229, 231, 235, 0.75);
+}
+
+.template-market-panel {
+  border-color: rgba(52, 211, 153, 0.28);
+  background:
+    linear-gradient(180deg, rgba(5, 46, 32, 0.46), rgba(3, 20, 15, 0.7));
+}
+
+.market-row {
+  padding: 2px 0;
+}
+
+.market-result {
+  margin-top: 4px;
+  padding: 9px 8px 2px;
+  border-radius: 7px;
+}
+
+.market-result.market-loss {
+  background: rgba(127, 29, 29, 0.16);
+}
+
+.market-result.market-gain {
+  background: rgba(20, 83, 45, 0.18);
+}
+
+.market-loading {
+  display: grid;
+  gap: 7px;
+}
+
+.market-loading span {
+  display: block;
+  height: 11px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.06), rgba(255,255,255,0.16), rgba(255,255,255,0.06));
+  background-size: 220% 100%;
+  animation: market-shimmer 1.2s linear infinite;
+}
+
+.market-loading span:nth-child(2) {
+  width: 78%;
+}
+
+.market-loading span:nth-child(3) {
+  width: 58%;
+}
+
+@keyframes market-shimmer {
+  to {
+    background-position: -220% 0;
+  }
+}
+
+@media (max-width: 700px) {
+  .valuation-summary {
+    margin-top: 14px;
+    padding-top: 14px;
+  }
+
+  .collection-top > .collection-line:first-child {
+    margin: -10px -10px 0;
+  }
+
+  .collection-top > .collection-line:nth-child(2) {
+    margin: -6px -10px 5px;
+  }
+}
+
+
+.collection-actions:has(.mini-btn-primary) {
+  flex-wrap: nowrap;
+  width: 100%;
+}
+
+.collection-actions .mini-btn-primary,
+.collection-actions .mini-btn-primary + .mini-btn-secondary {
+  flex: 1 1 0;
+  min-width: 0;
+  padding-inline: 8px;
+  white-space: nowrap;
+}

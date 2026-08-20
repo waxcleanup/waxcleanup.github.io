@@ -5,10 +5,11 @@ import PropTypes from 'prop-types';
 const resolveIpfsUrl = (val) => {
   if (!val) return 'default-placeholder.png';
   if (typeof val === 'string') {
+    if (val.includes('/ipfs/')) return `https://maestrobeatz.servegame.com/ipfs/${val.split('/ipfs/')[1]}`;
     if (val.startsWith('http://') || val.startsWith('https://')) return val;
-    if (val.startsWith('ipfs://')) return `https://ipfs.io/ipfs/${val.replace('ipfs://', '')}`;
+    if (val.startsWith('ipfs://')) return `https://maestrobeatz.servegame.com/ipfs/${val.replace('ipfs://', '')}`;
   }
-  return `https://ipfs.io/ipfs/${val}`;
+  return `https://maestrobeatz.servegame.com/ipfs/${val}`;
 };
 
 const NFTGrid = ({

@@ -7,12 +7,15 @@ import { loadFuel, loadEnergy } from '../services/transactionActions';
 const ipfsToUrl = (value) => {
   if (!value) return null;
 
-  // If it's already a full URL, just return it
+  const gateway = process.env.REACT_APP_IPFS_GATEWAY || 'https://maestrobeatz.servegame.com/ipfs';
+
+  if (value.includes('/ipfs/')) {
+    return `${gateway.replace(/\/$/, '')}/${value.split('/ipfs/')[1]}`;
+  }
+
   if (value.startsWith('http://') || value.startsWith('https://')) {
     return value;
   }
-
-  const gateway = process.env.REACT_APP_IPFS_GATEWAY || 'https://ipfs.io/ipfs';
 
   // Strip common prefixes like ipfs:// or ipfs/
   const cleaned = value.replace(/^ipfs:\/\//, '').replace(/^ipfs\//, '');

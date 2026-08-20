@@ -12,6 +12,11 @@ const TOMATOE_TOKEN_CONTRACT =
 const BANANAZ_TOKEN_CONTRACT =
   process.env.REACT_APP_BANANAZ_TOKEN_CONTRACT || 'maestrobeatz';
 
+const TRASH_TOKEN_CONTRACT =
+  process.env.REACT_APP_TRASH_TOKEN_CONTRACT || TOMATOE_TOKEN_CONTRACT;
+const CINDER_TOKEN_CONTRACT =
+  process.env.REACT_APP_CINDER_TOKEN_CONTRACT || TOMATOE_TOKEN_CONTRACT;
+
 const API_URL =
   process.env.REACT_APP_BACKEND_API_BASE_URL ||
   process.env.REACT_APP_API_BASE_URL ||
@@ -109,9 +114,9 @@ function formatAssetAmount(amount, decimals, symbol) {
 function getTokenContractForSymbol(symbol) {
   const upperSymbol = String(symbol || '').toUpperCase();
 
-  if (upperSymbol === 'BANANAZ') {
-    return BANANAZ_TOKEN_CONTRACT;
-  }
+  if (upperSymbol === 'BANANAZ') return BANANAZ_TOKEN_CONTRACT;
+  if (upperSymbol === 'TRASH') return TRASH_TOKEN_CONTRACT;
+  if (upperSymbol === 'CINDER') return CINDER_TOKEN_CONTRACT;
 
   return TOMATOE_TOKEN_CONTRACT;
 }

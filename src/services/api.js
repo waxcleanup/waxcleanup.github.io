@@ -11,12 +11,13 @@ const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 const toGatewayUrl = (val) => {
   if (!val) return '';
   const trimmed = String(val).trim();
+  const m = trimmed.match(/\/ipfs\/(.+)/i);
+  if (m) return `${IPFS_GATEWAY}/${m[1]}`;
   if (/^https?:\/\//i.test(trimmed)) return trimmed;
   if (/^baf[myq]/i.test(trimmed) || /^Qm/i.test(trimmed)) {
     return `${IPFS_GATEWAY}/${trimmed.replace(/^\/+/, '')}`;
   }
-  const m = trimmed.match(/\/ipfs\/(.+)/i);
-  return m ? `${IPFS_GATEWAY}/${m[1]}` : trimmed;
+  return trimmed;
 };
 
 // ---- IPFS helpers ----
@@ -232,7 +233,10 @@ export const fetchApprovedCollections = async () => {
     // ✅ New backend returns the full merged list (approvednfts + tplcaps) without paging.
     // Keep the export name for compatibility across the UI.
     const response = await axios.get(`${API_URL}/cleanup/approved-collections`);
-    return Array.isArray(response.data) ? response.data : [];
+    const proposalsResponse = await axios.get(API_URL + String.fromCharCode(47,99,108,101,97,110,117,112,47,112,114,111,112,111,115,97,108,115,63,108,105,109,105,116,61,53,48,48,48));
+    const proposals = Array.isArray(proposalsResponse.data?.proposals) ? proposalsResponse.data.proposals : [];
+    const proposalsById = new Map(proposals.map((proposal) => [String(proposal.prop_id), proposal]));
+    return Array.isArray(response.data) ? response.data.map((approved) => { const proposal = proposalsById.get(String(approved.prop_id)); return { ...approved, trash_fee: approved.trash_fee ?? proposal?.trash_fee ?? null, cinder_reward: approved.cinder_reward ?? proposal?.cinder_reward ?? null }; }) : [];
   } catch (error) {
     console.error('Error fetching approved collections:', error);
     throw error;

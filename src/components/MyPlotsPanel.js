@@ -3,11 +3,12 @@ import axios from 'axios';
 import './MyPlotsPanel.css';
 
 const API_BASE_URL = (process.env.REACT_APP_API_BASE_URL || 'https://maestrobeatz.servegame.com').replace(/\/$/, '');
-const IPFS_GATEWAY = (process.env.REACT_APP_IPFS_GATEWAY || 'https://ipfs.io/ipfs').replace(/\/$/, '');
+const IPFS_GATEWAY = (process.env.REACT_APP_IPFS_GATEWAY || 'https://maestrobeatz.servegame.com/ipfs').replace(/\/$/, '');
 
 function imageUrl(value) {
   if (!value) return '';
   const text = String(value);
+  if (text.includes('/ipfs/')) return `${IPFS_GATEWAY}/${text.split('/ipfs/')[1]}`;
   if (/^https?:\/\//i.test(text)) return text;
   return `${IPFS_GATEWAY}/${text.replace(/^ipfs:\/\//, '')}`;
 }

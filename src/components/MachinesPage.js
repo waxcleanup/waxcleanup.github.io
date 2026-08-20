@@ -1,6 +1,8 @@
 // src/components/MachinesPage.js
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSession } from '../hooks/SessionContext';
+import { usePlayerResources } from '../hooks/PlayerResourcesContext';
+import { rechargeUserEnergy } from '../services/userEnergyActions';
 import {
   claimMachine,
   depositRecipeOnly,
@@ -31,6 +33,7 @@ export default function MachinesPage({ session: sessionProp }) {
   const sessionCtx = useSession?.() || {};
   const contextSession = sessionCtx?.session || null;
   const session = sessionProp || contextSession || sessionCtx || null;
+  const { resources, refreshResources } = usePlayerResources();
 
   const [wallet, setWallet] = useState('');
   const [loading, setLoading] = useState(true);
@@ -38,6 +41,7 @@ export default function MachinesPage({ session: sessionProp }) {
 
   const [reactorsOwned, setReactorsOwned] = useState([]);
   const [machines, setMachines] = useState([]);
+  const [selectedMachineId, setSelectedMachineId] = useState(null);
   const [recipes, setRecipes] = useState([]);
   const [machineTemplates, setMachineTemplates] = useState([]);
   const [machineInputs, setMachineInputs] = useState([]);
@@ -56,6 +60,10 @@ export default function MachinesPage({ session: sessionProp }) {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [nowTick, setNowTick] = useState(Date.now());
+  const [rechargeOpen, setRechargeOpen] = useState(false);
+  const [rechargeAmount, setRechargeAmount] = useState('');
+  const [rechargeBusy, setRechargeBusy] = useState(false);
+  const [rechargeError, setRechargeError] = useState('');
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -106,6 +114,7 @@ export default function MachinesPage({ session: sessionProp }) {
         else setLoading(true);
 
         const data = await fetchMachineDashboard(actor);
+
 
         setReactorsOwned(data.reactorsOwned || []);
         setMachines(data.machines || []);
@@ -232,14 +241,27 @@ export default function MachinesPage({ session: sessionProp }) {
     return map;
   }, [selectedRecipeInputs, userBalances]);
 
+  const liveEnergy = Number(resources?.energy?.max || 0) > 0
+    ? Number(resources.energy.current || 0)
+    : Number(userBalances.energy || 0);
+  const liveEnergyMax = Number(resources?.energy?.max || 0) > 0
+    ? Number(resources.energy.max || 0)
+    : Number(userBalances.energyMax || 0);
+  const cinderBalance = Number(resources?.cinder?.amount || 0);
+  const energyPercent = liveEnergyMax > 0
+    ? Math.min(100, Math.max(0, (liveEnergy / liveEnergyMax) * 100))
+    : 0;
+  const energyLow = liveEnergyMax > 0 && energyPercent <= 35;
+  const energyRemaining = Math.max(0, liveEnergyMax - liveEnergy);
+  const maxRechargeCinder = Math.max(0, Math.min(cinderBalance, energyRemaining / 2));
+
   const hasEnoughEnergy = useMemo(() => {
     if (!selectedRecipe) return false;
 
     return (
-      Number(userBalances.energy || 0) >=
-      Number(toPlain(selectedRecipe?.energy_per_batch) || 0)
+      liveEnergy >= Number(toPlain(selectedRecipe?.energy_per_batch) || 0)
     );
-  }, [selectedRecipe, userBalances]);
+  }, [selectedRecipe, liveEnergy]);
 
   const templateNameMap = useMemo(() => {
     const map = {};
@@ -250,16 +272,76 @@ export default function MachinesPage({ session: sessionProp }) {
     return map;
   }, [machineTemplates]);
 
-  const primaryMachine = useMemo(() => {
-    if (!machines.length) return null;
+  useEffect(() => {
+    if (!machines.length) {
+      setSelectedMachineId(null);
+      return;
+    }
 
-    const running = machines.find((m) => {
-      if (typeof m?.isRunning === 'boolean') return m.isRunning;
-      return Number(toPlain(m?.isRunning) || 0) === 1;
+    const selectedStillExists = machines.some(
+      (machine) =>
+        String(getMachineRowId(machine)) === String(selectedMachineId)
+    );
+
+    if (selectedStillExists) return;
+
+    const running = machines.find((machine) => {
+      if (typeof machine?.isRunning === 'boolean') return machine.isRunning;
+      return Number(toPlain(machine?.isRunning) || 0) === 1;
     });
 
-    return running || machines[0];
-  }, [machines]);
+    const nextMachine = running || machines[0];
+
+    if (nextMachine) {
+      setSelectedMachineId(String(getMachineRowId(nextMachine)));
+    }
+  }, [machines, selectedMachineId]);
+
+  const selectedMachine = useMemo(() => {
+    if (!machines.length) return null;
+
+    const found = machines.find(
+      (machine) =>
+        String(getMachineRowId(machine)) === String(selectedMachineId)
+    );
+
+    return found || machines[0];
+  }, [machines, selectedMachineId]);
+
+  function openRecharge() {
+    setRechargeError('');
+    setRechargeAmount(maxRechargeCinder > 0 ? String(Math.min(1, maxRechargeCinder)) : '');
+    setRechargeOpen(true);
+  }
+
+  async function handleRechargeEnergy() {
+    const amount = Number(rechargeAmount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setRechargeError('Enter a valid CINDER amount.');
+      return;
+    }
+    if (amount > cinderBalance) {
+      setRechargeError(`Only ${cinderBalance.toFixed(6)} CINDER is available.`);
+      return;
+    }
+    if (amount > maxRechargeCinder + 0.000001) {
+      setRechargeError(`Use at most ${maxRechargeCinder.toFixed(6)} CINDER to avoid exceeding capacity.`);
+      return;
+    }
+
+    try {
+      setRechargeBusy(true);
+      setRechargeError('');
+      await rechargeUserEnergy(amount);
+      await Promise.all([refreshResources(), loadDashboard(true)]);
+      setRechargeOpen(false);
+      setMessage(`Loaded ${amount.toFixed(6)} CINDER into user energy.`);
+    } catch (err) {
+      setRechargeError(err?.message || 'Energy recharge failed.');
+    } finally {
+      setRechargeBusy(false);
+    }
+  }
 
   async function handleStake(assetId) {
     try {
@@ -443,32 +525,32 @@ export default function MachinesPage({ session: sessionProp }) {
       {message ? <div className="machines-banner success">{toPlain(message)}</div> : null}
       {error ? <div className="machines-banner error">{toPlain(error)}</div> : null}
 
-      <div className="machines-summary-grid">
-        <div className="machines-summary-card">
-          <span className="machines-summary-label">Wallet</span>
-          <strong>{toPlain(wallet)}</strong>
-        </div>
-
-        <div className="machines-summary-card">
-          <span className="machines-summary-label">Energy</span>
-          <strong>
-            {formatNumber(userBalances.energy, 0)} / {formatNumber(userBalances.energyMax, 0)}
-          </strong>
-        </div>
-
-        <div className="machines-summary-card">
-          <span className="machines-summary-label">TOMATOE</span>
-          <strong>{formatNumber(userBalances.tomatoe, 8)}</strong>
-        </div>
-
-        <div className="machines-summary-card">
-          <span className="machines-summary-label">BANANAZ</span>
-          <strong>{formatNumber(userBalances.bananaz, 8)}</strong>
-        </div>
-      </div>
-
       <div className="machines-primary-layout">
         <div className="staked-machines-focus">
+          <section className={`machine-energy-module${energyLow ? " is-low" : ""}`}>
+            <div className="machines-energy-heading">
+              <div>
+                <span className="machines-summary-label">Machine Energy</span>
+                <strong>{formatNumber(liveEnergy, 0)} / {formatNumber(liveEnergyMax, 0)}</strong>
+              </div>
+              <span className="machines-energy-percent">{Math.round(energyPercent)}%</span>
+            </div>
+            <div className="machines-energy-track" aria-label={`${Math.round(energyPercent)}% energy remaining`}>
+              <span style={{ width: `${energyPercent}%` }} />
+            </div>
+            <div className="machines-energy-module-foot">
+              <span>{energyLow ? 'Low energy may prevent production.' : 'Available for machine production.'}</span>
+              <button
+                type="button"
+                className="machines-energy-btn"
+                onClick={openRecharge}
+                disabled={liveEnergyMax <= 0 || energyRemaining <= 0 || cinderBalance <= 0}
+              >
+                {energyLow ? 'Recharge Energy' : energyRemaining <= 0 ? 'Energy Full' : 'Recharge'}
+              </button>
+            </div>
+          </section>
+
           {machines.length === 0 ? (
             <section className="machines-panel">
               <div className="machines-panel-top">
@@ -478,19 +560,59 @@ export default function MachinesPage({ session: sessionProp }) {
               <p className="machines-muted">No machines are currently staked.</p>
             </section>
           ) : (
-            <MachineHeroCard
-              machine={primaryMachine}
-              selectedRecipe={selectedRecipe}
-              machinePending={machinePending}
-              machineBalances={machineBalances}
-              templateNameMap={templateNameMap}
-              busyKey={busyKey}
-              onDepositOnly={handleDepositOnly}
-              onStartMachine={handleStartMachine}
-              onClaim={handleClaim}
-              onUnstake={handleUnstake}
-              nowTick={nowTick}
-            />
+            <>
+              {machines.length > 1 ? (
+                <div className="machine-selector-wrap">
+                  <label htmlFor="machine-selector">
+                    Manage Reactor
+                  </label>
+
+                  <select
+                    id="machine-selector"
+                    className="machines-select"
+                    value={
+                      selectedMachineId ??
+                      String(getMachineRowId(machines[0]))
+                    }
+                    onChange={(e) => setSelectedMachineId(e.target.value)}
+                  >
+                    {machines.map((machine) => {
+                      const machineId = getMachineRowId(machine);
+
+                      const running =
+                        typeof machine?.isRunning === 'boolean'
+                          ? machine.isRunning
+                          : Number(toPlain(machine?.isRunning) || 0) === 1;
+
+                      return (
+                        <option
+                          key={String(machineId)}
+                          value={String(machineId)}
+                        >
+                          {templateNameMap[
+                            Number(toPlain(machine?.template_id) || 0)
+                          ] || 'Reactor'} #{machineId} - {running ? 'Running' : 'Idle'}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+              ) : null}
+
+              <MachineHeroCard
+                machine={selectedMachine}
+                selectedRecipe={selectedRecipe}
+                machinePending={machinePending}
+                machineBalances={machineBalances}
+                templateNameMap={templateNameMap}
+                busyKey={busyKey}
+                onDepositOnly={handleDepositOnly}
+                onStartMachine={handleStartMachine}
+                onClaim={handleClaim}
+                onUnstake={handleUnstake}
+                nowTick={nowTick}
+              />
+            </>
           )}
         </div>
 
@@ -520,6 +642,79 @@ export default function MachinesPage({ session: sessionProp }) {
           getMachineRarity={getMachineRarity}
         />
       </div>
+
+      {rechargeOpen ? (
+        <div className="machines-recharge-overlay" role="presentation" onMouseDown={() => !rechargeBusy && setRechargeOpen(false)}>
+          <section
+            className="machines-recharge-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="machines-recharge-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="machines-recharge-header">
+              <div>
+                <span>Machine Room Power</span>
+                <h3 id="machines-recharge-title">Recharge User Energy</h3>
+              </div>
+              <button type="button" onClick={() => setRechargeOpen(false)} disabled={rechargeBusy} aria-label="Close">
+                &times;
+              </button>
+            </div>
+
+            <div className="machines-recharge-stats">
+              <div><span>Energy</span><strong>{formatNumber(liveEnergy, 0)} / {formatNumber(liveEnergyMax, 0)}</strong></div>
+              <div><span>CINDER Balance</span><strong>{formatNumber(cinderBalance, 6)}</strong></div>
+              <div><span>Maximum Load</span><strong>{formatNumber(maxRechargeCinder, 6)} CINDER</strong></div>
+            </div>
+
+            <label className="machines-recharge-field">
+              <span>CINDER to load</span>
+              <input
+                type="number"
+                min="0"
+                max={maxRechargeCinder}
+                step="0.000001"
+                value={rechargeAmount}
+                onChange={(event) => setRechargeAmount(event.target.value)}
+                disabled={rechargeBusy}
+              />
+              <small>1 CINDER restores 2 energy.</small>
+            </label>
+
+            <div className="machines-recharge-presets">
+              {[0.5, 1].map((amount) => (
+                <button
+                  key={amount}
+                  type="button"
+                  onClick={() => setRechargeAmount(String(Math.min(amount, maxRechargeCinder)))}
+                  disabled={rechargeBusy || maxRechargeCinder <= 0}
+                >
+                  {amount} CINDER
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setRechargeAmount(String(maxRechargeCinder))}
+                disabled={rechargeBusy || maxRechargeCinder <= 0}
+              >
+                Fill
+              </button>
+            </div>
+
+            {rechargeError ? <div className="machines-recharge-error">{rechargeError}</div> : null}
+
+            <button
+              type="button"
+              className="machines-recharge-confirm"
+              onClick={handleRechargeEnergy}
+              disabled={rechargeBusy || maxRechargeCinder <= 0}
+            >
+              {rechargeBusy ? 'Confirming...' : 'Load Energy'}
+            </button>
+          </section>
+        </div>
+      ) : null}
     </div>
   );
 }

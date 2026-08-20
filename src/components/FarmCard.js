@@ -5,7 +5,7 @@ import './FarmCard.css';
 import FarmPlotsGrid from './FarmPlotsGrid';
 
 const IPFS_GATEWAY = (
-  process.env.REACT_APP_IPFS_GATEWAY || 'https://ipfs.io/ipfs'
+  process.env.REACT_APP_IPFS_GATEWAY || 'https://maestrobeatz.servegame.com/ipfs'
 ).replace(/\/$/, '');
 
 const API_BASE_URL = (
@@ -17,6 +17,7 @@ function resolveIpfsImageSrc(image) {
 
   const s = String(image).trim();
 
+  if (s.includes('/ipfs/')) return `${IPFS_GATEWAY}/${s.split('/ipfs/')[1]}`;
   if (/^https?:\/\//i.test(s)) return s;
 
   if (s.startsWith('ipfs://')) {
