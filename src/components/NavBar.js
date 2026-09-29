@@ -8,6 +8,7 @@ import SkinSelector from './SkinSelector';
 import PlayerResourceBar from './PlayerResourceBar';
 import logo from '../assets/cleanupcentr.png';
 import './NavBar.css';
+import MaestroWalletPanel from '../wallet/maestro/MaestroWalletPanel';
 
 export default function NavBar() {
   const { session, handleLogin, handleLogout } = useSession();
@@ -42,12 +43,13 @@ export default function NavBar() {
 
           <li>
             <NavLink
-              to="/shop"
+              to="/market"
               className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
             >
-              Shop
+              Market
             </NavLink>
           </li>
+          <li><NavLink to="/exchange" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>Exchange</NavLink></li>
 
           <li>
             <NavLink
@@ -87,16 +89,7 @@ export default function NavBar() {
                 </NavLink>
               </li>
 
-              <li>
-                <NavLink
-                  to="/recipes"
-                  className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
-                >
-                  Blends
-                </NavLink>
-              </li>
-
-              <li>
+<li>
                 <NavLink
                   to="/collections"
                   className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
@@ -119,8 +112,9 @@ export default function NavBar() {
         )}
 
         <div className="nav-auth">
+          <MaestroWalletPanel />
           {!isLoggedIn ? (
-            <button onClick={() => handleLogin('anchor')} className="nav-button">
+            <button onClick={() => handleLogin()} className="nav-button">
               Login
             </button>
           ) : (

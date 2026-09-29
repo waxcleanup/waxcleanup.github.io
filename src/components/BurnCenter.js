@@ -1,3 +1,4 @@
+import BurnTotal from './BurnTotal';
 // src/components/BurnCenter.js
 import React, { useState, useEffect } from 'react';
 import './BurnCenter.css';
@@ -452,6 +453,8 @@ const BurnCenter = () => {
       <header className="app-header">
         <h1 className="app-title">The BurnCentr</h1>
       </header>
+
+      {session?.actor && <BurnTotal account={String(session.actor)} />}
 
       {session && (
         <>

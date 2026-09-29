@@ -1,0 +1,21 @@
+
+.machine-workshop{border:1px solid #395549;border-radius:18px;overflow:hidden;margin:18px 0;background:#0d1c18}
+.machine-workshop-canvas{height:650px;position:relative}
+.machine-workshop-footer{display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:14px;color:#bfd4c5;font-size:13px}
+.machine-workshop-footer span:first-child{flex:1 1 240px}
+.reactor-badge{white-space:nowrap;background:#14251fee;border:1px solid #759980;color:#edf5e9;padding:6px 10px;border-radius:9px;cursor:pointer;font-size:12px}
+.reactor-badge strong{color:#edb873}.reactor-badge small{display:block}
+.machine-view-toggle{display:flex;gap:8px;margin:16px 0}.machine-view-toggle button,.machine-workshop-footer button{padding:9px 18px;border:1px solid #50745b;border-radius:8px;background:#152820;color:#d9efdc;cursor:pointer}.machine-view-toggle button[aria-pressed=true]{background:#36593a}
+.reactor-console{box-sizing:border-box;width:320px;min-height:204px;padding:10px;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;background:#081d17;border:3px solid #607b57;border-radius:5px;box-shadow:inset 0 0 18px #77bb5522;color:#ddf5d2;font:13px/1.25 sans-serif;backface-visibility:hidden}
+.reactor-console>div,.reactor-console>small{grid-column:1/-1}.reactor-console small{display:block;font-size:11px;color:#c4d1bd}.reactor-console progress{display:block;width:100%;height:6px;margin:4px 0;accent-color:#91ee59}
+.reactor-console button,.workshop-staking button{min-height:44px;padding:6px;background:#31522b;border:1px solid #8fa970;border-radius:4px;color:#fff;font:bold 12px sans-serif;cursor:pointer}.reactor-console button:disabled{opacity:.42;cursor:not-allowed}.reactor-console .workshop-start-reason{color:#ffd29b;font-size:11px}
+.workshop-staking{width:220px;padding:12px;border:5px solid #48554b;background:#10241b;color:#ddf5d2;border-radius:6px}.workshop-staking label{display:grid;gap:6px}.workshop-staking select{width:100%;margin-bottom:8px}.workshop-staking button{width:100%}
+@media(max-width:650px){.machine-workshop-canvas{height:560px}.machine-workshop-footer{font-size:12px}}
+
+/* Keep DOM controls readable and clickable at every camera angle. */
+.machine-workshop-canvas{isolation:isolate}
+.reactor-console,.workshop-staking{pointer-events:auto;touch-action:manipulation;user-select:none}
+.reactor-console{width: min(320px, 78vw)}
+.reactor-console button:focus-visible,.workshop-staking button:focus-visible{outline:3px solid #f6d881;outline-offset:2px}
+.workshop-action-feedback{margin:10px 14px;color:#daf0cf;font-size:14px}
+.workshop-action-feedback.error{color:#ffc8b6}

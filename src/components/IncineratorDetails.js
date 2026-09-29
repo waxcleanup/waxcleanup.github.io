@@ -1,3 +1,4 @@
+import TokenLogo from './TokenLogo';
 import React, { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import PropTypes from 'prop-types';
@@ -35,6 +36,7 @@ const IncineratorDetails = ({
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [notice,setNotice] = useState('');
   const [imgLoaded, setImgLoaded] = useState(true);
 
   const isEmpty = !incinerator;
@@ -58,7 +60,7 @@ const IncineratorDetails = ({
   const maxDurability = 500;
 
   const remainingFuelCapacity = useMemo(
-    () => maxFuelCapacity - fuel,
+    () => Math.max(0,maxFuelCapacity - fuel),
     [fuel, maxFuelCapacity]
   );
 
@@ -69,33 +71,6 @@ const IncineratorDetails = ({
     return ipfsToUrl(raw);
   }, [img, imgCid]);
 
-  const pollIncineratorData = async (interval = 2000, duration = 10000) => {
-    const startTime = Date.now();
-
-    const poll = async () => {
-      try {
-        await fetchIncineratorData();
-      } catch (error) {
-        console.error('[ERROR] Polling incinerator data failed:', error);
-      }
-    };
-
-    const intervalId = setInterval(() => {
-      if (Date.now() - startTime >= duration) {
-        clearInterval(intervalId);
-      } else {
-        poll();
-      }
-    }, interval);
-
-    // Final refresh at the end of the polling window
-    setTimeout(() => {
-      fetchIncineratorData().catch((err) =>
-        console.error('[ERROR] Final poll failed:', err)
-      );
-    }, duration);
-  };
-
   const handleTransaction = async () => {
     let completed = false;
     setErrorMessage('');
@@ -104,7 +79,7 @@ const IncineratorDetails = ({
       if (transactionType === 'fuel') {
         const numericAmount = Number(amount);
         if (
-          !Number.isFinite(numericAmount) ||
+          !Number.isSafeInteger(numericAmount) ||
           numericAmount <= 0 ||
           numericAmount > remainingFuelCapacity
         ) {
@@ -114,13 +89,14 @@ const IncineratorDetails = ({
           return;
         }
         await loadFuel(owner, assetId, numericAmount);
-        alert(`Successfully loaded ${numericAmount} fuel!`);
+        setNotice('Fuel transaction accepted. Refreshing live readings…');
       } else if (transactionType === 'energy') {
         await loadEnergy(owner, assetId);
-        alert('Energy fully loaded!');
+        setNotice('Energy transaction accepted. Refreshing live readings…');
       }
 
-      await pollIncineratorData();
+      window.dispatchEvent(new Event('cleanup:incinerator-changed'));
+      await fetchIncineratorData();
       completed = true;
     } catch (error) {
       console.error('[ERROR] Transaction failed:', error);
@@ -201,10 +177,10 @@ const IncineratorDetails = ({
       )}
 
       <p className="incinerator-name">
-        <strong>Name:</strong> {name}
+        {name}
       </p>
       <p className="asset-id">
-        <strong>Asset ID:</strong> {assetId}
+        Asset #{assetId}
       </p>
 
       <div className="progress-bar-container">
@@ -213,7 +189,7 @@ const IncineratorDetails = ({
           style={{ width: `${(fuel / maxFuelCapacity) * 100}%` }}
         />
         <span className="progress-bar-text">
-          Fuel: {fuel}/{maxFuelCapacity}
+          <TokenLogo symbol="TRASH" size={18} /> Fuel: {Number(fuel).toLocaleString()} / {Number(maxFuelCapacity).toLocaleString()}
         </span>
       </div>
 
@@ -239,6 +215,7 @@ const IncineratorDetails = ({
         </span>
       </div>
 
+      {notice && <p className="inc-action-notice" role="status">{notice}</p>}
       {showButtons && (
         <div className="button-container organized-buttons">
           {onRemove && (
@@ -249,17 +226,18 @@ const IncineratorDetails = ({
                 onRemove();
               }}
             >
-              Remove
+              Unequip
             </button>
           )}
-          <button className="fuel-button" onClick={handleFuelClick}>
-            Load Fuel
+          <button className="fuel-button" disabled={remainingFuelCapacity<=0||loading} onClick={handleFuelClick}>
+            {remainingFuelCapacity<=0 ? "Fuel full" : "Load TRASH fuel"}
           </button>
-          <button className="energy-button" onClick={handleEnergyClick}>
-            Load Energy
+          <button className="energy-button" disabled={energy>=maxEnergyCapacity||loading} onClick={handleEnergyClick}>
+            {energy>=maxEnergyCapacity ? "Energy full" : "Recharge energy"}
           </button>
           <button
             className="repair-button"
+            disabled={durability>=maxDurability||loading}
             onClick={(e) => {
               e.stopPropagation();
               onRepair(incinerator);
@@ -284,23 +262,25 @@ const IncineratorDetails = ({
             className="modal-content"
             onClick={(e) => e.stopPropagation()}
           >
-            <h4>Confirm Transaction</h4>
+            <h4>{transactionType === "fuel" ? "Load TRASH fuel" : "Recharge incinerator"}</h4><p className="inc-action-target">{name} · #{assetId}</p>
 
             {transactionType === 'fuel' ? (
               <>
-                <p>Enter the amount of fuel to load:</p>
+                <p><TokenLogo symbol="TRASH" size={22}/>1 TRASH adds 1 fuel. Space available: <strong>{remainingFuelCapacity.toLocaleString()}</strong>.</p><label htmlFor={`fuel-${assetId}`}>TRASH to load</label>
                 <input
+                  id={`fuel-${assetId}`}
                   type="number"
+                  step="1"
                   value={amount}
                   onChange={handleFuelInputChange}
                   placeholder="Fuel amount"
                   min="1"
                   max={remainingFuelCapacity}
                   disabled={loading}
-                />
+                /><button type="button" disabled={loading} onClick={()=>setAmount(String(remainingFuelCapacity))}>Fill capacity</button><p>You pay: <strong>{amount || "0"} TRASH</strong>. Your wallet must cover this amount.</p>
               </>
             ) : (
-              <p>Loading energy will cost 2 CINDER tokens. Proceed?</p>
+              <p><TokenLogo symbol="CINDER" size={22}/>Recharge from <strong>{energy} / {maxEnergyCapacity}</strong> energy. Cost: <strong>2 CINDER</strong>.</p>
             )}
 
             {errorMessage && (
@@ -317,7 +297,7 @@ const IncineratorDetails = ({
 
             <div className="modal-buttons">
               <button onClick={handleTransaction} disabled={loading}>
-                {loading ? 'Processing...' : 'Confirm'}
+                {loading ? 'Waiting for wallet…' : transactionType === 'fuel' ? 'Load fuel in wallet' : 'Recharge in wallet'}
               </button>
               <button
                 onClick={(e) => {

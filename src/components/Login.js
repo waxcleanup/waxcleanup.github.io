@@ -34,7 +34,6 @@ const Login = () => {
         >
           <option value="">-- Select Wallet --</option>
           <option value="anchor">Anchor Wallet</option>
-          <option value="wombat">Wombat Wallet</option>
           <option value="cloudwallet">WAX Cloud Wallet</option>
         </select>
       </div>

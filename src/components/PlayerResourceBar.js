@@ -1,3 +1,4 @@
+import TokenLogo from './TokenLogo';
 import React from 'react';
 import { usePlayerResources } from '../hooks/PlayerResourcesContext';
 import './PlayerResourceBar.css';
@@ -22,7 +23,7 @@ function formatBytes(value) {
 function ResourceChip({ name, resource, className }) {
   return (
     <div className={`player-resource-chip ${className}`} title={resource.exact}>
-      <span className="player-resource-dot" aria-hidden="true" />
+      <TokenLogo symbol={name} size={18} />
       <span className="player-resource-name">{name}</span>
       <strong>{formatCompact(resource.amount)}</strong>
     </div>

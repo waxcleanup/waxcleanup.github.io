@@ -5,6 +5,7 @@ import './FarmSlotModal.css';
 import TomatoGrowthSVG from './TomatoGrowthSVG';
 
 export default function FarmSlotModal({
+  waterLabel,harvestLabel,
   farmId, // kept for future use / display
   plot,
   slot,
@@ -67,6 +68,7 @@ export default function FarmSlotModal({
             </span>
           </div>
 
+          {state==='GROWING' && <div className="slot-modal-note"><strong>{waterLabel==='READY'?'Water ready':waterLabel?`Water in ${waterLabel}`:'Checking water timer…'}</strong><p>{harvestLabel}</p><small>Assumes each remaining watering happens as soon as it is ready.</small></div>}
           {/* Progress */}
           {state !== 'EMPTY' && (
             <>

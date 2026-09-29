@@ -1,5 +1,5 @@
 // src/components/BagPanel.js
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import axios from 'axios';
 import './BagPanel.css';
 
@@ -13,6 +13,8 @@ import { stakeUserCell } from '../services/userCellActions';
 import { stakePlot } from '../services/plotStakeActions';
 
 import StakePlotModal from './StakePlotModal';
+import LootReveal from './LootReveal';
+import RecentReveals from './RecentReveals';
 
 // -----------------------------
 // IPFS helper (CID -> URL)
@@ -138,21 +140,6 @@ function normalizeBagAsset(a) {
   };
 }
 
-function getLootDiff(beforeAssets = [], afterAssets = [], openedAssetId = null) {
-  const beforeIds = new Set((beforeAssets || []).map((a) => safeStr(a.asset_id)));
-
-  return (afterAssets || []).filter((asset) => {
-    const id = safeStr(asset.asset_id);
-    if (!id) return false;
-    if (openedAssetId && id === safeStr(openedAssetId)) return false;
-    return !beforeIds.has(id);
-  });
-}
-
-function wait(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 function NFTImage({ asset, className }) {
   if (!asset?.image) return null;
 
@@ -199,11 +186,13 @@ export default function BagPanel({
   const [globalFarms, setGlobalFarms] = useState([]);
   const [farmsLoading, setFarmsLoading] = useState(false);
 
-  // Loot reveal modal
-  const [lootModalOpen, setLootModalOpen] = useState(false);
-  const [lootItems, setLootItems] = useState([]);
-  const [lastOpenedPackName, setLastOpenedPackName] = useState('');
-
+  const [reveal, setReveal] = useState(null);
+  const revealRun = useRef(0);
+  useEffect(() => {
+    revealRun.current += 1;
+    setReveal(null);
+    return () => { revealRun.current += 1; };
+  }, [wallet]);
   const effectiveFarms = useMemo(() => {
     const list = Array.isArray(farms) ? farms : globalFarms;
     return (list || []).map((f) => {
@@ -363,51 +352,6 @@ export default function BagPanel({
     }
   };
 
-  const revealLootFromBagDiff = async (beforeAssets, openedAsset) => {
-    let bestLoot = [];
-    let stablePasses = 0;
-    let lastCount = -1;
-
-    // poll for up to ~4 seconds total
-    for (let attempt = 0; attempt < 8; attempt += 1) {
-      const afterAssets = await fetchBag({ silent: true });
-      const loot = getLootDiff(beforeAssets, afterAssets, openedAsset?.asset_id);
-
-      // keep the largest loot set we have seen
-      if (loot.length > bestLoot.length) {
-        bestLoot = loot;
-      }
-
-      // once count stops changing for a couple passes, assume settled
-      if (loot.length === lastCount) {
-        stablePasses += 1;
-      } else {
-        stablePasses = 0;
-        lastCount = loot.length;
-      }
-
-      // if we already found loot and it has stabilized, stop
-      if (bestLoot.length > 0 && stablePasses >= 2) {
-        break;
-      }
-
-      await wait(500);
-    }
-
-    if (bestLoot.length > 0) {
-      setLootItems(bestLoot);
-      setLastOpenedPackName(openedAsset?.name || 'Pack');
-      setLootModalOpen(true);
-      setStatusMsg(
-        `Pack opened ✅ You received ${bestLoot.length} item${bestLoot.length === 1 ? '' : 's'}.`
-      );
-    } else {
-      setLootItems([]);
-      setLastOpenedPackName(openedAsset?.name || 'Pack');
-      setStatusMsg('Pack opened ✅ Loot may take a moment to appear.');
-    }
-  };
-
   const handleCompostDeposit = async (asset) => {
     try {
       setPendingAssetId(asset.asset_id);
@@ -427,15 +371,18 @@ export default function BagPanel({
 
   const handleSeedPackOpen = async (asset) => {
     try {
-      const beforeAssets = [...assets];
+      const run = revealRun.current;
 
       setPendingAssetId(asset.asset_id);
       setStatusMsg('Signing seed pack open…');
-      await depositPack(wallet, asset.asset_id, asset.template_id);
+      const result = await depositPack(wallet, asset.asset_id, asset.template_id);
 
+      if (run !== revealRun.current) return;
       removeFromBag(asset.asset_id);
-      await notifyChanged();
-      await revealLootFromBagDiff(beforeAssets, asset);
+      setReveal({result, title:asset.name || 'Pack'});
+      setStatusMsg('Transaction accepted. Your NFT reveal is ready.');
+      void notifyChanged();
+      void fetchBag({silent:true});
     } catch (err) {
       console.error(err);
       setStatusMsg(err.message || 'Seed pack open failed or was cancelled.');
@@ -446,15 +393,18 @@ export default function BagPanel({
 
   const handleGenericPackOpen = async (asset) => {
     try {
-      const beforeAssets = [...assets];
+      const run = revealRun.current;
 
       setPendingAssetId(asset.asset_id);
       setStatusMsg('Signing pack open…');
-      await openCratePack(wallet, asset);
+      const result = await openCratePack(wallet, asset);
 
+      if (run !== revealRun.current) return;
       removeFromBag(asset.asset_id);
-      await notifyChanged();
-      await revealLootFromBagDiff(beforeAssets, asset);
+      setReveal({result, title:asset.name || 'Pack'});
+      setStatusMsg('Transaction accepted. Your NFT reveal is ready.');
+      void notifyChanged();
+      void fetchBag({silent:true});
     } catch (err) {
       console.error(err);
       setStatusMsg(err.message || 'Pack open failed or was cancelled.');
@@ -655,51 +605,8 @@ export default function BagPanel({
         }}
       />
 
-      {lootModalOpen && (
-        <div className="bag-loot-overlay" onClick={() => setLootModalOpen(false)}>
-          <div
-            className="bag-loot-modal"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="bag-loot-header">
-              <h3 className="bag-loot-title">🎉 {lastOpenedPackName} Opened</h3>
-              <button
-                className="bag-loot-close"
-                onClick={() => setLootModalOpen(false)}
-                type="button"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="bag-loot-subtitle">You received:</div>
-
-            <div className="bag-loot-grid">
-              {lootItems.map((item) => (
-                <div key={item.asset_id} className="bag-loot-card">
-                  <NFTImage asset={item} className="bag-loot-image" />
-                  <div className="bag-loot-name">{item.name || `#${item.asset_id}`}</div>
-                  <div className="bag-loot-meta">
-                    <span className="bag-item-chip">Tpl: {item.template_id}</span>
-                    <span className="bag-item-chip">ID: {shortId(item.asset_id)}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="bag-loot-actions">
-              <button
-                className="bag-item-btn bag-item-btn-pack"
-                onClick={() => setLootModalOpen(false)}
-                type="button"
-              >
-                Nice
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
+      <RecentReveals wallet={wallet} />
+      {reveal && <LootReveal result={reveal.result} title={reveal.title} wallet={wallet} onResolved={()=>{void fetchBag({silent:true});}} onClose={()=>setReveal(null)} />}
       {filteredAssets.length === 0 && assets.length > 0 && (
         <div className="bag-status">No matches for “{filterText}”.</div>
       )}
@@ -745,12 +652,12 @@ export default function BagPanel({
 
                         <button type="button" onClick={() => copyToClipboard(asset.asset_id)}>Copy Asset ID</button>
                       </details>
-                      {selectedPocket === 'tools' && <button className="bag-item-btn bag-item-btn-tool" disabled={pendingAssetId === asset.asset_id} onClick={() => handleToolStake(asset)}>{pendingAssetId === asset.asset_id ? 'Staking…' : 'Stake Tool'}</button>}
-                      {selectedPocket === 'cores' && <button className="bag-item-btn bag-item-btn-core" disabled={pendingAssetId === asset.asset_id} onClick={() => handleCoreStake(asset)}>{pendingAssetId === asset.asset_id ? 'Staking…' : 'Stake Core'}</button>}
-                      {selectedPocket === 'plots' && <button className="bag-item-btn bag-item-btn-plot" disabled={pendingAssetId === asset.asset_id} onClick={() => openStakePlotModal(asset)}>{pendingAssetId === asset.asset_id ? 'Staking…' : farmsLoading ? 'Loading farms…' : 'Stake Plot'}</button>}
-                      {selectedPocket === 'compost' && <button className="bag-item-btn bag-item-btn-compost" disabled={pendingAssetId === asset.asset_id} onClick={() => handleCompostDeposit(asset)}>{pendingAssetId === asset.asset_id ? 'Depositing…' : 'Deposit Compost'}</button>}
-                      {selectedPocket === 'seeds' && <button className="bag-item-btn bag-item-btn-pack" disabled={pendingAssetId === asset.asset_id} onClick={() => handleSeedPackOpen(asset)}>{pendingAssetId === asset.asset_id ? 'Opening…' : 'Open Seed Pack'}</button>}
-                      {selectedPocket === 'packs' && <button className="bag-item-btn bag-item-btn-pack" disabled={pendingAssetId === asset.asset_id || unavailable} onClick={() => handleGenericPackOpen(asset)} title={unavailable ? 'This pack cannot be opened yet.' : ''}>{pendingAssetId === asset.asset_id ? 'Opening…' : unavailable ? 'Unavailable' : 'Open Pack'}</button>}
+                      {selectedPocket === 'tools' && <button className="bag-item-btn bag-item-btn-tool" disabled={Boolean(pendingAssetId)} onClick={() => handleToolStake(asset)}>{pendingAssetId === asset.asset_id ? 'Staking…' : 'Stake Tool'}</button>}
+                      {selectedPocket === 'cores' && <button className="bag-item-btn bag-item-btn-core" disabled={Boolean(pendingAssetId)} onClick={() => handleCoreStake(asset)}>{pendingAssetId === asset.asset_id ? 'Staking…' : 'Stake Core'}</button>}
+                      {selectedPocket === 'plots' && <button className="bag-item-btn bag-item-btn-plot" disabled={Boolean(pendingAssetId)} onClick={() => openStakePlotModal(asset)}>{pendingAssetId === asset.asset_id ? 'Staking…' : farmsLoading ? 'Loading farms…' : 'Stake Plot'}</button>}
+                      {selectedPocket === 'compost' && <button className="bag-item-btn bag-item-btn-compost" disabled={Boolean(pendingAssetId)} onClick={() => handleCompostDeposit(asset)}>{pendingAssetId === asset.asset_id ? 'Depositing…' : 'Deposit Compost'}</button>}
+                      {selectedPocket === 'seeds' && <button className="bag-item-btn bag-item-btn-pack" disabled={Boolean(pendingAssetId)} onClick={() => handleSeedPackOpen(asset)}>{pendingAssetId === asset.asset_id ? 'Opening…' : 'Open Seed Pack'}</button>}
+                      {selectedPocket === 'packs' && <button className="bag-item-btn bag-item-btn-pack" disabled={Boolean(pendingAssetId) || unavailable} onClick={() => handleGenericPackOpen(asset)} title={unavailable ? 'This pack cannot be opened yet.' : ''}>{pendingAssetId === asset.asset_id ? 'Opening…' : unavailable ? 'Unavailable' : 'Open Pack'}</button>}
                     </div>
                   </article>
                 );

@@ -1,8 +1,9 @@
+import TokenLogo from './TokenLogo';
 // src/components/MachinesPage.js
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useSession } from '../hooks/SessionContext';
-import { usePlayerResources } from '../hooks/PlayerResourcesContext';
-import { rechargeUserEnergy } from '../services/userEnergyActions';
+import React, { useCallback, useEffect, useMemo, useState, lazy, Suspense } from "react";
+import { useSession } from "../hooks/SessionContext";
+import { usePlayerResources } from "../hooks/PlayerResourcesContext";
+import { rechargeUserEnergy } from "../services/userEnergyActions";
 import {
   claimMachine,
   depositRecipeOnly,
@@ -12,10 +13,10 @@ import {
   stakeMachine,
   startMachine,
   unstakeMachine,
-} from '../services/machineActions';
-import MachineHeroCard from './machines/MachineHeroCard';
-import RecipeControlPanel from './machines/RecipeControlPanel';
-import AvailableReactorsPanel from './machines/AvailableReactorsPanel';
+} from "../services/machineActions";
+import MachineHeroCard from "./machines/MachineHeroCard";
+import RecipeControlPanel from "./machines/RecipeControlPanel";
+import AvailableReactorsPanel from "./machines/AvailableReactorsPanel";
 import {
   toPlain,
   isLikelyWaxAccountName,
@@ -26,8 +27,15 @@ import {
   getMachineRarity,
   getMachineRowId,
   getTemplateId,
-} from './machines/machineUtils';
-import './MachinesPage.css';
+} from "./machines/machineUtils";
+import "./MachinesPage.css";
+
+const MachineRoom3D = lazy(() => import('./machines/MachineRoom3D'));
+class WorkshopBoundary extends React.Component {
+  state = { failed: false };
+  static getDerivedStateFromError(){ return {failed:true}; }
+  render(){ return this.state.failed ? <p>The 3D workshop could not load. Select 2D controls to manage your machines.</p> : this.props.children; }
+}
 
 export default function MachinesPage({ session: sessionProp }) {
   const sessionCtx = useSession?.() || {};
@@ -35,7 +43,8 @@ export default function MachinesPage({ session: sessionProp }) {
   const session = sessionProp || contextSession || sessionCtx || null;
   const { resources, refreshResources } = usePlayerResources();
 
-  const [wallet, setWallet] = useState('');
+  const [room3D, setRoom3D] = useState(true);
+  const [wallet, setWallet] = useState("");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -56,14 +65,14 @@ export default function MachinesPage({ session: sessionProp }) {
   });
 
   const [selectedRecipeId, setSelectedRecipeId] = useState(REACTOR_RECIPE_ID);
-  const [busyKey, setBusyKey] = useState('');
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
+  const [busyKey, setBusyKey] = useState("");
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
   const [nowTick, setNowTick] = useState(Date.now());
   const [rechargeOpen, setRechargeOpen] = useState(false);
-  const [rechargeAmount, setRechargeAmount] = useState('');
+  const [rechargeAmount, setRechargeAmount] = useState("");
   const [rechargeBusy, setRechargeBusy] = useState(false);
-  const [rechargeError, setRechargeError] = useState('');
+  const [rechargeError, setRechargeError] = useState("");
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -82,12 +91,12 @@ export default function MachinesPage({ session: sessionProp }) {
         session?.session?.auth?.actorName ||
         session?.session?.auth?.accountName ||
         session?.actor ||
-        '';
+        "";
 
       const actor = toPlain(rawActor);
 
       if (!isLikelyWaxAccountName(actor)) {
-        setWallet('');
+        setWallet("");
         setReactorsOwned([]);
         setMachines([]);
         setRecipes([]);
@@ -130,23 +139,23 @@ export default function MachinesPage({ session: sessionProp }) {
             bananaz: 0,
             energy: 0,
             energyMax: 0,
-          }
+          },
         );
 
-        setError('');
+        setError("");
       } catch (err) {
         console.error(err);
         setError(
           err?.response?.data?.error ||
             err?.message ||
-            'Failed to load machines dashboard.'
+            "Failed to load machines dashboard.",
         );
       } finally {
         setLoading(false);
         setRefreshing(false);
       }
     },
-    [session]
+    [session],
   );
 
   useEffect(() => {
@@ -155,7 +164,7 @@ export default function MachinesPage({ session: sessionProp }) {
 
   const recipeOptions = useMemo(() => {
     return (recipes || []).filter(
-      (recipe) => Number(toPlain(recipe?.active) || 0) === 1
+      (recipe) => Number(toPlain(recipe?.active) || 0) === 1,
     );
   }, [recipes]);
 
@@ -163,7 +172,7 @@ export default function MachinesPage({ session: sessionProp }) {
     return (
       recipeOptions.find(
         (recipe) =>
-          Number(toPlain(recipe?.recipe_id) || 0) === Number(selectedRecipeId)
+          Number(toPlain(recipe?.recipe_id) || 0) === Number(selectedRecipeId),
       ) ||
       recipeOptions[0] ||
       null
@@ -175,7 +184,7 @@ export default function MachinesPage({ session: sessionProp }) {
     return (machineInputs || []).filter(
       (input) =>
         Number(toPlain(input?.recipe_id) || 0) ===
-        Number(toPlain(selectedRecipe?.recipe_id) || 0)
+        Number(toPlain(selectedRecipe?.recipe_id) || 0),
     );
   }, [machineInputs, selectedRecipe]);
 
@@ -184,7 +193,7 @@ export default function MachinesPage({ session: sessionProp }) {
     return (machineLoot || []).filter(
       (loot) =>
         Number(toPlain(loot?.recipe_id) || 0) ===
-        Number(toPlain(selectedRecipe?.recipe_id) || 0)
+        Number(toPlain(selectedRecipe?.recipe_id) || 0),
     );
   }, [machineLoot, selectedRecipe]);
 
@@ -222,13 +231,15 @@ export default function MachinesPage({ session: sessionProp }) {
       }
 
       const rawQty = toPlain(input?.token_qty);
-      const [amount = '0', symbol = ''] = rawQty.trim().split(' ');
+      const [amount = "0", symbol = ""] = rawQty.trim().split(" ");
       const required = Number(amount || 0);
       const upperSymbol = symbol.toUpperCase();
 
       let balance = 0;
-      if (upperSymbol === 'TOMATOE') balance = Number(userBalances.tomatoe || 0);
-      else if (upperSymbol === 'BANANAZ') balance = Number(userBalances.bananaz || 0);
+      if (upperSymbol === "TOMATOE")
+        balance = Number(userBalances.tomatoe || 0);
+      else if (upperSymbol === "BANANAZ")
+        balance = Number(userBalances.bananaz || 0);
 
       map[upperSymbol] = {
         required,
@@ -241,33 +252,37 @@ export default function MachinesPage({ session: sessionProp }) {
     return map;
   }, [selectedRecipeInputs, userBalances]);
 
-  const liveEnergy = Number(resources?.energy?.max || 0) > 0
-    ? Number(resources.energy.current || 0)
-    : Number(userBalances.energy || 0);
-  const liveEnergyMax = Number(resources?.energy?.max || 0) > 0
-    ? Number(resources.energy.max || 0)
-    : Number(userBalances.energyMax || 0);
+  const liveEnergy =
+    Number(resources?.energy?.max || 0) > 0
+      ? Number(resources.energy.current || 0)
+      : Number(userBalances.energy || 0);
+  const liveEnergyMax =
+    Number(resources?.energy?.max || 0) > 0
+      ? Number(resources.energy.max || 0)
+      : Number(userBalances.energyMax || 0);
   const cinderBalance = Number(resources?.cinder?.amount || 0);
-  const energyPercent = liveEnergyMax > 0
-    ? Math.min(100, Math.max(0, (liveEnergy / liveEnergyMax) * 100))
-    : 0;
+  const energyPercent =
+    liveEnergyMax > 0
+      ? Math.min(100, Math.max(0, (liveEnergy / liveEnergyMax) * 100))
+      : 0;
   const energyLow = liveEnergyMax > 0 && energyPercent <= 35;
   const energyRemaining = Math.max(0, liveEnergyMax - liveEnergy);
-  const maxRechargeCinder = Math.max(0, Math.min(cinderBalance, energyRemaining / 2));
+  const maxRechargeCinder = Math.max(
+    0,
+    Math.min(cinderBalance, energyRemaining / 2),
+  );
 
   const hasEnoughEnergy = useMemo(() => {
     if (!selectedRecipe) return false;
 
-    return (
-      liveEnergy >= Number(toPlain(selectedRecipe?.energy_per_batch) || 0)
-    );
+    return liveEnergy >= Number(toPlain(selectedRecipe?.energy_per_batch) || 0);
   }, [selectedRecipe, liveEnergy]);
 
   const templateNameMap = useMemo(() => {
     const map = {};
     for (const tpl of machineTemplates || []) {
       const tplId = Number(toPlain(tpl?.template_id) || 0);
-      map[tplId] = toPlain(tpl?.machine_name) || 'Machine';
+      map[tplId] = toPlain(tpl?.machine_name) || "Machine";
     }
     return map;
   }, [machineTemplates]);
@@ -280,13 +295,13 @@ export default function MachinesPage({ session: sessionProp }) {
 
     const selectedStillExists = machines.some(
       (machine) =>
-        String(getMachineRowId(machine)) === String(selectedMachineId)
+        String(getMachineRowId(machine)) === String(selectedMachineId),
     );
 
     if (selectedStillExists) return;
 
     const running = machines.find((machine) => {
-      if (typeof machine?.isRunning === 'boolean') return machine.isRunning;
+      if (typeof machine?.isRunning === "boolean") return machine.isRunning;
       return Number(toPlain(machine?.isRunning) || 0) === 1;
     });
 
@@ -302,42 +317,41 @@ export default function MachinesPage({ session: sessionProp }) {
 
     const found = machines.find(
       (machine) =>
-        String(getMachineRowId(machine)) === String(selectedMachineId)
+        String(getMachineRowId(machine)) === String(selectedMachineId),
     );
 
     return found || machines[0];
   }, [machines, selectedMachineId]);
 
   function openRecharge() {
-    setRechargeError('');
-    setRechargeAmount(maxRechargeCinder > 0 ? String(Math.min(1, maxRechargeCinder)) : '');
+    setRechargeError("");
+    setRechargeAmount(
+      maxRechargeCinder > 0 ? String(Math.min(1, maxRechargeCinder)) : "",
+    );
     setRechargeOpen(true);
   }
 
   async function handleRechargeEnergy() {
-    const amount = Number(rechargeAmount);
-    if (!Number.isFinite(amount) || amount <= 0) {
-      setRechargeError('Enter a valid CINDER amount.');
-      return;
-    }
-    if (amount > cinderBalance) {
-      setRechargeError(`Only ${cinderBalance.toFixed(6)} CINDER is available.`);
-      return;
-    }
-    if (amount > maxRechargeCinder + 0.000001) {
-      setRechargeError(`Use at most ${maxRechargeCinder.toFixed(6)} CINDER to avoid exceeding capacity.`);
-      return;
-    }
-
+    const nextAmount = Number(rechargeAmount);
+    if (!Number.isFinite(nextAmount) || nextAmount <= 0)
+      return setRechargeError("Enter a valid CINDER amount.");
+    if (nextAmount > cinderBalance)
+      return setRechargeError(
+        `Only ${cinderBalance.toFixed(6)} CINDER is available.`,
+      );
+    if (nextAmount > maxRechargeCinder + 0.000001)
+      return setRechargeError(
+        `Use at most ${maxRechargeCinder.toFixed(6)} CINDER to avoid exceeding capacity.`,
+      );
     try {
       setRechargeBusy(true);
-      setRechargeError('');
-      await rechargeUserEnergy(amount);
+      setRechargeError("");
+      await rechargeUserEnergy(nextAmount);
       await Promise.all([refreshResources(), loadDashboard(true)]);
       setRechargeOpen(false);
-      setMessage(`Loaded ${amount.toFixed(6)} CINDER into user energy.`);
-    } catch (err) {
-      setRechargeError(err?.message || 'Energy recharge failed.');
+      setMessage(`Loaded ${nextAmount.toFixed(6)} CINDER into user energy.`);
+    } catch (nextError) {
+      setRechargeError(nextError?.message || "Energy recharge failed.");
     } finally {
       setRechargeBusy(false);
     }
@@ -348,16 +362,16 @@ export default function MachinesPage({ session: sessionProp }) {
       const plainAssetId = toPlain(assetId);
 
       setBusyKey(`stake-${plainAssetId}`);
-      setError('');
-      setMessage('');
+      setError("");
+      setMessage("");
       await stakeMachine(wallet, plainAssetId);
       setMessage(`Machine ${plainAssetId} staked successfully.`);
       await loadDashboard(true);
     } catch (err) {
       console.error(err);
-      setError(err?.message || 'Failed to stake machine.');
+      setError(err?.message || "Failed to stake machine.");
     } finally {
-      setBusyKey('');
+      setBusyKey("");
     }
   }
 
@@ -366,19 +380,17 @@ export default function MachinesPage({ session: sessionProp }) {
     const recipeId = Number(toPlain(selectedRecipe?.recipe_id) || 0);
 
     const machineIdMissing =
-      machineId === null ||
-      machineId === undefined ||
-      Number.isNaN(machineId);
+      machineId === null || machineId === undefined || Number.isNaN(machineId);
 
     if (machineIdMissing || recipeId <= 0) {
-      setError('Missing machine or recipe.');
+      setError("Missing machine or recipe.");
       return;
     }
 
     try {
       setBusyKey(`deposit-${machineId}`);
-      setError('');
-      setMessage('');
+      setError("");
+      setMessage("");
 
       await depositRecipeOnly(
         wallet,
@@ -386,21 +398,21 @@ export default function MachinesPage({ session: sessionProp }) {
         recipeId,
         selectedRecipeInputs,
         machineBalances,
-        1
+        1,
       );
 
       setMessage(
         `Deposited inputs for ${
-          toPlain(selectedRecipe?.recipe_name) || 'machine recipe'
-        } on machine #${machineId}.`
+          toPlain(selectedRecipe?.recipe_name) || "machine recipe"
+        } on machine #${machineId}.`,
       );
 
       await loadDashboard(true);
     } catch (err) {
       console.error(err);
-      setError(err?.message || 'Failed to deposit machine inputs.');
+      setError(err?.message || "Failed to deposit machine inputs.");
     } finally {
-      setBusyKey('');
+      setBusyKey("");
     }
   }
 
@@ -409,88 +421,82 @@ export default function MachinesPage({ session: sessionProp }) {
     const recipeId = Number(toPlain(selectedRecipe?.recipe_id) || 0);
 
     const machineIdMissing =
-      machineId === null ||
-      machineId === undefined ||
-      Number.isNaN(machineId);
+      machineId === null || machineId === undefined || Number.isNaN(machineId);
 
     if (machineIdMissing || recipeId <= 0) {
-      setError('Missing machine or recipe.');
+      setError("Missing machine or recipe.");
       return;
     }
 
     try {
       setBusyKey(`start-${machineId}`);
-      setError('');
-      setMessage('');
+      setError("");
+      setMessage("");
 
       await startMachine(wallet, machineId, recipeId, 1);
 
       setMessage(
         `Started ${
-          toPlain(selectedRecipe?.recipe_name) || 'machine recipe'
-        } on machine #${machineId}.`
+          toPlain(selectedRecipe?.recipe_name) || "machine recipe"
+        } on machine #${machineId}.`,
       );
 
       await loadDashboard(true);
     } catch (err) {
       console.error(err);
-      setError(err?.message || 'Failed to start machine.');
+      setError(err?.message || "Failed to start machine.");
     } finally {
-      setBusyKey('');
+      setBusyKey("");
     }
   }
 
   async function handleClaim(machine) {
     const machineId = getMachineRowId(machine);
     const machineIdMissing =
-      machineId === null ||
-      machineId === undefined ||
-      Number.isNaN(machineId);
+      machineId === null || machineId === undefined || Number.isNaN(machineId);
 
     if (machineIdMissing) {
-      setError('Missing machine.');
+      setError("Missing machine.");
       return;
     }
 
     try {
       setBusyKey(`claim-${machineId}`);
-      setError('');
-      setMessage('');
+      setError("");
+      setMessage("");
       await claimMachine(wallet, machineId);
       setMessage(`Claimed machine #${machineId}.`);
       await loadDashboard(true);
     } catch (err) {
       console.error(err);
-      setError(err?.message || 'Failed to claim machine output.');
+      setError(err?.message || "Failed to claim machine output.");
     } finally {
-      setBusyKey('');
+      setBusyKey("");
     }
   }
 
   async function handleUnstake(machine) {
     const machineId = getMachineRowId(machine);
     const machineIdMissing =
-      machineId === null ||
-      machineId === undefined ||
-      Number.isNaN(machineId);
+      machineId === null || machineId === undefined || Number.isNaN(machineId);
 
     if (machineIdMissing) {
-      setError('Missing machine.');
+      setError("Missing machine.");
       return;
     }
 
     try {
       setBusyKey(`unstake-${machineId}`);
-      setError('');
-      setMessage('');
+      setError("");
+      setMessage("");
       await unstakeMachine(wallet, machineId);
       setMessage(`Unstaked machine #${machineId}.`);
       await loadDashboard(true);
     } catch (err) {
       console.error(err);
-      setError(err?.message || 'Failed to unstake machine.');
+      setError(err?.message || "Failed to unstake machine.");
     } finally {
-      setBusyKey('');
+      setBusyKey("");
     }
   }
 
@@ -505,74 +511,75 @@ export default function MachinesPage({ session: sessionProp }) {
     );
   }
 
-  return (
-    <div className="machines-room">
-      <div className="machines-header">
-        <div>
-          <h2>Machine Room</h2>
-          <p>Stake reactors, load recipe inputs, run production, and claim outputs.</p>
-        </div>
-
-        <button
-          className="machines-refresh-btn"
-          onClick={() => loadDashboard(true)}
-          disabled={loading || refreshing}
-        >
-          {refreshing ? 'Refreshing...' : 'Refresh'}
-        </button>
-      </div>
-
-      {message ? <div className="machines-banner success">{toPlain(message)}</div> : null}
-      {error ? <div className="machines-banner error">{toPlain(error)}</div> : null}
-
+  const machineControls = (<>
       <div className="machines-primary-layout">
         <div className="staked-machines-focus">
-          <section className={`machine-energy-module${energyLow ? " is-low" : ""}`}>
+          <section
+            className={`machine-energy-module${energyLow ? " is-low" : ""}`}
+          >
             <div className="machines-energy-heading">
               <div>
                 <span className="machines-summary-label">Machine Energy</span>
-                <strong>{formatNumber(liveEnergy, 0)} / {formatNumber(liveEnergyMax, 0)}</strong>
+                <strong>
+                  {formatNumber(liveEnergy, 0)} /{" "}
+                  {formatNumber(liveEnergyMax, 0)}
+                </strong>
               </div>
-              <span className="machines-energy-percent">{Math.round(energyPercent)}%</span>
+              <span className="machines-energy-percent">
+                {Math.round(energyPercent)}%
+              </span>
             </div>
-            <div className="machines-energy-track" aria-label={`${Math.round(energyPercent)}% energy remaining`}>
+            <div
+              className="machines-energy-track"
+              aria-label={`${Math.round(energyPercent)}% energy remaining`}
+            >
               <span style={{ width: `${energyPercent}%` }} />
             </div>
             <div className="machines-energy-module-foot">
-              <span>{energyLow ? 'Low energy may prevent production.' : 'Available for machine production.'}</span>
+              <span>
+                {energyLow
+                  ? "Low energy may prevent production."
+                  : "Available for machine production."}
+              </span>
               <button
                 type="button"
                 className="machines-energy-btn"
                 onClick={openRecharge}
-                disabled={liveEnergyMax <= 0 || energyRemaining <= 0 || cinderBalance <= 0}
+                disabled={
+                  liveEnergyMax <= 0 ||
+                  energyRemaining <= 0 ||
+                  cinderBalance <= 0
+                }
               >
-                {energyLow ? 'Recharge Energy' : energyRemaining <= 0 ? 'Energy Full' : 'Recharge'}
+                {energyRemaining <= 0
+                  ? "Energy Full"
+                  : energyLow
+                    ? "Recharge Energy"
+                    : "Recharge"}
               </button>
             </div>
           </section>
-
           {machines.length === 0 ? (
             <section className="machines-panel">
               <div className="machines-panel-top">
                 <h3>Staked Machines</h3>
                 <span>0</span>
               </div>
-              <p className="machines-muted">No machines are currently staked.</p>
+              <p className="machines-muted">
+                No machines are currently staked.
+              </p>
             </section>
           ) : (
             <>
               {machines.length > 1 ? (
                 <div className="machine-selector-wrap">
-                  <label htmlFor="machine-selector">
-                    Manage Reactor
-                  </label>
+                  <label htmlFor="machine-selector">Manage Reactor</label>
 
                   <select
                     id="machine-selector"
                     className="machines-select"
                     value={
-                      selectedMachineId ??
-                      String(getMachineRowId(machines[0]))
+                      selectedMachineId ?? String(getMachineRowId(machines[0]))
                     }
                     onChange={(e) => setSelectedMachineId(e.target.value)}
                   >
@@ -580,7 +587,7 @@ export default function MachinesPage({ session: sessionProp }) {
                       const machineId = getMachineRowId(machine);
 
                       const running =
-                        typeof machine?.isRunning === 'boolean'
+                        typeof machine?.isRunning === "boolean"
                           ? machine.isRunning
                           : Number(toPlain(machine?.isRunning) || 0) === 1;
 
@@ -591,7 +598,8 @@ export default function MachinesPage({ session: sessionProp }) {
                         >
                           {templateNameMap[
                             Number(toPlain(machine?.template_id) || 0)
-                          ] || 'Reactor'} #{machineId} - {running ? 'Running' : 'Idle'}
+                          ] || "Reactor"}{" "}
+                          #{machineId} - {running ? "Running" : "Idle"}
                         </option>
                       );
                     })}
@@ -643,8 +651,43 @@ export default function MachinesPage({ session: sessionProp }) {
         />
       </div>
 
+  </>);
+
+  return (
+    <div className="machines-room">
+      <div className="machines-header">
+        <div>
+          <h2>Machine Room</h2>
+          <p>
+            Stake reactors, load recipe inputs, run production, and claim
+            outputs.
+          </p>
+        </div>
+
+        <button
+          className="machines-refresh-btn"
+          onClick={() => loadDashboard(true)}
+          disabled={loading || refreshing}
+        >
+          {refreshing ? "Refreshing..." : "Refresh"}
+        </button>
+      </div>
+
+      {message ? (
+        <div className="machines-banner success">{toPlain(message)}</div>
+      ) : null}
+      {error ? (
+        <div className="machines-banner error">{toPlain(error)}</div>
+      ) : null}
+
+      <div className="machine-view-toggle" aria-label="Machine room view"><button aria-pressed={room3D} onClick={()=>setRoom3D(true)}>3D workshop</button><button aria-pressed={!room3D} onClick={()=>setRoom3D(false)}>2D controls</button></div>
+      {room3D ? <WorkshopBoundary><Suspense fallback={<p>Preparing workshop…</p>}><MachineRoom3D machines={machines} selectedId={getMachineRowId(selectedMachine)} onSelect={setSelectedMachineId} recipe={selectedRecipe} now={nowTick} balances={machineBalances} inputs={machineInputs} busyKey={busyKey} onDeposit={handleDepositOnly} onStart={handleStartMachine} energy={liveEnergy} energyMax={liveEnergyMax} cinderBalance={cinderBalance} onRecharge={openRecharge} onClaim={handleClaim} availableReactors={availableReactors} onStake={handleStake} onUnstake={handleUnstake} actionError={toPlain(error)} actionMessage={toPlain(message)}/></Suspense></WorkshopBoundary> : machineControls}
       {rechargeOpen ? (
-        <div className="machines-recharge-overlay" role="presentation" onMouseDown={() => !rechargeBusy && setRechargeOpen(false)}>
+        <div
+          className="machines-recharge-overlay"
+          role="presentation"
+          onMouseDown={() => !rechargeBusy && setRechargeOpen(false)}
+        >
           <section
             className="machines-recharge-modal"
             role="dialog"
@@ -657,19 +700,34 @@ export default function MachinesPage({ session: sessionProp }) {
                 <span>Machine Room Power</span>
                 <h3 id="machines-recharge-title">Recharge User Energy</h3>
               </div>
-              <button type="button" onClick={() => setRechargeOpen(false)} disabled={rechargeBusy} aria-label="Close">
+              <button
+                type="button"
+                onClick={() => setRechargeOpen(false)}
+                disabled={rechargeBusy}
+                aria-label="Close"
+              >
                 &times;
               </button>
             </div>
-
             <div className="machines-recharge-stats">
-              <div><span>Energy</span><strong>{formatNumber(liveEnergy, 0)} / {formatNumber(liveEnergyMax, 0)}</strong></div>
-              <div><span>CINDER Balance</span><strong>{formatNumber(cinderBalance, 6)}</strong></div>
-              <div><span>Maximum Load</span><strong>{formatNumber(maxRechargeCinder, 6)} CINDER</strong></div>
+              <div>
+                <span>Energy</span>
+                <strong>
+                  {formatNumber(liveEnergy, 0)} /{" "}
+                  {formatNumber(liveEnergyMax, 0)}
+                </strong>
+              </div>
+              <div>
+                <span><TokenLogo symbol="CINDER" size={16}/>CINDER Balance</span>
+                <strong>{formatNumber(cinderBalance, 6)}</strong>
+              </div>
+              <div>
+                <span>Maximum Load</span>
+                <strong>{formatNumber(maxRechargeCinder, 6)} <TokenLogo symbol="CINDER" size={16}/>CINDER</strong>
+              </div>
             </div>
-
             <label className="machines-recharge-field">
-              <span>CINDER to load</span>
+              <span><TokenLogo symbol="CINDER" size={16}/>CINDER to load</span>
               <input
                 type="number"
                 min="0"
@@ -679,18 +737,21 @@ export default function MachinesPage({ session: sessionProp }) {
                 onChange={(event) => setRechargeAmount(event.target.value)}
                 disabled={rechargeBusy}
               />
-              <small>1 CINDER restores 2 energy.</small>
+              <small>1 <TokenLogo symbol="CINDER" size={16}/>CINDER restores 2 energy.</small>
             </label>
-
             <div className="machines-recharge-presets">
-              {[0.5, 1].map((amount) => (
+              {[0.5, 1].map((preset) => (
                 <button
-                  key={amount}
+                  key={preset}
                   type="button"
-                  onClick={() => setRechargeAmount(String(Math.min(amount, maxRechargeCinder)))}
+                  onClick={() =>
+                    setRechargeAmount(
+                      String(Math.min(preset, maxRechargeCinder)),
+                    )
+                  }
                   disabled={rechargeBusy || maxRechargeCinder <= 0}
                 >
-                  {amount} CINDER
+                  {preset} <TokenLogo symbol="CINDER" size={16}/>CINDER
                 </button>
               ))}
               <button
@@ -701,16 +762,16 @@ export default function MachinesPage({ session: sessionProp }) {
                 Fill
               </button>
             </div>
-
-            {rechargeError ? <div className="machines-recharge-error">{rechargeError}</div> : null}
-
+            {rechargeError ? (
+              <div className="machines-recharge-error">{rechargeError}</div>
+            ) : null}
             <button
               type="button"
               className="machines-recharge-confirm"
               onClick={handleRechargeEnergy}
               disabled={rechargeBusy || maxRechargeCinder <= 0}
             >
-              {rechargeBusy ? 'Confirming...' : 'Load Energy'}
+              {rechargeBusy ? "Confirming..." : "Load Energy"}
             </button>
           </section>
         </div>

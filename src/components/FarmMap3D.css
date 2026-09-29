@@ -1,0 +1,21 @@
+.farm3d{border:1px solid #536b46;border-radius:16px;overflow:hidden;background:#172e23;color:#ecedce}.farm3d-canvas{height:480px;position:relative;isolation:isolate}.farm3d-canvas button{border:1px solid #c2c394;background:#203e30e8;color:#f1e7bf;border-radius:14px;padding:4px 8px;font-size:10px;white-space:nowrap;cursor:pointer}.farm3d-canvas button.ready{background:#dfc784;color:#223b2a}.farm3d-controls,.farm3d-selection{display:flex;gap:12px;flex-wrap:wrap;align-items:center;padding:16px}.farm3d-selection{border-top:1px solid #526847}.farm3d-selection label{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.farm3d-selection select{max-width:100%;padding:8px;background:#203e30;color:#f1e7bf}.farm3d-controls button,.farm3d-selection button,.farm-view-toggle button{padding:8px 12px;border:1px solid #8d9d6d;border-radius:10px;background:#294a35;color:#f1e7bf;cursor:pointer}.farm3d button:disabled{opacity:.5;cursor:default}.farm-view-toggle{display:flex;gap:8px;margin:12px 0}.farm-view-toggle button[aria-pressed=true]{background:#d5c38b;color:#233829}@media(max-width:600px){.farm3d-canvas{height:360px}.farm3d-controls,.farm3d-selection{font-size:12px;padding:12px}}
+.farm3d-weather{position:absolute;top:12px;left:12px;background:#203e30e8;color:#f1e7bf;padding:7px 10px;border-radius:12px;font-size:11px;pointer-events:none;z-index:2}
+.farm3d-landmark-label{display:block;white-space:nowrap;text-align:center;background:#1c352ee8;border:1px solid #b49f6b;border-radius:8px;padding:5px 9px;color:#f5d798;font-size:10px;letter-spacing:.6px;pointer-events:none}.farm3d-landmark-label small{font-size:10px;letter-spacing:0;color:#e8eddb}
+.farm3d-landmark-label progress{display:block;width:100%;height:5px;margin-top:5px;accent-color:#ffad32}
+
+.farm3d-canvas .farm3d-plot-badge{padding:6px 9px;border-radius:9px;border:1px solid #e0c88a;background:#10271f;color:#fff2d0;box-shadow:0 3px 9px #0007}.farm3d-plot-badge strong{display:flex;align-items:center;justify-content:center;gap:5px;font-size:12px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.3}.farm3d-plot-badge small{display:block;margin-top:2px;font-size:9px;line-height:1.2}.farm3d-canvas .farm3d-plot-badge.ready{background:#e5cb87;color:#193525}.farm3d-plot-badge:focus-visible{outline:3px solid #fff3bc;outline-offset:3px}
+
+/* Compact crop pins: full status remains available on hover and selection. */
+.farm3d-canvas .farm3d-plot-badge{padding:4px 7px;border-radius:12px;background:#162e26f5;border-color:#d1bb8580;box-shadow:0 2px 5px #0005}.farm3d-plot-badge strong{font-size:10px;font-weight:700;gap:4px;line-height:1.2}.farm3d-plot-badge svg{width:11px;height:11px}
+
+@media(max-width:650px){.farm-view-toggle button,.farm3d-controls button,.farm3d-selection button{min-height:44px;min-width:44px}.farm3d-selection select{font-size:16px;min-height:44px}.farm3d-canvas .farm3d-plot-badge{min-height:32px;padding:6px 8px}.farm3d-controls>span:first-child{flex-basis:100%}.farm3d-selection{align-items:stretch;flex-direction:column}}
+.farm3d-canvas { height: min(72vh, 760px); min-height: 440px; }
+.farm3d-controls label { display: flex; align-items: center; gap: 6px; }
+.farm-design-lab { max-width: 1440px; margin: 0 auto; padding: 24px; color: #e6eadc; }
+.farm-design-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 20px; padding: 16px; background: #203e30; border: 1px solid #60724b; border-radius: 12px; margin: 14px 0; }
+.farm-design-controls label { display: flex; gap: 8px; align-items: center; }
+.farm-design-controls input[type=range] { width: 160px; }
+.farm-growth-comparison { display: flex; gap: 20px; margin-top: 20px; align-items: center; }
+.farm-growth-comparison .tomato-growth-wrapper { width: 180px; flex-shrink: 0; }
+@media(max-width: 650px) { .farm3d-canvas { height: 60vh; min-height: 380px; } .farm-design-lab { padding: 10px; } .farm-growth-comparison { flex-wrap: wrap; } }
+.farm3d-plot-badge{font-variant-numeric:tabular-nums}.farm3d-plot-badge small{display:block;color:#d7e5bc;font-size:9px;line-height:1.4;margin-top:3px;white-space:nowrap}

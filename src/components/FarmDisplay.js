@@ -120,7 +120,7 @@ export default function FarmDisplay({
             </div>
 
             {walletAccount && sharedFarm?.asset_id ? (
-              <FarmPlotsGrid farmId={sharedFarm.asset_id} ownerFilter={walletAccount} onChanged={onChanged} refreshNonce={refreshNonce} />
+              <FarmPlotsGrid farm={sharedFarm} farmId={sharedFarm.asset_id} ownerFilter={walletAccount} onChanged={onChanged} refreshNonce={refreshNonce} />
             ) : (
               <div className="farm-empty-state">{walletAccount ? 'Waiting for the Global Farm…' : 'Connect your wallet to tend your plots.'}</div>
             )}

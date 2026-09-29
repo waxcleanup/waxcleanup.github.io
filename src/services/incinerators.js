@@ -1,3 +1,4 @@
+import {postWaxMainnetRpc} from './waxMainnetEndpoints';
 // src/services/incinerators.js
 import axios from 'axios';
 
@@ -75,3 +76,13 @@ export const fetchIncineratorSlots = async (accountName) => {
     return defaultSlots(accountName);
   }
 };
+// Read mutable state without waiting for NFT artwork or wallet inventory indexing.
+export async function fetchLiveIncinerators(owner) {
+ const read=options=>postWaxMainnetRpc('/v1/chain/get_table_rows',{json:true,code:'cleanupcentr',scope:'cleanupcentr',...options});
+ const [incins,slots]=await Promise.all([
+  read({table:'incinerators',index_position:2,key_type:'i64',lower_bound:owner,upper_bound:owner,limit:1000}),
+  read({table:'incinslots',lower_bound:owner,upper_bound:owner,limit:1})
+ ]);
+ if(!Array.isArray(incins.rows)||incins.more||!Array.isArray(slots.rows))throw new Error('Incomplete incinerator readings. Please refresh.');
+ return {rows:incins.rows.filter(r=>r.owner===owner).map(r=>({...r,asset_id:String(r.id),fuel:Number(r.fuel),energy:Number(r.energy),durability:Number(r.durability)})),slots:slots.rows.find(r=>r.owner===owner)?.slots||[]};
+}

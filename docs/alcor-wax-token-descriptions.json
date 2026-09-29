@@ -1,0 +1,26 @@
+{
+  "CINDER@cleanuptoken": {
+    "name": "CleanupCentr CINDER",
+    "website": {"link": "https://maestrobeatz.servegame.com/cleanupcentr/", "name": "CleanupCentr"},
+    "tags": ["Gaming", "NFT"],
+    "description": "CINDER connects NFT cleanup with the CleanupCentr game economy on WAX. Players earn CINDER by burning approved NFTs through Incinerators, then spend it to recharge personal and farm energy."
+  },
+  "TRASH@cleanuptoken": {
+    "name": "CleanupCentr TRASH",
+    "website": {"link": "https://maestrobeatz.servegame.com/cleanupcentr/", "name": "CleanupCentr"},
+    "tags": ["Gaming", "NFT"],
+    "description": "TRASH is the Incinerator fuel token in CleanupCentr on WAX. It supports the Burn Center gameplay loop: fuel an Incinerator, burn approved NFTs, and produce CINDER for the wider game economy."
+  },
+  "TOMATOE@maestrobeatz": {
+    "name": "CleanupCentr TOMATOE",
+    "website": {"link": "https://maestrobeatz.servegame.com/cleanupcentr/", "name": "CleanupCentr"},
+    "tags": ["Gaming", "NFT"],
+    "description": "TOMATOE is a farming resource in CleanupCentr on WAX. Players earn it through configured crop rewards and use it for eligible shop items and blend recipes, connecting harvests with farming supplies and progression."
+  },
+  "BANANAZ@maestrobeatz": {
+    "name": "CleanupCentr BANANAZ",
+    "website": {"link": "https://maestrobeatz.servegame.com/cleanupcentr/", "name": "CleanupCentr"},
+    "tags": ["Gaming", "NFT"],
+    "description": "BANANAZ is a blend ingredient in CleanupCentr on WAX. Supported recipes, including EcoFusion Compost, use BANANAZ alongside other required tokens and NFTs to create farming supplies."
+  }
+}

@@ -7,7 +7,7 @@ import { fetchBurnableNFTs, invalidateBurnableNFTCache } from '../services/fetch
 import {
   fetchUnstakedIncinerators,
   fetchStakedIncinerators,
-  fetchIncineratorSlots,
+  fetchLiveIncinerators,
 } from '../services/incinerators';
 
 import {
@@ -22,6 +22,7 @@ import {
 
 import { getRepairStatus } from '../services/repairStatusApi';
 
+import BurnReceipt from './BurnReceipt';
 import NFTGrid from './NFTGrid';
 import NFTSlots from './NFTSlots';
 import IncineratorModal from './IncineratorModal';
@@ -69,6 +70,7 @@ const BurnRoom = ({ accountName, onClose }) => {
   const [showIncineratorModal, setShowIncineratorModal] = useState(false);
   const [selectedSlotIndex, setSelectedSlotIndex] = useState(null);
 
+  const [burnReceipts, setBurnReceipts] = useState([]);
   const [burnMessage, setBurnMessage] = useState('');
   const [messageVisible, setMessageVisible] = useState(false);
 
@@ -399,97 +401,62 @@ const BurnRoom = ({ accountName, onClose }) => {
     return parts.join(' ');
   };
 
-  // ✅ Sync UI slots from on-chain incinslots via backend
-  const syncSlotsFromChain = useCallback(
-    async (stakedList) => {
-      try {
-        const slotResp = await fetchIncineratorSlots(accountName);
-        if (!slotResp?.success) {
-          setSlots([null, null, null]);
-          return;
-        }
-
-        const uiSlots = 3;
-        const slotted = Array.isArray(slotResp.slotted) ? slotResp.slotted : [];
-        const next = Array(uiSlots).fill(null);
-
-        for (const row of slotted) {
-          const idx = Number(row.slot);
-          if (!Number.isFinite(idx) || idx < 0 || idx >= uiSlots) continue;
-
-          if (!row.incinerator_id) {
-            next[idx] = null;
-            continue;
-          }
-
-          const asset_id = String(row.incinerator_id);
-          const fallbackFromStaked = (stakedList || []).find((s) => String(s.asset_id) === asset_id);
-
-          const baseObj = fallbackFromStaked || {
-            asset_id,
-            id: asset_id,
-            owner: row.owner,
-            fuel: row.fuel,
-            energy: row.energy,
-            durability: row.durability,
-            template_id: row.template_id,
-            locked: row.locked,
-            name: row.name,
-            imgCid: row.imgCid,
-            rarity: row.rarity,
-          };
-
-          const img =
-            imgCache.current.get(asset_id) ||
-            baseObj.img ||
-            baseObj.imgCid ||
-            'default-placeholder.png';
-
-          imgCache.current.set(asset_id, img);
-          next[idx] = { ...baseObj, asset_id, img };
-        }
-
-        setSlots(next);
-      } catch (e) {
-        console.error('[ERROR] syncSlotsFromChain:', e);
-        setSlots([null, null, null]);
-      }
-    },
-    [accountName]
-  );
-
-  // --- Fetch incinerators + timers + slots ---
+  const incMetadata = useRef({});
+  const incRequest = useRef(0);
+  const incAccount = useRef(accountName);
+  incAccount.current = accountName;
+  const [incRefreshStatus,setIncRefreshStatus] = useState('');
+  useEffect(()=>{incAccount.current=accountName;incMetadata.current={};incRequest.current++;return()=>{incRequest.current++;incAccount.current=null;};},[accountName]);
   const fetchIncineratorData = useCallback(async () => {
+    if(!accountName)return;
+    const request=++incRequest.current;
+    const valid=()=>incAccount.current===accountName&&request===incRequest.current;
     try {
-      const [unstaked, staked] = await Promise.all([
-        fetchUnstakedIncinerators(accountName),
-        fetchStakedIncinerators(accountName),
-      ]);
-
-      const normalizedStaked = (staked || []).map((inc) => {
-        const asset_id = String(inc.asset_id || inc.id);
-        const img =
-          imgCache.current.get(asset_id) || inc.img || inc.imgCid || 'default-placeholder.png';
-        imgCache.current.set(asset_id, img);
-        return { ...inc, asset_id, img };
-      });
-
-      setStakedIncinerators(normalizedStaked);
-      setUnstakedIncinerators(
-        (unstaked || []).filter(
-          (i) => !normalizedStaked.some((n) => String(n.asset_id) === String(i.asset_id))
-        )
-      );
-
-      await syncSlotsFromChain(normalizedStaked);
-      await fetchRepairTimers(normalizedStaked);
-    } catch (err) {
-      console.error('[ERROR] Incinerator fetch failed:', err);
+      const live=await fetchLiveIncinerators(accountName);
+      if(!valid())return;
+      const publish=()=>{
+        const normalized=live.rows.map(row=>({...incMetadata.current[row.asset_id],...row,
+          name:incMetadata.current[row.asset_id]?.name||'Incinerator',
+          fuelCap:100000,energyCap:10}));
+        setStakedIncinerators(normalized);
+        setSlots(Array.from({length:3},(_,i)=>normalized.find(r=>r.asset_id===String(live.slots[i]))||null));
+        return normalized;
+      };
+      const normalized=publish();
+      setIncRefreshStatus('Updated '+new Date().toLocaleTimeString());
+      // Artwork and repair timers must not hold up fuel, energy or durability.
+      fetchRepairTimers(normalized);
+      Promise.all([fetchUnstakedIncinerators(accountName),fetchStakedIncinerators(accountName)]).then(([unstaked,metadata])=>{
+        if(!valid())return;
+        metadata.forEach(row=>{incMetadata.current[String(row.asset_id||row.id)]=row;});
+        publish();
+        setUnstakedIncinerators(unstaked.filter(r=>!live.rows.some(n=>n.asset_id===String(r.asset_id||r.id))));
+      }).catch(()=>{});
+    } catch(error) {
+      if(valid())setIncRefreshStatus('Readings could not refresh. Showing the last update.');
     }
-  }, [accountName, fetchRepairTimers, syncSlotsFromChain]);
+  },[accountName,fetchRepairTimers]);
+
+  useEffect(()=>{
+    let stopped=false,timer,generation=0;
+    const refresh=()=>{
+      const cycle=++generation;clearTimeout(timer);
+      let attempt=0;
+      const run=async()=>{
+        await fetchIncineratorData();
+        if(!stopped&&cycle===generation&&attempt<4)timer=setTimeout(run,[1000,2000,4000,8000][attempt++]);
+      };
+      run();
+    };
+    window.addEventListener('cleanup:incinerator-changed',refresh);
+    window.addEventListener('cleanup:burn-complete',refresh);
+    window.addEventListener('focus',refresh);
+    return()=>{stopped=true;clearTimeout(timer);window.removeEventListener('cleanup:incinerator-changed',refresh);window.removeEventListener('cleanup:burn-complete',refresh);window.removeEventListener('focus',refresh);};
+  },[fetchIncineratorData]);
 
   // --- Fetch NFTs + incinerators on mount ---
   const fetchData = useCallback(async () => {
+    const readings = fetchIncineratorData();
     setLoadingNFTs(true);
     try {
       const nfts = await fetchBurnableNFTs(accountName);
@@ -499,12 +466,19 @@ const BurnRoom = ({ accountName, onClose }) => {
     } finally {
       setLoadingNFTs(false);
     }
-    await fetchIncineratorData();
+    await readings;
   }, [accountName, fetchIncineratorData]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  useEffect(()=>{
+    if(!showConsole&&!showIncineratorModal)return;
+    fetchIncineratorData();
+    const timer=setInterval(()=>{if(!document.hidden)fetchIncineratorData();},15000);
+    return()=>clearInterval(timer);
+  },[showConsole,showIncineratorModal,fetchIncineratorData]);
 
   // tick timers down locally
   useEffect(() => {
@@ -566,14 +540,15 @@ const BurnRoom = ({ accountName, onClose }) => {
       setBurnMessage('Burn initiated…');
       setMessageVisible(true);
 
-      await burnNFT(accountName, nft, inc);
+      const result = await burnNFT(accountName, nft, inc);
+      setBurnReceipts(previous => [{...result, owner: accountName, assetId}, ...previous].slice(0, 5));
+      setBurnMessage('Burn complete.');
+      window.dispatchEvent(new Event('cleanup:burn-complete'));
 
       setBurnableNFTs((prev) => prev.filter((i) => i.asset_id !== nft.asset_id));
       setNftSlots((prev) => prev.map((s, i) => (i === idx ? null : s)));
 
       invalidateBurnableNFTCache();
-      await fetchIncineratorData();
-
       if (showCapsModal) {
         await fetchBurnStatusMulti();
       }
@@ -668,6 +643,7 @@ const BurnRoom = ({ accountName, onClose }) => {
 
     try {
       await repairIncinerator(accountName, repairTarget.asset_id, pts);
+      window.dispatchEvent(new Event("cleanup:incinerator-changed"));
       await fetchIncineratorData();
       setShowRepairModal(false);
     } catch (err) {
@@ -716,7 +692,7 @@ const BurnRoom = ({ accountName, onClose }) => {
       await clearIncineratorSlot(accountName, slotIndex);
 
       await fetchIncineratorData();
-      setBurnMessage('Incinerator unequipped!');
+      setBurnMessage('Incinerator unequipped. You can now unstake it to your wallet if fully repaired.');
     } catch (e) {
       console.error('[ERROR] clearIncineratorSlot failed:', e);
       alert(e?.response?.data?.message || e?.message || 'Failed to unequip incinerator');
@@ -956,6 +932,7 @@ const BurnRoom = ({ accountName, onClose }) => {
             )}
           </div>
 
+          {burnReceipts.some(receipt => receipt.owner === accountName) && createPortal(<aside className="burn-receipts" aria-label="Recent burn rewards">{burnReceipts.filter(receipt => receipt.owner === accountName).map(receipt => <BurnReceipt key={receipt.transactionId} receipt={receipt} onDismiss={() => setBurnReceipts(previous => previous.filter(item => item.transactionId !== receipt.transactionId))} />)}</aside>, document.body)}
           {messageVisible && <div className="burn-message">{burnMessage}</div>}
 
           {/* Floating Dock */}
@@ -1036,10 +1013,10 @@ const BurnRoom = ({ accountName, onClose }) => {
                   <div className="burnroom-sheet-content">
                     <div className="burnroom-inc-row">
                       <h3 className="burnroom-inc-title">Incinerators</h3>
-                      <div className="burnroom-inc-hint">Tap a slot to equip</div>
+                      <button type="button" className="inc-refresh" onClick={fetchIncineratorData}>Refresh readings ↻</button>
                     </div>
 
-                    <div className="incinerator-grid burnroom-inc-grid">
+                    <p className="inc-readings-status" role="status">{incRefreshStatus || "Loading live readings…"}</p><div className="incinerator-grid burnroom-inc-grid">
                       {(slots || []).map((slot, i) => (
                         <div
                           key={i}

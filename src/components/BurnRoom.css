@@ -180,7 +180,7 @@
   margin: 0 auto;
 }
 
-.burnroom-sheet .burnroom-inc-grid .incinerator-card img {
+.burnroom-sheet .burnroom-inc-grid .incinerator-card .incinerator-image {
   width: 96px !important;
   height: 96px !important;
   object-fit: contain;
@@ -369,3 +369,45 @@
     font-size: 11px;
   }
 }
+
+.burnroom-sheet .burnroom-inc-grid .incinerator-card{width:100%;max-width:340px;background:#231616;border:1px solid #74382f;box-shadow:0 8px 24px #0003;padding:16px!important;box-sizing:border-box}
+.burnroom-sheet .burnroom-inc-grid .incinerator-card .token-logo{width:18px!important;height:18px!important;display:inline-block;margin:0 6px 0 0;min-width:18px;object-fit:contain}
+.burnroom-sheet .burnroom-inc-grid .incinerator-name{color:#fff0e6;font-weight:700;font-size:16px!important;line-height:1.4!important}
+.burnroom-sheet .burnroom-inc-grid .asset-id{color:#c9aaa0;font-size:11px!important;overflow-wrap:anywhere}
+.burnroom-sheet .progress-bar-container{height:32px;background:#160e0e;border-color:#63352e;border-radius:8px}
+.burnroom-sheet .progress-bar-fill{opacity:.35}.burnroom-sheet .progress-bar-text{font-size:12px;color:#fff3e9;text-shadow:none}
+.burnroom-sheet .burnroom-inc-grid .incinerator-card button{background:#3d211d;color:#fff0e6;border:1px solid #8b4637;box-shadow:none;min-height:38px}
+.burnroom-sheet .burnroom-inc-grid .incinerator-card .fuel-button{background:#d94b2e;color:#fff5ed}.burnroom-sheet button:disabled{opacity:.5;cursor:not-allowed}
+.inc-readings-status{font-size:12px;color:#c9aaa0;padding:0 4px}.inc-refresh{background:#3d211d;color:#ffe4d1;border:1px solid #874433;border-radius:8px;padding:8px;font-size:12px}.inc-action-notice{color:#ffc18e!important;line-height:1.5!important}
+.incinerator-transaction-overlay .modal-content{background:#251715;color:#fff0e6;border:1px solid #914b37;border-radius:18px;width:min(420px,calc(100vw - 40px));padding:22px;box-sizing:border-box;text-align:left}
+.incinerator-transaction-overlay h4{font-size:21px;margin:0 0 8px}.incinerator-transaction-overlay p{line-height:1.6}.inc-action-target{color:#d1aea0;font-size:12px;overflow-wrap:anywhere}.incinerator-transaction-overlay input{width:100%;box-sizing:border-box;background:#160e0c;color:#fff2e8;border:1px solid #92503b;border-radius:8px;padding:12px;margin:8px 0}.incinerator-transaction-overlay button{background:#d94b2e;color:#fff5ed;border:1px solid #ed7950;border-radius:8px;padding:10px}.incinerator-transaction-overlay .modal-buttons{display:flex;gap:10px;flex-wrap:wrap}
+.burnroom-sheet .burnroom-inc-grid .incinerator-details{width:100%;min-width:0;box-sizing:border-box}
+.burnroom-sheet .burnroom-inc-grid .incinerator-details .organized-buttons{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%}
+.burnroom-sheet .burnroom-inc-grid .incinerator-details .organized-buttons button{width:100%;min-width:0;margin:0;white-space:normal}
+.burnroom-sheet .burnroom-inc-grid .incinerator-details .progress-bar-container{width:100%;height:32px;box-sizing:border-box}
+
+/* Cinder palette shared by the console and its action reviews. */
+.burnroom-sheet{background:#160f10;border-color:#71372d}
+.burnroom-sheet .burnroom-inc-title{color:#ffab75}
+.burnroom-sheet .burnroom-inc-grid .incinerator-card{background:linear-gradient(150deg,#301c18,#1b1313);box-shadow:0 8px 24px #0005,inset 0 1px #f8904920}
+.burnroom-sheet .burnroom-inc-grid .incinerator-card button:hover:not(:disabled),.inc-refresh:hover{background:#653025;border-color:#ef8657}
+.burnroom-sheet .burnroom-inc-grid .incinerator-card .fuel-button{background:linear-gradient(135deg,#b83526,#db512e);color:#fff5ed;border-color:#eb7950}
+.burnroom-sheet .fuel-bar{background:#ef602d}.burnroom-sheet .energy-bar{background:#e9a23d}.burnroom-sheet .durability-bar{background:#b57862}.burnroom-sheet .durability-bar.low{background:#ee3e39}
+.burnroom-sheet .progress-bar-fill{opacity:.5}
+.incinerator-transaction-overlay h4{color:#ffb27d}.incinerator-transaction-overlay button:hover:not(:disabled){background:#b73c27}.incinerator-transaction-overlay .modal-buttons button:last-child{background:#3d2520;color:#ffe7da;border-color:#8b4a39}
+.incinerator-transaction-overlay :focus-visible,.burnroom-sheet :focus-visible{outline:2px solid #ffb27d;outline-offset:3px}
+.incinerator-repair .popup-glow{background:linear-gradient(150deg,#301c18,#1b1313);color:#fff0e6;border:1px solid #914b37;box-shadow:0 12px 40px #0008;border-radius:18px}
+.incinerator-repair h3{color:#ffb27d}.incinerator-repair input{background:#160e0c;color:#fff2e8;border-color:#92503b;padding:10px}.incinerator-repair button{background:#48271f;color:#ffe7da;border:1px solid #8b4a39;border-radius:8px;padding:10px}.incinerator-repair .confirm-button{background:#c9442c;color:#fff5ed}.incinerator-repair .error-text{color:#ffb0a1}
+.burnroom .burn-receipt, .burn-receipt {
+  margin: 12px 0; padding: 16px; border: 1px solid #9f443c;
+  border-radius: 16px; background: #261619; color: #fff0e6;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;
+}
+.burn-receipt [role="status"] { display: grid; gap: 6px; }
+.burn-receipt [role="status"] > span { color: #dac3bc; font-size: 13px; }
+.burn-receipt b { display: flex; gap: 8px; align-items: center; color: #ffc38e; }
+.burn-receipt-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.burn-receipt a { color: #ffd0a7; }
+.burn-receipt button { padding: 8px 12px; border-radius: 10px; background: #592622; color: #fff0e6; border: 1px solid #a14b3e; }
+.burn-receipts { position: fixed; z-index: 100001; bottom: 20px; right: 16px; width: min(460px, calc(100vw - 32px)); max-height: 45vh; overflow-y: auto; }
+.burn-receipts .burn-receipt { box-shadow: 0 10px 35px #0009; margin: 8px 0 0; }

@@ -9,9 +9,11 @@ import { SessionProvider } from './hooks/SessionContext';
 import { PlayerResourcesProvider } from './hooks/PlayerResourcesContext';
 import { SkinProvider } from './hooks/SkinContext';
 
-// Restore original path after GitHub Pages 404 redirect
+const routerBasename = process.env.REACT_APP_ROUTER_BASENAME || '';
+
+// Restore legacy GitHub Pages redirects only in the root-hosted build.
 const savedPath = sessionStorage.getItem('redirectPath');
-if (savedPath && savedPath !== window.location.pathname) {
+if (!routerBasename && savedPath && savedPath !== window.location.pathname) {
   sessionStorage.removeItem('redirectPath');
   window.history.replaceState(null, '', savedPath);
 }
@@ -22,7 +24,7 @@ root.render(
   <SessionProvider>
     <PlayerResourcesProvider>
       <SkinProvider>
-        <BrowserRouter>
+        <BrowserRouter basename={routerBasename}>
           <App />
         </BrowserRouter>
       </SkinProvider>

@@ -32,7 +32,7 @@ export function getRecipeActionText(recipe) {
 }
 
 export async function fetchBlendOverview(wallet) {
-  const { data } = await axios.get(`${API_BASE}/blends/overview/${wallet}`);
+  const { data } = await axios.get(`${API_BASE}/blends/overview/${encodeURIComponent(wallet)}`, { timeout: 30000 });
   return data;
 }
 

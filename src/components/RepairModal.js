@@ -13,10 +13,10 @@ const RepairModal = ({
   maxPoints
 }) => {
   return (
-    <div className="modal-backdrop fade-in">
+    <div className="modal-backdrop fade-in incinerator-repair">
       <div className="modal-box popup-glow">
-        <h3>🛠 Repair Incinerator</h3>
-        <p>1 CINDER = +1 Durability = 1 Minute of Repair Time</p>
+        <h3>Restore durability</h3>
+        <p>Missing durability: <strong>{maxPoints} / 500</strong></p><p>Each point costs 1 CINDER and takes 1 minute to repair.</p><p>Selected: <strong>{repairPoints || 0} CINDER</strong> · <strong>{repairPoints || 0} minutes</strong></p>
         <input
           type="number"
           min="1"
@@ -45,7 +45,7 @@ const RepairModal = ({
         </div>
         <div className="modal-buttons">
           <button className="cancel-button" onClick={onCancel}>Cancel</button>
-          <button className="confirm-button" onClick={onConfirm}>Confirm</button>
+          <button className="confirm-button" onClick={onConfirm}>Start repair in wallet</button>
         </div>
       </div>
     </div>

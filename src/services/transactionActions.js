@@ -1,3 +1,4 @@
+import { buildIncineratorEquipActions } from './incineratorFlow.mjs';
 // src/services/transactionActions.js
 
 import axios from 'axios';
@@ -134,7 +135,7 @@ export const burnNFT = async (accountName, nft, incinerator) => {
       );
     }
 
-    return result.transactionId;
+    return result;
   } catch (error) {
     console.error(
       `[ERROR] Error during burn transaction for NFT: ${nftAssetId}`,
@@ -352,18 +353,7 @@ export const setIncineratorSlot = async (accountName, slotIndex, incineratorId) 
   if (!id || id === '0') throw new Error('Invalid incinerator id.');
 
   const dataTrx = {
-    actions: [
-      {
-        account: 'cleanupcentr',
-        name: 'setincslot',
-        authorization: [{ actor: accountName, permission: 'active' }],
-        data: {
-          user: accountName,
-          slot,
-          incinerator_id: id,
-        },
-      },
-    ],
+    actions: buildIncineratorEquipActions('cleanupcentr', accountName, slot, id),
   };
 
   try {

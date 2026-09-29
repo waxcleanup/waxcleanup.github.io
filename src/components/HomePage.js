@@ -1,9 +1,10 @@
+import BurnLeaderboard from './BurnLeaderboard';
+import BurnTotal from './BurnTotal';
 // src/components/HomePage.js
 import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSession } from '../hooks/SessionContext';
 import logo from '../assets/cleanupcentr.png';
-import MessageBoard from './MessageBoard';
 import './HomePage.css';
 
 export default function HomePage() {
@@ -33,96 +34,55 @@ export default function HomePage() {
     };
   }, []);
 
-  const openLink = (url) => {
-    if (!url) return;
-    window.open(url, '_blank', 'noopener,noreferrer');
-  };
 
   const ProjectIntro = () => (
-    <section className="homepage-intro">
-      <div className="intro-card">
-        <h2 className="intro-title">Welcome to TheCleanupCentr</h2>
-        <p className="intro-text">
-          CleanupCentr is a WAX on-chain ecosystem focused on NFT cleanup and farming.
-          Burn approved NFTs using Incinerators, earn CINDER rewards, power farms with
-          energy, and grow your yield through plots, tools, and weather-driven mechanics.
-        </p>
-
-        <div className="intro-actions">
-          <button
-            className="homepage-link-button"
-            onClick={() => navigate('/shop')}
-            title="Browse machines, cores, and packs"
-          >
-            View Shop
-          </button>
-
-          <button
-            className="homepage-link-button"
-            onClick={() => openLink(LINKS.atomicHubCollectionUrl)}
-            title="View the CleanupCentr collection on AtomicHub"
-          >
-            View Collection (AtomicHub)
-          </button>
-
-          <button
-            className="homepage-link-button"
-            onClick={() => openLink(LINKS.discordInviteUrl)}
-            title="Join the community on Discord"
-          >
-            Join Discord
-          </button>
-
-          <button
-            className="homepage-link-button"
-            onClick={() => openLink(LINKS.telegramUrl)}
-            title="Join the Telegram"
-          >
-            Telegram
-          </button>
-
-          <button
-            className="homepage-link-button"
-            onClick={() => openLink(LINKS.twitterUrl)}
-            title="Follow on X"
-          >
-            Follow on X
-          </button>
-        </div>
-
-        <div className="intro-notes">
-          <p className="intro-note">
-            Tip: Browse the Shop without logging in, then connect your wallet when you're ready
-            to buy or manage your machines.
-          </p>
-        </div>
+    <section className="homepage-banner" aria-labelledby="homepage-about-title">
+      <div className="homepage-banner-copy">
+      <h2 id="homepage-about-title">About CleanupCentr</h2>
+      <p>Burn approved NFTs on WAX and earn CINDER. Put your rewards to work with farming and machines.</p>
       </div>
+      <div className="homepage-banner-actions">
+      <button className="homepage-shop-link" onClick={() => navigate('/market/shop')}>View Shop <span aria-hidden="true">→</span></button>
+      <nav className="homepage-community-links" aria-label="Collection and community">
+        <a href={LINKS.atomicHubCollectionUrl} target="_blank" rel="noopener noreferrer">AtomicHub <span aria-hidden="true">↗</span></a>
+        <a href={LINKS.discordInviteUrl} target="_blank" rel="noopener noreferrer">Discord <span aria-hidden="true">↗</span></a>
+        <a href={LINKS.telegramUrl} target="_blank" rel="noopener noreferrer">Telegram <span aria-hidden="true">↗</span></a>
+        <a href={LINKS.twitterUrl} target="_blank" rel="noopener noreferrer">Follow on X <span aria-hidden="true">↗</span></a>
+      </nav>
+      </div>
+
     </section>
   );
 
   return (
     <div className="homepage-container">
-      <MessageBoard />
 
       <header className="homepage-header">
         <img src={logo} alt="Cleanup Logo" className="homepage-logo" />
         <h1 className="homepage-title">TheCleanupCentr</h1>
       </header>
 
-      {!session && (
-        <section className="homepage-primary">
-          <div className="homepage-login">
-            <button
-              onClick={() => handleLogin('anchor')}
-              className="homepage-login-button"
-            >
-              Login
-            </button>
-          </div>
-        </section>
-      )}
+      <div className="homepage-dashboard">
+        <ProjectIntro />
+        <div className="homepage-burn-activity">
+          <BurnTotal />
+          <BurnLeaderboard />
 
-      <ProjectIntro />
+          {!session && (
+            <section className="homepage-primary">
+              <div className="homepage-login">
+                <button
+                  onClick={() => handleLogin()}
+                  className="homepage-login-button"
+                >
+                  Login
+                </button>
+              </div>
+            </section>
+          )}
+
+        </div>
+      </div>
     </div>
   );
 }

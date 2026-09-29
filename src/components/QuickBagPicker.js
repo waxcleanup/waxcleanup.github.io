@@ -16,6 +16,7 @@ export default function QuickBagPicker({
   category,
   title,
   actionLabel,
+  actionError,
   pendingAssetId,
   onConfirm,
   onClose,
@@ -28,6 +29,7 @@ export default function QuickBagPicker({
     if (!open || !wallet) return undefined;
     const controller = new AbortController();
     setLoading(true);
+    setAssets([]);
     setError('');
     axios.get(`${process.env.REACT_APP_API_BASE_URL}/bag/${wallet}`, {
       signal: controller.signal,
@@ -46,6 +48,7 @@ export default function QuickBagPicker({
   const choices = useMemo(() => assets.filter((asset) => {
     const type = assetType(asset);
     if (category === 'seeds') return type.includes('seed');
+    if (category === 'plots') return type.includes('plot');
     if (category === 'compost') return type.includes('compost');
     return false;
   }), [assets, category]);
@@ -53,12 +56,12 @@ export default function QuickBagPicker({
   const groupedChoices = useMemo(() => {
     const groups = new Map();
     choices.forEach((asset) => {
-      const key = String(asset.template_id || asset.name || asset.asset_id);
+      const key = category === 'plots' ? String(asset.asset_id) : String(asset.template_id || asset.name || asset.asset_id);
       if (!groups.has(key)) groups.set(key, { key, items: [], asset });
       groups.get(key).items.push(asset);
     });
     return Array.from(groups.values());
-  }, [choices]);
+  }, [choices, category]);
 
   if (!open) return null;
 
@@ -70,12 +73,13 @@ export default function QuickBagPicker({
           <button type="button" className="quick-bag-close" onClick={onClose} disabled={Boolean(pendingAssetId)} aria-label="Close Field Bag picker" title="Close">×</button>
         </header>
         {loading && <div className="quick-bag-state">Checking your bag…</div>}
+        {actionError && <div className="quick-bag-state is-error" role="alert">{actionError}</div>}
         {error && <div className="quick-bag-state is-error">{error}</div>}
         {!loading && !error && choices.length === 0 && (
           <div className="quick-bag-state">No matching NFTs are available in your Field Bag.</div>
         )}
         <div className="quick-bag-grid">
-          {groupedChoices.map((group) => {
+          {!loading && !error && groupedChoices.map((group) => {
             const asset = group.asset;
             const id = String(asset.asset_id || '');
             const image = toIpfsUrl(asset.image || asset.img || asset?.data?.img);
@@ -90,7 +94,7 @@ export default function QuickBagPicker({
                 <div className="quick-bag-card-copy">
                   <span className="quick-bag-type">{category === 'seeds' ? 'Seed supply' : 'Farm supply'}</span>
                   <strong>{asset.name || `NFT #${id}`}</strong>
-                  <small>{group.items.length} available · Template #{asset.template_id || '—'}</small>
+                  <small>{category === 'plots' ? `Asset #${id}` : `${group.items.length} available · Template #${asset.template_id || '—'}`}</small>
                 </div>
                 <button type="button" disabled={Boolean(pendingAssetId)} onClick={() => onConfirm?.(asset)}>
                   {pending ? 'Processing…' : `${actionLabel} 1`}

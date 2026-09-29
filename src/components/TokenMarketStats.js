@@ -1,3 +1,4 @@
+import TokenLogo from './TokenLogo';
 // src/components/TokenMarketStats.js
 import React, { useEffect, useState } from "react";
 import axios from "axios";
@@ -32,7 +33,7 @@ const TokenMarketStats = () => {
 
   return (
     <div className="p-6 text-white">
-      <h1 className="text-2xl font-bold mb-4">Top 100 WAX Token Markets</h1>
+      <h1 className="text-2xl font-bold mb-4">Top 100 <TokenLogo symbol="WAX" size={16}/>WAX Token Markets</h1>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {tokens.map((token, index) => (
           <div
@@ -43,13 +44,13 @@ const TokenMarketStats = () => {
               #{index + 1} — {token.token.symbol} @{token.token.contract}
             </h2>
             <p>
-              Price (WAX): {token.price != null ? token.price.toFixed(8) : "N/A"}
+              Price (<TokenLogo symbol="WAX" size={16}/>WAX): {token.price != null ? token.price.toFixed(8) : "N/A"}
             </p>
             <p>
               24h Volume: {token.volume24h != null ? token.volume24h.toFixed(2) : "N/A"}
             </p>
             <p>
-              Liquidity: {token.liquidity?.wax?.toFixed(2) ?? "0"} WAX / {token.liquidity?.token?.toFixed(2) ?? "0"} {token.token.symbol}
+              Liquidity: {token.liquidity?.wax?.toFixed(2) ?? "0"} <TokenLogo symbol="WAX" size={16}/>WAX / {token.liquidity?.token?.toFixed(2) ?? "0"} {token.token.symbol}
             </p>
           </div>
         ))}

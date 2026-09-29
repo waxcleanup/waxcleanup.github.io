@@ -1,3 +1,4 @@
+import TokenLogo from './TokenLogo';
 // src/components/FarmCard.js
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
@@ -166,7 +167,7 @@ export default function FarmCard({
           </div>
           <div className="farm-stat">
             <span>Reward Pool</span>
-            <strong>{rewardPoolLabel}</strong>
+            <strong><TokenLogo symbol="CINDER" size={18} />{rewardPoolLabel}</strong>
           </div>
           {createdLabel && (
             <div className="farm-stat">
@@ -270,6 +271,7 @@ export default function FarmCard({
 
         {plotsExpanded && canExpandPlots && (
         <FarmPlotsGrid
+          farm={farm}
           farmId={asset_id}
           onChanged={handlePlotsChanged}
           refreshNonce={refreshNonce}

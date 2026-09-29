@@ -1,3 +1,4 @@
+import TokenLogo from './TokenLogo';
 import React, { useEffect, useMemo, useState } from 'react';
 import './VoteModal.css';
 
@@ -147,7 +148,7 @@ export default function VoteModal({
         </div>
 
         <div className="vote-modal-row">
-          <label>TRASH Amount</label>
+          <label><TokenLogo symbol="TRASH" size={16}/>TRASH Amount</label>
           <input
             value={amount}
             onChange={(e) => setAmount(e.target.value)}

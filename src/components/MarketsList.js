@@ -1,3 +1,4 @@
+import TokenLogo from './TokenLogo';
 // src/components/MarketsList.js
 import React, { useEffect, useState } from "react";
 import axios from "axios";
@@ -28,7 +29,7 @@ const MarketsList = () => {
         <thead>
           <tr>
             <th className="py-2 px-4 border-b">Symbol</th>
-            <th className="py-2 px-4 border-b">Price (WAX)</th>
+            <th className="py-2 px-4 border-b">Price (<TokenLogo symbol="WAX" size={16}/>WAX)</th>
             <th className="py-2 px-4 border-b">24h Volume</th>
             <th className="py-2 px-4 border-b">Details</th>
           </tr>

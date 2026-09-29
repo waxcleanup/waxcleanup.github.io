@@ -1,3 +1,4 @@
+import TokenLogo from './TokenLogo';
 // src/components/EnergyCellSection.js
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { rechargeUserEnergy } from "../services/userEnergyActions";
@@ -229,8 +230,8 @@ export default function EnergyCellSection({ cells, accountName, onRefresh, toolP
         </button>
         <div className="ecs-energyTrack" aria-label={`${pctLabel} energy remaining`}><span style={{ width: pctWidth }} /></div>
         <div className="ecs-energyFoot">
-          <span>Balance: <strong>{cinderBalance.toLocaleString(undefined, { maximumFractionDigits: 6 })} CINDER</strong></span>
-          {!isFull && max > 0 && <span>Full recharge: <strong>{cinderToFull.toFixed(3)} CINDER</strong></span>}
+          <span>Balance: <strong>{cinderBalance.toLocaleString(undefined, { maximumFractionDigits: 6 })} <TokenLogo symbol="CINDER" size={16}/>CINDER</strong></span>
+          {!isFull && max > 0 && <span>Full recharge: <strong>{cinderToFull.toFixed(3)} <TokenLogo symbol="CINDER" size={16}/>CINDER</strong></span>}
         </div>
       </div>}
       {mode !== "summary" && <>
@@ -430,8 +431,8 @@ export default function EnergyCellSection({ cells, accountName, onRefresh, toolP
                 </div>
               </div>
               <div className="ecs-modalStat">
-                <div className="ecs-modalLabel">CINDER Balance</div>
-                <div className="ecs-modalValue">{cinderBalance.toFixed(6)} CINDER</div>
+                <div className="ecs-modalLabel"><TokenLogo symbol="CINDER" size={16}/>CINDER Balance</div>
+                <div className="ecs-modalValue">{cinderBalance.toFixed(6)} <TokenLogo symbol="CINDER" size={16}/>CINDER</div>
               </div>
             </div>
             <div className="ecs-quickAmounts">
@@ -443,7 +444,7 @@ export default function EnergyCellSection({ cells, accountName, onRefresh, toolP
             </div>
 
             <label className="ecs-modalLabel2">
-              CINDER to spend
+              <TokenLogo symbol="CINDER" size={16}/>CINDER to spend
               <input
                 type="number"
                 min={Math.min(1, maxRechargeSpend || 1)}
@@ -456,7 +457,7 @@ export default function EnergyCellSection({ cells, accountName, onRefresh, toolP
             </label>
 
             <div className="ecs-inputLimit">
-              Maximum available: {maxRechargeSpend.toFixed(6)} CINDER
+              Maximum available: {maxRechargeSpend.toFixed(6)} <TokenLogo symbol="CINDER" size={16}/>CINDER
             </div>
 
             {Number(amount) > 0 && (

@@ -1,0 +1,89 @@
+{
+  "pool": {
+    "id": 5113,
+    "active": 1,
+    "tokenA": {
+      "quantity": "75461.943890 CINDER",
+      "contract": "cleanuptoken"
+    },
+    "tokenB": {
+      "quantity": "16052.98089888 WAX",
+      "contract": "eosio.token"
+    },
+    "fee": 3000,
+    "feeProtocol": 0,
+    "tickSpacing": 60,
+    "maxLiquidityPerTick": "1247497401346422",
+    "currSlot": {
+      "sqrtPriceX64": "85082340309713862285",
+      "tick": 30576,
+      "lastObservationTimestamp": 1733160829,
+      "currentObservationNum": 1,
+      "maxObservationNum": 1
+    },
+    "feeGrowthGlobalAX64": "809856614898931396",
+    "feeGrowthGlobalBX64": "11004638192634731607",
+    "protocolFeeA": "0.000000 CINDER",
+    "protocolFeeB": "0.00000000 WAX",
+    "liquidity": "348023787691"
+  },
+  "ticks": [
+    {
+      "id": 443580,
+      "liquidityGross": "348023787691",
+      "liquidityNet": "-348023787691",
+      "feeGrowthOutsideAX64": "0",
+      "feeGrowthOutsideBX64": "0",
+      "tickCumulativeOutside": 0,
+      "secondsPerLiquidityOutsideX64": "0",
+      "secondsOutside": 0,
+      "initialized": 1
+    },
+    {
+      "id": -443580,
+      "liquidityGross": "348023787691",
+      "liquidityNet": "348023787691",
+      "feeGrowthOutsideAX64": "0",
+      "feeGrowthOutsideBX64": "0",
+      "tickCumulativeOutside": 0,
+      "secondsPerLiquidityOutsideX64": "0",
+      "secondsOutside": 1733160829,
+      "initialized": 1
+    }
+  ],
+  "positions": [
+    {
+      "id": 104303,
+      "owner": "acpru.wam",
+      "tickLower": -443580,
+      "tickUpper": 443580,
+      "liquidity": 126670347,
+      "feeGrowthInsideALastX64": "36445608941565879",
+      "feeGrowthInsideBLastX64": "464225788404846913",
+      "feesA": 0,
+      "feesB": 0
+    },
+    {
+      "id": 114603,
+      "owner": "yzyr.wam",
+      "tickLower": -443580,
+      "tickUpper": 443580,
+      "liquidity": 823320536,
+      "feeGrowthInsideALastX64": "804414881465444996",
+      "feeGrowthInsideBLastX64": "10884044323264840136",
+      "feesA": 0,
+      "feesB": 0
+    },
+    {
+      "id": 148229,
+      "owner": "unknownpools",
+      "tickLower": -443580,
+      "tickUpper": 443580,
+      "liquidity": "347073796808",
+      "feeGrowthInsideALastX64": "809794178846369259",
+      "feeGrowthInsideBLastX64": "11003456568936871439",
+      "feesA": 0,
+      "feesB": 0
+    }
+  ]
+}

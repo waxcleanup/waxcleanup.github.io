@@ -1,3 +1,4 @@
+import TokenLogo from './TokenLogo';
 // src/components/ProposalModal.js
 import React, { useState, useEffect } from 'react';
 import './ProposalModal.css';
@@ -414,7 +415,7 @@ function ProposalModal({
 
         {/* ✅ STATIC PROPOSAL FEE (cannot be changed) */}
         <div className="modal-field">
-          <label>Proposal Fee (TRASH):</label>
+          <label>Proposal Fee (<TokenLogo symbol="TRASH" size={16}/>TRASH):</label>
           <input
             type="text"
             value={formattedFeeLabel || `${localProposalStake} TRASH`}

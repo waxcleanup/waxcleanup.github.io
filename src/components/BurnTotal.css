@@ -1,0 +1,17 @@
+.burn-total {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: min(100%, 620px);
+  margin: 0 auto 28px;
+  padding: clamp(20px, 4vw, 32px);
+  border: 1px solid rgba(0, 255, 153, .28);
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(0, 255, 153, .09), rgba(20, 20, 20, .95));
+  text-align: center;
+  box-sizing: border-box;
+}
+.burn-total-label { color: #d7ffe9; font-size: 15px; font-weight: 600; }
+.burn-total-value { color: #00ff99; font-size: clamp(26px, 6vw, 48px); line-height: 1.2; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; max-width: 100%; }
+.burn-total-caption { color: #aac8b8; font-size: 13px; overflow-wrap: anywhere; }

@@ -1,6 +1,7 @@
 // src/hooks/SessionContext.js
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import sessionKit, { saveSession, clearSession } from '../config/sessionConfig';
+import sessionKit, { saveSession, clearSession, assertMainnetSession, ensureSessionEndpoint } from '../config/sessionConfig';
+import { MAESTRO_WALLET_ID, getMaestroWalletState, subscribeMaestroWallet } from '../wallet/maestro/maestroWallet';
 
 const SessionContext = createContext({
   session: null,
@@ -30,6 +31,7 @@ function isUserCancelledLogin(err) {
 
 export function SessionProvider({ children }) {
   const [session, setSession] = useState(null);
+  const [localWallet, setLocalWallet] = useState(getMaestroWalletState);
   const [loading, setLoading] = useState(true);
 
   // Optional UI helpers
@@ -39,8 +41,14 @@ export function SessionProvider({ children }) {
   useEffect(() => {
     (async () => {
       try {
+        await ensureSessionEndpoint();
         const restored = await sessionKit.restore();
+        if (restored?.walletPlugin?.id === MAESTRO_WALLET_ID && !getMaestroWalletState().unlocked) {
+          clearSession();
+          return;
+        }
         if (restored?.permissionLevel && restored?.transact) {
+          assertMainnetSession(restored);
           setSession(restored);
           saveSession(restored);
         }
@@ -52,26 +60,37 @@ export function SessionProvider({ children }) {
     })();
   }, []);
 
+  useEffect(() => subscribeMaestroWallet(setLocalWallet), []);
+  useEffect(() => {
+    if (session?.walletPlugin?.id === MAESTRO_WALLET_ID &&
+        (!localWallet.unlocked || `${localWallet.account}@${localWallet.permission}` !== String(session.permissionLevel))) {
+      clearSession();
+      setSession(null);
+    }
+  }, [session, localWallet]);
+
   const handleLogin = useCallback(async (walletPluginId) => {
     setLoginError('');
     setLoginCancelled(false);
 
     try {
       setLoading(true);
-
-      const result = await sessionKit.login({ walletPluginId });
+      await ensureSessionEndpoint();
+      const result = await sessionKit.login(walletPluginId ? { walletPlugin: walletPluginId } : undefined);
       const newSession = result?.session;
 
       if (!newSession?.permissionLevel || !newSession?.transact) {
         throw new Error('Login succeeded but session is missing required fields.');
       }
 
+      assertMainnetSession(newSession);
       setSession(newSession);
       saveSession(newSession);
       return newSession;
     } catch (err) {
       // ✅ User cancelled wallet prompt (don’t crash the app)
       if (isUserCancelledLogin(err)) {
+        await sessionKit.ui?.onLoginComplete?.();
         setLoginCancelled(true);
         return null;
       }
@@ -104,7 +123,7 @@ export function SessionProvider({ children }) {
 
   return (
     <SessionContext.Provider
-      value={{ session, loading, loginError, loginCancelled, handleLogin, handleLogout }}
+      value={{ session, localWallet, loading, loginError, loginCancelled, handleLogin, handleLogout }}
     >
       {children}
     </SessionContext.Provider>
@@ -114,4 +133,3 @@ export function SessionProvider({ children }) {
 export function useSession() {
   return useContext(SessionContext);
 }
-

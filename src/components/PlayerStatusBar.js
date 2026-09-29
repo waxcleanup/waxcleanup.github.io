@@ -1,3 +1,4 @@
+import TokenLogo from './TokenLogo';
 import React from 'react';
 import './PlayerStatusBar.css';
 
@@ -107,8 +108,8 @@ export default function PlayerStatusBar({
                       className="player-status-value player-status-reward-line"
                     >
                       <span className={iconClass}>
-                        {t.symbol === 'TOMATOE' && '🍅'}
-                        {t.symbol === 'CINDER' && '🔥'}
+                        <TokenLogo symbol={t.symbol} size={20} />
+                        
                       </span>
                       {t.amountStr} {t.symbol}
                     </div>

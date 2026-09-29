@@ -1,0 +1,31 @@
+name: Publish migration page
+on:
+  push:
+    branches: [gh-pages]
+permissions:
+  pages: write
+concurrency:
+  group: migration-pages-build
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Request the configured Pages branch build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node <<'JS'
+          const root = `https://api.github.com/repos/${process.env.GITHUB_REPOSITORY}/pages`;
+          const headers = {Authorization: `Bearer ${process.env.GH_TOKEN}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28'};
+          (async () => {
+            const config = await fetch(root, {headers});
+            if (!config.ok) throw new Error(`Pages configuration check failed: ${config.status}`);
+            const site = await config.json();
+            if (site.source?.branch !== 'gh-pages' || site.source?.path !== '/') throw new Error('Unexpected Pages publishing source. No build requested.');
+            const response = await fetch(`${root}/builds`, {method:'POST', headers});
+            if (response.status !== 201) throw new Error(`Pages build request failed: ${response.status}`);
+            console.log(`Pages build ${(await response.json()).status}`);
+          })().catch(error => {console.error(error.message);process.exit(1);});
+          JS

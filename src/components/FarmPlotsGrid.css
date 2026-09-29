@@ -358,3 +358,8 @@
   background: rgba(34, 197, 94, 0.18);
   border-color: rgba(34, 197, 94, 0.55);
 }
+.farm-timer-note{font-size:12px;line-height:1.6;color:#bcccaf;margin:12px 0}
+.plot-card .plot-slots{grid-template-columns:repeat(auto-fit,minmax(min(180px,100%),1fr));gap:10px}
+.plot-card .plot-slot{width:100%;height:auto;min-height:180px;flex-direction:column;box-sizing:border-box;padding:10px;line-height:1.4}
+.plot-card .plot-slot-empty{min-height:80px}.plot-card .plot-slot .plot-slot-svg{height:120px;max-height:120px;width:100%}
+.plot-timer-summary{position:relative;width:100%;text-align:center;color:#f0edd9;line-height:1.5;font-size:12px;font-variant-numeric:tabular-nums;margin-top:8px}.plot-timer-summary strong,.plot-timer-summary small{display:block}.plot-timer-summary small{color:#c6d9b6;font-size:11px;margin-top:4px}

@@ -1,3 +1,4 @@
+import TokenLogo from './TokenLogo';
 import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import './FarmRechargeModal.css';
@@ -78,12 +79,12 @@ export default function FarmRechargeModal({
           </div>
           <div>
             <span>Available</span>
-            <strong>{compactNumber(cinderBalance)} CINDER</strong>
+            <strong>{compactNumber(cinderBalance)} <TokenLogo symbol="CINDER" size={16}/>CINDER</strong>
           </div>
         </div>
 
         <label className="farm-recharge-field">
-          <span>CINDER to spend</span>
+          <span><TokenLogo symbol="CINDER" size={16}/>CINDER to spend</span>
           <div className="farm-recharge-input-row">
             <input
               type="number"

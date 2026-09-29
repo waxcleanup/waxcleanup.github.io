@@ -1,9 +1,11 @@
+import TokenLogo from './TokenLogo';
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { buyPack } from '../services/shopActions';
 import { usePlayerResources } from '../hooks/PlayerResourcesContext';
 import './ShopPage.css';
+import { fetchShopUsdRate, tokenPriceKey, estimatedUsd } from '../services/shopUsd';
 
 const API_BASE =
   process.env.REACT_APP_API_BASE_URL || 'https://maestrobeatz.servegame.com';
@@ -87,10 +89,30 @@ function getMaxQty(item) {
   return Math.max(1, Math.min(txLimit, Number(item.remaining)));
 }
 
+function dropRange(drop) {
+  if (Number(drop.template_id) <= 0) return { min: 0, max: 0 };
+  return { min: Number(drop.qty_min), max: Number(drop.qty_max) };
+}
+
+export function slotNftRange(drops) {
+  const ranges = drops.map(dropRange);
+  return { min: Math.min(...ranges.map(r => r.min)), max: Math.max(...ranges.map(r => r.max)) };
+}
+
+export function crateNftRange(detail) {
+  const ranges = (detail.guaranteed || []).map(dropRange);
+  const slots = {};
+  for (const drop of detail.bonus || []) (slots[drop.slot] ||= []).push(drop);
+  ranges.push(...Object.values(slots).map(slotNftRange));
+  return ranges.reduce((total, range) => ({ min: total.min + range.min, max: total.max + range.max }), { min: 0, max: 0 });
+}
+
+function formatNftRange({ min, max }) {
+  return `${min === max ? min : `${min}–${max}`} ${max === 1 && min === 1 ? 'NFT' : 'NFTs'}`;
+}
+
 function formatDropQty(drop) {
-  if (!drop) return '';
-  if (drop.qty_min === drop.qty_max) return `x${drop.qty_min}`;
-  return `x${drop.qty_min}-${drop.qty_max}`;
+  return formatNftRange(dropRange(drop));
 }
 
 function DropItem({ item, showWeight = false }) {
@@ -109,7 +131,7 @@ function DropItem({ item, showWeight = false }) {
             }}
           />
         ) : (
-          <div className="drop-item-placeholder">?</div>
+          <div className="drop-item-placeholder">{Number(item.template_id) === 0 ? '—' : 'NFT'}</div>
         )}
       </div>
 
@@ -117,7 +139,7 @@ function DropItem({ item, showWeight = false }) {
         <div className="drop-item-name">{item.name}</div>
         <div className="drop-item-meta">
           <span>{formatDropQty(item)}</span>
-          {showWeight && <span>{item.weight}% weight</span>}
+          {showWeight && <span>{item.chance == null ? `Weight ${item.weight}` : `${Number(item.chance.toFixed(2))}% chance`}</span>}
         </div>
       </div>
     </div>
@@ -125,19 +147,19 @@ function DropItem({ item, showWeight = false }) {
 }
 
 function DropTableModal({ detail, loading, error, onClose }) {
-  if (!detail && !loading && !error) return null;
-
+  const modal = React.useRef();
+  useEffect(() => { modal.current?.showModal(); }, []);
   const sale = detail?.sale;
+  const bonusSlots = Object.entries((detail?.bonus || []).reduce((groups, drop) => {
+    const slot = Number(drop.slot);
+    (groups[slot] ||= []).push(drop);
+    return groups;
+  }, {})).sort(([a], [b]) => Number(a) - Number(b));
 
   return (
-    <div className="shop-modal-overlay" onClick={onClose}>
-      <div
-        className="shop-modal"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <button className="shop-modal-close" onClick={onClose} type="button">
-          ×
-        </button>
+    <dialog ref={modal} className="shop-contents-dialog" aria-label="Crate contents" onCancel={e => { e.preventDefault(); onClose(); }}>
+      <div className="shop-item-dialog-header"><span>Crate contents</span><button className="shop-item-close" aria-label="Close contents" onClick={onClose} type="button">×</button></div>
+      <div className="shop-contents-scroll">
 
         {loading ? (
           <div className="shop-modal-loading">Loading drops...</div>
@@ -159,12 +181,12 @@ function DropTableModal({ detail, loading, error, onClose }) {
               </div>
 
               <div className="shop-modal-info">
-                <p className="shop-modal-kicker">Drop Table</p>
+                
                 <h2 className="shop-modal-title">{sale?.name}</h2>
-                <p className="shop-modal-description">{sale?.description}</p>
+                <details className="shop-contents-description"><summary>About this crate</summary><p>{sale?.description}</p></details>
 
                 <div className="shop-modal-stats">
-                  <span>{formatPrice(sale)}</span>
+                  <span><TokenLogo token={{symbol: sale.token, contract: sale.token_contract, precision: Number(sale.decimals)}} size={18} />{formatPrice(sale)}</span>
                   <span>
                     Remaining:{' '}
                     {sale?.remaining === null || sale?.remaining === undefined
@@ -175,6 +197,10 @@ function DropTableModal({ detail, loading, error, onClose }) {
               </div>
             </div>
 
+            {!detail?.guaranteed?.length && !detail?.bonus?.length && <p role="status">Contents are not available for this item yet.</p>}
+            {(!!detail?.guaranteed?.length || !!detail?.bonus?.length) && (
+              <div className="shop-nft-count"><span>Total per crate</span><strong>{formatNftRange(crateNftRange(detail))}</strong></div>
+            )}
             {!!detail?.guaranteed?.length && (
               <div className="shop-modal-section">
                 <h3 className="shop-modal-section-title">Guaranteed Drops</h3>
@@ -192,26 +218,36 @@ function DropTableModal({ detail, loading, error, onClose }) {
 
             {!!detail?.bonus?.length && (
               <div className="shop-modal-section">
-                <h3 className="shop-modal-section-title">Bonus Drops</h3>
-                <div className="drop-list">
-                  {detail.bonus.map((drop) => (
-                    <DropItem
-                      key={`b-${drop.id}-${drop.template_id}`}
-                      item={drop}
-                      showWeight
-                    />
-                  ))}
-                </div>
+                <h3 className="shop-modal-section-title">Guaranteed slots · randomized drops</h3>
+                <p className="shop-outcome-note">Every slot is included. Its NFT outcome is randomized using the chances below.{detail.bonus.some(drop => Number(drop.template_id) <= 0 || Number(drop.qty_max) === 0) && ' “No Bonus” means that slot adds no NFT.'}</p>
+                {bonusSlots.map(([slot, drops]) => (
+                  <section className="shop-drop-slot" key={slot} aria-label={`Slot ${Number(slot) + 1}`}>
+                    <div className="shop-drop-slot-header">
+                      <h4>Slot {Number(slot) + 1}</h4>
+                      <span>Guaranteed slot · 1 random outcome</span>
+                    </div>
+                    <div className="shop-slot-count">Drops {formatNftRange(slotNftRange(drops))}</div>
+                    <div className="drop-list">
+                      {drops.map(drop => (
+                        <DropItem key={`b-${drop.id}-${drop.template_id}`} item={drop} showWeight />
+                      ))}
+                    </div>
+                  </section>
+                ))}
               </div>
             )}
           </>
         )}
       </div>
-    </div>
+    </dialog>
   );
 }
 
-function ShopItemCard({
+const PRODUCT_STORIES = {
+  '904730': { title: 'Start your next harvest', summary: 'Seeds and compost to put your farm to work.', features: ['Enhanced and basic tomato seeds', 'Compost for your farm', 'Chance of bonus resources'] },
+  '900986': { title: 'Build up your farm', summary: 'A restoration supply crate for your next growing project.', features: ['4 EcoFusion Compost NFTs', '1 Seed Pack NFT', 'A randomized bonus slot'] },
+};
+export function ShopItemCard({
   item,
   isLoggedIn,
   onBuy,
@@ -219,13 +255,20 @@ function ShopItemCard({
   buying,
   tokenBalance,
   balanceReady,
+  usdRate,
+  rateNow = Date.now(),
 }) {
+  const story = PRODUCT_STORIES[String(item.template_id)];
+  const unitUsd = estimatedUsd(item.price, usdRate, rateNow);
   const imageUrl = buildIpfsUrl(item.image);
   const soldOut = Boolean(item.is_sold_out);
   const type = mapCategoryToType(item.category);
 
   const maxQty = getMaxQty(item);
   const [qty, setQty] = React.useState(1);
+  const [detailOpen, setDetailOpen] = React.useState(false);
+  const detailDialog = React.useRef();
+  useEffect(() => { if (detailOpen) detailDialog.current?.showModal(); }, [detailOpen]);
 
   const totalCost = Number(item.price || 0) * Number(qty || 0);
   const affordabilityKnown =
@@ -256,21 +299,23 @@ function ShopItemCard({
       setQty(1);
       return;
     }
-    setQty(Math.min(maxQty, Math.max(1, value)));
+    setQty(Math.min(maxQty, Math.max(1, Math.floor(value))));
   };
 
   return (
-    <div
-      className={`shop-card ${soldOut ? 'sold-out' : ''} ${
+    <article
+      aria-label={item.name}
+      className={`shop-card shop-thumbnail-card ${soldOut ? 'sold-out' : ''} ${
         insufficientFunds ? 'insufficient-funds' : ''
       }`}
     >
-      <div className="shop-card-image-wrap">
+      <button type="button" className="shop-card-image-wrap shop-thumbnail-trigger" aria-label={`View ${item.name}`} onClick={() => setDetailOpen(true)}>
         {imageUrl ? (
           <img
             src={imageUrl}
             alt={item.name}
             className="shop-card-image"
+            loading="lazy"
             onError={(e) => {
               e.currentTarget.style.display = 'none';
             }}
@@ -280,9 +325,12 @@ function ShopItemCard({
             <span>{type.toUpperCase()}</span>
           </div>
         )}
-      </div>
-
-      <div className="shop-card-body">
+        <span className="shop-thumbnail-peek"><strong>{story?.title || 'Discover this item'}</strong><span>{story?.summary || 'View contents, quantity and purchase details.'}</span><b>View item →</b></span>
+      </button>
+      <div className="shop-thumbnail-info"><span className="shop-thumbnail-category">{soldOut ? 'Sold out' : type}</span><h3>{item.name}</h3><strong className="shop-thumbnail-price"><TokenLogo token={{symbol: item.token, contract: item.token_contract, precision: Number(item.decimals)}} size={18} />{formatPrice(item)}</strong><span className="shop-thumbnail-usd">{unitUsd || 'USD estimate unavailable'}</span><button type="button" className="shop-thumbnail-view" onClick={() => setDetailOpen(true)}>View item</button></div>
+      {detailOpen && <dialog ref={detailDialog} className="shop-item-dialog" aria-label={item.name} onCancel={e => { e.preventDefault(); if (!buying) setDetailOpen(false); }}>
+      <div className="shop-item-dialog-header"><span>Item details</span><button type="button" className="shop-item-close" aria-label="Close item details" disabled={buying} onClick={() => setDetailOpen(false)}>×</button></div>
+      <div className="shop-item-scroll"><div className="shop-card-body">
         <div className="shop-card-top">
           <span className={`shop-type-badge shop-type-${type}`}>
             {type}
@@ -292,12 +340,14 @@ function ShopItemCard({
 
         <h3 className="shop-card-title">{item.name}</h3>
 
-        <p className="shop-card-description">{item.description}</p>
+        <p className="shop-card-description">{story?.summary || item.description}</p>
+        {story && <details className="shop-product-description"><summary>Contents &amp; description</summary><ul className="shop-product-features">{story.features.map(feature => <li key={feature}>{feature}</li>)}</ul><p>{item.description}</p></details>}
 
         <div className="shop-card-meta compact">
           <div className="shop-compact-block">
-            <span className="shop-meta-label">Price</span>
-            <span className="shop-price">{formatPrice(item)}</span>
+            <span className="shop-meta-label">Price per item</span>
+            <span className="shop-price"><TokenLogo token={{symbol: item.token, contract: item.token_contract, precision: Number(item.decimals)}} size={18} />{formatPrice(item)}</span>
+            <span className="shop-usd-price">{unitUsd || 'USD estimate unavailable'}</span>
           </div>
 
           <div className="shop-compact-block right">
@@ -310,13 +360,9 @@ function ShopItemCard({
           </div>
         </div>
 
-        <div className="shop-card-submeta">
-          <span>Tx Limit: {formatNumber(item.tx_limit)}</span>
-        </div>
-
         <div className="shop-qty-section">
           <div className="shop-qty-label-row">
-            <span className="shop-meta-label">Quantity</span>
+            <span className="shop-meta-label">Quantity <small>· max {formatNumber(item.tx_limit)}</small></span>
             {quantityIncreased && (
               <span className="shop-qty-selected">x{qty} selected</span>
             )}
@@ -335,6 +381,8 @@ function ShopItemCard({
 
             <input
               type="number"
+              aria-label={`Quantity for ${item.name}`}
+              step="1"
               min="1"
               max={maxQty}
               value={qty}
@@ -362,10 +410,12 @@ function ShopItemCard({
               insufficientFunds ? 'insufficient' : quantityIncreased ? 'increased' : ''
             }`}
           >
-            {formatTotal(item, qty)}
+            <TokenLogo token={{symbol: item.token, contract: item.token_contract, precision: Number(item.decimals)}} size={18} />{formatTotal(item, qty)}
           </span>
         </div>
 
+        <div className="shop-usd-total"><span>Estimated total</span><strong>{estimatedUsd(totalCost, usdRate, rateNow) || 'USD estimate unavailable'}</strong></div>
+        {unitUsd && <p className="shop-rate-note">Alcor market estimate · checked {new Date(usdRate.checkedAt).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}. You pay in {item.token}; swap costs and price changes can affect the USD equivalent.</p>}
         {insufficientFunds && (
           <div className="shop-affordability-warning" role="status">
             Not enough {item.token}. Need {formatNumber(shortfall)} more.
@@ -375,16 +425,16 @@ function ShopItemCard({
         <div className="shop-card-actions">
           <button
             className="shop-secondary-btn"
-            onClick={() => onViewDrops(item)}
+            onClick={() => { setDetailOpen(false); onViewDrops(item); }}
             type="button"
             disabled={buying}
           >
-            View Drops
+            Explore contents
           </button>
 
           <button
             className="shop-buy-btn compact"
-            onClick={() => onBuy(item, qty)}
+            onClick={async () => { await onBuy(item, qty); setDetailOpen(false); }}
             disabled={soldOut || buying || insufficientFunds}
             type="button"
           >
@@ -395,17 +445,37 @@ function ShopItemCard({
                 : insufficientFunds
                   ? `Need more ${item.token}`
                 : isLoggedIn
-                  ? `Buy ${qty}`
+                  ? `Buy ${qty} ${type === 'packs' ? qty === 1 ? 'crate' : 'crates' : qty === 1 ? 'item' : 'items'}`
                   : 'Connect Wallet'}
           </button>
         </div>
+        {insufficientFunds && <Link className="shop-get-tokens" to="/exchange">Get {item.token} in Exchange →</Link>}
+        {type === 'packs' && <p className="shop-open-note">After purchase, open your crate in <Link to="/market/blends">Blends</Link>.</p>}
       </div>
-    </div>
+      </div></dialog>}
+    </article>
   );
 }
 
-export default function ShopPage({ session, onLogin }) {
+export default function ShopPage({ session, onLogin, embedded = false }) {
   const [items, setItems] = useState([]);
+  const [usdRates, setUsdRates] = useState({});
+  const [rateNow, setRateNow] = useState(Date.now());
+  useEffect(() => {
+    let active = true;
+    const tokens = [...new Map(items.map(item => [tokenPriceKey(item), item])).values()];
+    async function refreshRates() {
+      const results = await Promise.all(tokens.map(async item => {
+        try { return [tokenPriceKey(item), await fetchShopUsdRate(item)]; }
+        catch { return [tokenPriceKey(item), null]; }
+      }));
+      if (active) { setUsdRates(Object.fromEntries(results)); setRateNow(Date.now()); }
+    }
+    refreshRates();
+    const refresh = setInterval(refreshRates, 60000);
+    const clock = setInterval(() => setRateNow(Date.now()), 10000);
+    return () => { active = false; clearInterval(refresh); clearInterval(clock); };
+  }, [items]);
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -413,6 +483,8 @@ export default function ShopPage({ session, onLogin }) {
   const [buying, setBuying] = useState(false);
 
   const [selectedSale, setSelectedSale] = useState(null);
+  const dropRequest = React.useRef(0);
+  useEffect(() => () => { dropRequest.current += 1; }, []);
   const [dropDetail, setDropDetail] = useState(null);
   const [dropLoading, setDropLoading] = useState(false);
   const [dropError, setDropError] = useState('');
@@ -522,6 +594,7 @@ export default function ShopPage({ session, onLogin }) {
   };
 
   const handleViewDrops = async (item) => {
+    const request = ++dropRequest.current;
     try {
       setSelectedSale(item.sale_id);
       setDropLoading(true);
@@ -529,16 +602,17 @@ export default function ShopPage({ session, onLogin }) {
       setDropDetail(null);
 
       const response = await axios.get(`${API_BASE}/shop/sales/${item.sale_id}`);
-      setDropDetail(response.data);
+      if (request === dropRequest.current) setDropDetail(response.data);
     } catch (err) {
       console.error('Failed to fetch drop detail:', err);
-      setDropError('Unable to load drop table right now.');
+      if (request === dropRequest.current) setDropError('Unable to load drop table right now.');
     } finally {
-      setDropLoading(false);
+      if (request === dropRequest.current) setDropLoading(false);
     }
   };
 
   const closeDropModal = () => {
+    dropRequest.current += 1;
     setSelectedSale(null);
     setDropDetail(null);
     setDropError('');
@@ -547,7 +621,7 @@ export default function ShopPage({ session, onLogin }) {
 
   return (
     <div className="shop-page">
-      <section className="shop-hero">
+      {!embedded && <section className="shop-hero">
         <div className="shop-hero-content">
           <p className="shop-kicker">CleanupCentr Marketplace</p>
           <h1 className="shop-title">Shop Packs and Game Items</h1>
@@ -566,7 +640,7 @@ export default function ShopPage({ session, onLogin }) {
             )}
           </div>
         </div>
-      </section>
+      </section>}
 
       <section className="shop-controls">
         <div className="shop-filter-row">
@@ -603,6 +677,8 @@ export default function ShopPage({ session, onLogin }) {
                 buying={buying}
                 tokenBalance={getTokenBalance(resources, item.token)}
                 balanceReady={balanceReady}
+                usdRate={usdRates[tokenPriceKey(item)]}
+                rateNow={rateNow}
               />
             ))}
           </div>

@@ -1,16 +1,24 @@
 // sessionConfig.js
-import { SessionKit } from "@wharfkit/session";
+import { SessionKit, BrowserLocalStorage } from "@wharfkit/session";
 import { WebRenderer } from "@wharfkit/web-renderer";
 import { WalletPluginAnchor } from "@wharfkit/wallet-plugin-anchor";
-import { WalletPluginWombat } from "@wharfkit/wallet-plugin-wombat"; // Wombat Wallet Plugin
 import { WalletPluginCloudWallet } from "@wharfkit/wallet-plugin-cloudwallet"; // WAX Cloud Wallet Plugin
+import { MaestroWalletPlugin } from '../wallet/maestro/MaestroWalletPlugin';
+import { WAX_MAINNET_CHAIN_ID, getHealthyWaxMainnetEndpoint } from '../services/waxMainnetEndpoints';
 
 // Load configuration from environment variables
 const chainId = process.env.REACT_APP_CHAINID;
 const rpcEndpoint = process.env.REACT_APP_RPC;
 
-console.log('Chain ID:', chainId);
-console.log('RPC Endpoint:', rpcEndpoint);
+const serverHosted = process.env.REACT_APP_SERVER_HOSTED === 'true';
+const sessionStorageKey = serverHosted ? 'cleanupcentr_mainnet_session' : 'userSession';
+
+export function assertMainnetSession(session) {
+  if (chainId !== WAX_MAINNET_CHAIN_ID || String(session?.chain?.id || session?.chainId || '') !== WAX_MAINNET_CHAIN_ID) {
+    throw new Error('This site requires a WAX Mainnet wallet session.');
+  }
+  return session;
+}
 
 // Initialize sessionKit with selected wallet plugins and configuration
 const sessionKit = new SessionKit({
@@ -28,17 +36,8 @@ const sessionKit = new SessionKit({
   ],
   ui: new WebRenderer(),
   walletPlugins: [
+    new MaestroWalletPlugin(),
     new WalletPluginAnchor(),
-    new WalletPluginWombat({
-      metadata: {
-        name: 'Wombat Wallet',
-        logo: 'https://wombat.app/favicon.ico',
-      },
-      network: {
-        chainId: chainId,
-        rpcEndpoint: rpcEndpoint,
-      }
-    }),
     new WalletPluginCloudWallet({
       metadata: {
         name: 'WAX Cloud Wallet',
@@ -50,7 +49,13 @@ const sessionKit = new SessionKit({
       }
     })
   ]
-});
+}, serverHosted ? { storage: new BrowserLocalStorage('cleanupcentr-mainnet') } : {});
+
+export const ensureSessionEndpoint = async () => {
+  const endpoint = await getHealthyWaxMainnetEndpoint({ force: true });
+  sessionKit.setEndpoint(WAX_MAINNET_CHAIN_ID, endpoint);
+  return endpoint;
+};
 
 // Save session data to local storage
 export const saveSession = (session) => {
@@ -59,23 +64,22 @@ export const saveSession = (session) => {
     actor: session.actor,
     permission: session.permission,
     chainId: session.chainId,
-    walletPlugin: session.walletPlugin,
+    walletPlugin: session.walletPlugin?.id || '',
     sessionId: session.sessionId || 'default-session',
   });
-  localStorage.setItem('userSession', sessionData);
+  localStorage.setItem(sessionStorageKey, sessionData);
 };
 
 // Restore session from local storage
 export const restoreSession = async () => {
-  const storedSession = localStorage.getItem('userSession');
+  const storedSession = localStorage.getItem(sessionStorageKey);
   if (storedSession) {
     try {
-      const parsedSession = JSON.parse(storedSession);
-      const restoredSession = await sessionKit.restore(parsedSession);
-      return restoredSession;
+      const restoredSession = await sessionKit.restore({ chain: WAX_MAINNET_CHAIN_ID });
+      return assertMainnetSession(restoredSession);
     } catch (error) {
       console.error('Failed to restore session:', error);
-      localStorage.removeItem('userSession'); // Clean up corrupted session if any
+      localStorage.removeItem(sessionStorageKey); // Clean up corrupted session if any
     }
   }
   return null;
@@ -83,7 +87,7 @@ export const restoreSession = async () => {
 
 // Clear session from storage (if needed for logout or session invalidation)
 export const clearSession = () => {
-  localStorage.removeItem('userSession');
+  localStorage.removeItem(sessionStorageKey);
 };
 
 export default sessionKit;

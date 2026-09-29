@@ -29,7 +29,7 @@ import { unequipTool } from '../services/toolEquipActions';
 export default function Farming() {
   const { session } = useSession();
   const { resources, refreshResources } = usePlayerResources();
-  const wallet = session?.actor;
+  const wallet = String(session?.actor || session?.permissionLevel?.actor || '');
 
   const API = process.env.REACT_APP_API_BASE_URL;
 
@@ -216,22 +216,25 @@ export default function Farming() {
       return;
     }
 
+    const controller = new AbortController();
     const fetchPlayerStatus = async () => {
       setLoadingPlayerStatus(true);
       try {
-        const res = await axios.get(`${API}/api/player/${wallet}/status`);
+        const res = await axios.get(`${API}/api/player/${wallet}/status`, { params: { _: Date.now() }, signal: controller.signal });
         setPlayerStatus(res.data);
         setPlayerStatusError(null);
       } catch (err) {
+        if (controller.signal.aborted) return;
         console.error('Error loading player status:', err);
         setPlayerStatusError('Could not load player status');
       } finally {
-        setLoadingPlayerStatus(false);
+        if (!controller.signal.aborted) setLoadingPlayerStatus(false);
       }
     };
 
     fetchPlayerStatus();
-  }, [API, wallet]);
+    return () => controller.abort();
+  }, [API, wallet, bagRefreshNonce]);
 
   // --------------------------------------------------
   // Battery modal
@@ -439,6 +442,8 @@ export default function Farming() {
   // --------------------------------------------------
   const handleFarmChanged = useCallback(
     async (_evt) => {
+      setBagRefreshNonce((n) => n + 1);
+      void refreshResources();
       try {
         await pollRefreshFarms({ tries: 6, delayMs: 800 });
         await loadInventory(wallet, { tries: 2, delayMs: 600 });
@@ -446,7 +451,7 @@ export default function Farming() {
         setBagRefreshNonce((n) => n + 1);
       }
     },
-    [pollRefreshFarms, loadInventory, wallet]
+    [pollRefreshFarms, loadInventory, wallet, refreshResources]
   );
 
   const handleBagChanged = useCallback(async () => {

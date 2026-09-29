@@ -1,7 +1,11 @@
 // src/components/CollectionsPage.js
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
+import {Link} from 'react-router-dom';
 import './CollectionsPage.css';
+import TokenLogo from './TokenLogo';
+import { TOKENS } from '../services/exchangeMath';
+import { tokenMetadata } from '../services/tokenMetadata';
 
 function safeText(value, fallback = 'Unknown') {
   if (value === null || value === undefined || value === '') return fallback;
@@ -103,6 +107,8 @@ function categorizeTemplate(template) {
 
   const combined = `${nftType} ${name} ${schema} ${category} ${subcategory}`;
 
+  if (schema === 'energycell' || schema === 'cores' || nftType.includes('cell')) return 'Energy & Resources';
+  if (schema === 'packs' || nftType === 'crate') return 'Packs';
   const hasAny = (terms) => terms.some((term) => combined.includes(term));
 
   if (hasAny(['machine', 'reactor', 'processor'])) {
@@ -143,12 +149,14 @@ function getUseHint(template) {
   const schema = normalizeText(getRawSchema(template));
   const combined = `${nftType} ${name} ${schema}`;
 
+  if (schema === 'energycell' || combined.includes('farm cell')) return 'Adds energy capacity to its equipped farm. It is separate from personal energy storage.';
+  if (schema === 'cores') return 'Increases personal energy capacity when staked. Recharge fills the available capacity.';
   if (combined.includes('seed pack') || combined.includes('seedpack')) {
     return 'Used to open and receive seeds for planting and harvest-based gameplay.';
   }
 
   if (combined.includes('seed') || combined.includes('sapling')) {
-    return 'Used for planting, growth systems, or future yield-based gameplay.';
+    return 'Deposit to prepare seeds for planting. Water through the required growth ticks, then harvest the configured token reward.';
   }
 
   if (
@@ -185,7 +193,7 @@ function getUseHint(template) {
   }
 
   if (combined.includes('compost')) {
-    return 'Used as a farming input for planting, blending, or land progression.';
+    return 'Deposit to add compost to your farming balance. Planting consumes deposited compost.';
   }
 
   if (
@@ -238,8 +246,8 @@ function buildYieldInfo(template, referenceData) {
         title: 'Seed Pack Output',
         lines: [
           `Contains: ${seedCount} ${pack.seed_name || 'seed'}${seedCount === 1 ? '' : 's'}`,
-          `Per Seed: ${pack.seed_base_yield_display || '0'} ${tokenCode}`.trim(),
-          `Total Yield: ${formatTotalFromRaw(totalRaw, tokenDecimals)} ${tokenCode}`.trim(),
+          `Base harvest / seed: ${pack.seed_base_yield_display || '0'} ${tokenCode}`.trim(),
+          `Combined base harvest: ${formatTotalFromRaw(totalRaw, tokenDecimals)} ${tokenCode}`.trim(),
         ],
       };
     }
@@ -282,8 +290,8 @@ function buildYieldInfo(template, referenceData) {
     return {
       title: 'Pack Info',
       lines: [
-        'This pack may use crate loot, blend loot, or another opening system.',
-        'Add a crate or loot metadata layer later if you want detailed outputs here.',
+        'Check the matching shop item or blend recipe for its current contents.',
+        'Fixed and randomized slots can have different NFT count ranges.',
       ],
     };
   }
@@ -317,7 +325,7 @@ function NftCard({ template, referenceData }) {
   const imageUrl = getImageUrl(template);
 
   return (
-    <div className="nft-card">
+    <article className="nft-card" id={`item-${displayTemplateId}`}>
       {imageUrl && (
         <img
           src={imageUrl}
@@ -338,7 +346,7 @@ function NftCard({ template, referenceData }) {
 
         <h3>{displayName}</h3>
 
-        <p className="nft-card-description">{useHint}</p>
+        
 
         {yieldInfo && (
           <div className="nft-card-yield">
@@ -353,20 +361,20 @@ function NftCard({ template, referenceData }) {
                   margin: index === yieldInfo.lines.length - 1 ? 0 : '0 0 6px',
                 }}
               >
-                {line}
+                {String(line).split(/\b(WAXUSDC|WAX|CINDER|TRASH|TOMATOE|BANANAZ)\b/g).map((part, i) => TOKENS.some(t => t.symbol === part) ? <React.Fragment key={i}><TokenLogo symbol={part} size={16}/>{part}</React.Fragment> : part)}
               </p>
             ))}
           </div>
         )}
 
-        <div className="nft-card-meta">
+        <details className="nft-card-details"><summary>Details & uses <span>+</span></summary><p className="nft-card-description">{useHint}</p><div className="nft-card-meta">
           <p><strong>Type:</strong> {displayType}</p>
           <p><strong>Schema:</strong> {displaySchema}</p>
           <p><strong>Collection:</strong> {displayCollection}</p>
           <p><strong>Template ID:</strong> {displayTemplateId}</p>
-        </div>
+        </div><div className="nft-card-links"><Link to={displayCategory === 'Machines' ? '/machines' : displayCategory === 'Packs' ? '/market/blends' : '/farming'}>Use in game →</Link><Link to="/market/listings">Marketplace →</Link><a href={`#item-${displayTemplateId}`}>Item link ↗</a></div></details>
       </div>
-    </div>
+    </article>
   );
 }
 
@@ -449,6 +457,16 @@ export default function CollectionsPage() {
     };
   }, []);
 
+  useEffect(()=>{
+    const reveal=()=>{
+      const id=window.location.hash.slice(1);
+      if(!/^item-\d+$/.test(id)) return;
+      setSearch(''); setActiveCategory('All');
+      requestAnimationFrame(()=>{const card=document.getElementById(id); if(card){const details=card.querySelector('details'); if(details) details.open=true; card.scrollIntoView({block:'start'});}});
+    };
+    reveal();window.addEventListener('hashchange',reveal);return()=>window.removeEventListener('hashchange',reveal);
+  },[templates,loading]);
+
   const categories = useMemo(() => {
     const preferredOrder = [
       'All',
@@ -501,7 +519,7 @@ export default function CollectionsPage() {
     return (
       <div className="collections-page">
         <div className="collections-hero">
-          <h2>Game Encyclopedia</h2>
+          <span className="collections-kicker">CLEANUPCENTR FIELD GUIDE</span><h1>Game Encyclopedia</h1>
           <p>Loading game items...</p>
         </div>
       </div>
@@ -512,7 +530,7 @@ export default function CollectionsPage() {
     return (
       <div className="collections-page">
         <div className="collections-hero">
-          <h2>Game Encyclopedia</h2>
+          <span className="collections-kicker">CLEANUPCENTR FIELD GUIDE</span><h1>Game Encyclopedia</h1>
           <p>{error}</p>
         </div>
       </div>
@@ -522,18 +540,24 @@ export default function CollectionsPage() {
   return (
     <div className="collections-page">
       <div className="collections-hero">
-        <h2>Game Encyclopedia</h2>
+        <span className="collections-kicker">CLEANUPCENTR FIELD GUIDE</span><h1>Game Encyclopedia</h1>
         <p>
-          Explore CleanupCentr items, learn what each NFT is, and see how it fits
-          into the game ecosystem.
+          Find an item. Understand its role. Plan your next move.
         </p>
       </div>
 
+      <nav className="collections-actions" aria-label="Explore the game"><Link to="/guide">Player guide →</Link><Link to="/market/shop">Shop →</Link><Link to="/market/listings">Player marketplace →</Link><Link to="/exchange">Exchange →</Link></nav>
+      <details className="encyclopedia-tokens"><summary>Token reference · logos, uses & contracts</summary>
+        <div className="encyclopedia-token-grid">{TOKENS.map(token => {
+          const meta = tokenMetadata(token);
+          return <article key={token.key}><header><TokenLogo token={token} size={28}/><div><strong>{token.symbol}</strong><small>{meta.role}</small></div></header><p>{meta.description}</p><small>{token.contract} · {token.precision} decimals</small></article>;
+        })}</div>
+      </details>
       <div className="collections-toolbar">
         <input
           type="text"
           className="collections-search"
-          placeholder="Search by name, type, schema, or template ID..."
+          aria-label="Search encyclopedia" placeholder="Search items or template IDs…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -543,18 +567,19 @@ export default function CollectionsPage() {
             <button
               key={category}
               type="button"
+              aria-pressed={activeCategory === category}
               className={`collections-filter-btn ${
                 activeCategory === category ? 'active' : ''
               }`}
               onClick={() => setActiveCategory(category)}
             >
-              {category}
+              {category} <span>{category === 'All' ? templates.length : templates.filter(t=>getTemplateCategory(t)===category).length}</span>
             </button>
           ))}
         </div>
       </div>
 
-      <div className="collections-summary">
+      <p className="collections-summary">Seed rewards below require planting, watering and harvesting; opening a seed pack does not pay those tokens immediately.</p><div className="collections-summary">
         <p>
           Showing <strong>{filteredTemplates.length}</strong> of{' '}
           <strong>{templates.length}</strong> registered items

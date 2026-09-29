@@ -1,3 +1,4 @@
+import TokenLogo from './TokenLogo';
 // src/components/ApprovedCollectionsPopup.js
 // Upgraded: supports BOTH approved template-burn rules and approved schema-burn rules.
 
@@ -266,10 +267,10 @@ export default function ApprovedCollectionsPopup({
 
         <div className="valuation-summary">
           {valuationLoading ? (
-            <span>Loading Alcor CINDER/WAX price...</span>
+            <span>Loading Alcor <TokenLogo symbol="CINDER" size={16}/>CINDER/<TokenLogo symbol="WAX" size={16}/>WAX price...</span>
           ) : tokenValues?.cinder ? (
             <>
-              <strong>1 CINDER ~ {fmtWax(tokenValues.cinder.wax_per_token)} WAX</strong>
+              <strong>1 <TokenLogo symbol="CINDER" size={16}/>CINDER ~ {fmtWax(tokenValues.cinder.wax_per_token)} <TokenLogo symbol="WAX" size={16}/>WAX</strong>
               <span>
                 Alcor pool #{tokenValues.cinder.pool_id} - updated{" "}
                 {new Date(tokenValues.fetched_at).toLocaleTimeString()}
@@ -423,7 +424,7 @@ export default function ApprovedCollectionsPopup({
                       </div>
 
                       <div className="collection-line">
-                        <span className="label">CINDER Reward</span>
+                        <span className="label"><TokenLogo symbol="CINDER" size={16}/>CINDER Reward</span>
                         <span className="value mono">{fmtAssetAmount(row.cinder_reward, "—")}</span>
                       </div>
 
@@ -431,15 +432,15 @@ export default function ApprovedCollectionsPopup({
                         <>
                           <div className="collection-line valuation-line">
                             <span className="label">Reward Value</span>
-                            <span className="value mono">~ {fmtWax(tokenValue.rewardWax)} WAX</span>
+                            <span className="value mono">~ {fmtWax(tokenValue.rewardWax)} <TokenLogo symbol="WAX" size={16}/>WAX</span>
                           </div>
                           <div className="collection-line valuation-line">
-                            <span className="label">TRASH Cost</span>
-                            <span className="value mono">- {fmtWax(tokenValue.trashWax)} WAX</span>
+                            <span className="label"><TokenLogo symbol="TRASH" size={16}/>TRASH Cost</span>
+                            <span className="value mono">- {fmtWax(tokenValue.trashWax)} <TokenLogo symbol="WAX" size={16}/>WAX</span>
                           </div>
                           <div className="collection-line valuation-net">
                             <span className="label">Net Token Value</span>
-                            <span className="value mono">~ {fmtWax(tokenValue.netWax)} WAX</span>
+                            <span className="value mono">~ {fmtWax(tokenValue.netWax)} <TokenLogo symbol="WAX" size={16}/>WAX</span>
                           </div>
                         </>
                       )}
@@ -507,7 +508,7 @@ export default function ApprovedCollectionsPopup({
                                       ? "Estimated gain if bought"
                                       : "Estimated break-even"}
                                 </span>
-                                <strong>{fmtWax(Math.abs(marketPremium))} WAX</strong>
+                                <strong>{fmtWax(Math.abs(marketPremium))} <TokenLogo symbol="WAX" size={16}/>WAX</strong>
                               </div>
                             )}
                             <a href={marketUrl} target="_blank" rel="noreferrer" className="atomic-market-link">
@@ -552,7 +553,7 @@ export default function ApprovedCollectionsPopup({
                     </div>
 
                     <div className="collection-line">
-                      <span className="label">CINDER Reward</span>
+                      <span className="label"><TokenLogo symbol="CINDER" size={16}/>CINDER Reward</span>
                       <span className="value mono">{fmtAssetAmount(row.cinder_reward, "—")}</span>
                     </div>
 

@@ -1,7 +1,12 @@
+import {farmTimers,formatFarmTime,harvestLabel} from '../utils/farmTimers';
+import FarmPlotStakeControl from './FarmPlotStakeControl';
+import PlotUnstakeControl from './PlotUnstakeControl';
 // src/components/FarmPlotsGrid.js
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef, lazy, Suspense } from 'react';
 import axios from 'axios';
+import usePlantingCapacity from '../hooks/usePlantingCapacity';
 import './FarmPlotsGrid.css';
+import './FarmMap3D.css';
 
 import FarmSlotModal from './FarmSlotModal';
 import TomatoGrowthSVG from './TomatoGrowthSVG';
@@ -11,6 +16,14 @@ import { waterPlot, waterPlots, harvestPlot } from '../services/plotActions';
 import { plantSlot } from '../services/plantActions';
 import { getWaxRpc } from '../services/waxRpcRead';
 import { unstakePlot } from '../services/plotStakeActions';
+
+const FarmMap3D = lazy(() => import('./FarmMap3D'));
+class FarmSceneBoundary extends React.Component {
+  state = { failed: false };
+  static getDerivedStateFromError() { return { failed: true }; }
+  render() { return this.state.failed ? <p>3D could not load. Select 2D plots to continue.</p> : this.props.children; }
+}
+
 
 const IPFS_GATEWAY = (
   process.env.REACT_APP_IPFS_GATEWAY || 'https://maestrobeatz.servegame.com/ipfs'
@@ -36,25 +49,8 @@ function parseEosioTimeMs(v) {
   return Number.isFinite(ms) ? ms : null;
 }
 
-function fmtMMSS(ms) {
-  const totalSec = Math.max(0, Math.floor(ms / 1000));
-  const m = Math.floor(totalSec / 60);
-  const s = totalSec % 60;
-  return `${m}:${String(s).padStart(2, '0')}`;
-}
-
-/**
- * ✅ Water cooldown comes from CHAIN seedmeta:
- * backend returns: slot.seconds_per_tick
- * Water cooldown = 1 tick (seconds_per_tick)
- */
-function getWaterCooldownMs(slot) {
-  const spt = Number(slot?.seconds_per_tick || 0);
-  if (spt > 0) return spt * 1000;
-  return null;
-}
-
 export default function FarmPlotsGrid({
+  farm,
   farmId,
   onChanged,
   refreshNonce,
@@ -64,6 +60,7 @@ export default function FarmPlotsGrid({
   const { session } = useSession();
   const wallet = session?.actor;
 
+  const [view3D, setView3D] = useState(true);
   const [plots, setPlots] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -82,12 +79,13 @@ export default function FarmPlotsGrid({
   // Blockchain time (same pattern as Proposals.js)
   // ---------------------------
   const [blockchainTime, setBlockchainTime] = useState(Date.now());
+  const chainOffset=useRef(0);
 
   const fetchChainTime = useCallback(async () => {
     try {
       const data = await getWaxRpc('/v1/chain/get_info');
       const headBlockTime = parseEosioTimeMs(data.head_block_time);
-      if (headBlockTime != null) setBlockchainTime(headBlockTime);
+      if (headBlockTime != null) {chainOffset.current=headBlockTime-Date.now();setBlockchainTime(headBlockTime);}
     } catch {
       // keep last known
     }
@@ -101,7 +99,7 @@ export default function FarmPlotsGrid({
 
   useEffect(() => {
     const i = setInterval(() => {
-      setBlockchainTime((t) => t + 1000);
+      setBlockchainTime(Date.now()+chainOffset.current);
     }, 1000);
     return () => clearInterval(i);
   }, []);
@@ -193,13 +191,14 @@ export default function FarmPlotsGrid({
 
   useEffect(() => {
     if (wallet) fetchSeedStatus(wallet);
-  }, [wallet, fetchSeedStatus]);
+  }, [wallet, fetchSeedStatus, refreshNonce]);
 
-  // ✅ Pick a usable seed batch (first batch with qty > 0)
+  const planting = usePlantingCapacity({ wallet, farmId,
+    batch: seedStatus?.batches?.find(b => Number(b.qty) > 0), refreshNonce, pending: slotPending });
   const getPlantBatch = useCallback(() => {
-    const batches = seedStatus?.batches || [];
-    return batches.find((b) => Number(b.qty) > 0) || null;
-  }, [seedStatus]);
+    if (!planting.capacity) return null;
+    return (seedStatus?.batches || []).find(b => Number(b.qty) > 0) || null;
+  }, [seedStatus, planting.capacity]);
 
   // --------------------------------------------------
   // Actions
@@ -217,6 +216,7 @@ export default function FarmPlotsGrid({
         return;
       }
       await fetchPlots();
+      onChanged?.({ type: 'plot_watered', farmId, plotAssetId: plot.plot_asset_id });
     } catch (e) {
       setTxError(e?.message || 'Water failed');
     } finally {
@@ -231,6 +231,7 @@ export default function FarmPlotsGrid({
     try {
       await harvestPlot(wallet, plot.plot_asset_id, slot.index);
       await fetchPlots();
+      onChanged?.({ type: 'plot_harvested', farmId, plotAssetId: plot.plot_asset_id });
     } catch (e) {
       setTxError(e?.message || 'Harvest failed');
     } finally {
@@ -243,7 +244,7 @@ export default function FarmPlotsGrid({
 
     const batch = getPlantBatch();
     if (!batch) {
-      setTxError('No seeds available to plant.');
+      setTxError('Planting requires a seed, compost, and enough player and farm energy.');
       return;
     }
 
@@ -251,6 +252,7 @@ export default function FarmPlotsGrid({
     setSlotPending(key);
 
     try {
+      if (await planting.refresh() < 1) throw new Error('Not enough seeds, compost, or energy to plant.');
       await plantSlot({
         actor: wallet,
         plotAssetId: Number(plotAssetId),
@@ -261,6 +263,7 @@ export default function FarmPlotsGrid({
 
       await fetchPlots();
       await fetchSeedStatus(wallet);
+      onChanged?.({ type: 'plot_planted', farmId, plotAssetId });
     } catch (e) {
       setTxError(e?.message || 'Plant failed');
     } finally {
@@ -286,28 +289,11 @@ export default function FarmPlotsGrid({
   // --------------------------------------------------
   // Water timer label
   // --------------------------------------------------
-  const getWaterLabel = useCallback(
-    (slot) => {
-      if (!slot) return null;
-      if (slot.state !== 'GROWING') return null;
-
-      if (Number(slot.tick || 0) === 0) return 'READY';
-
-      const lastActionMs = parseEosioTimeMs(slot.last_action);
-      const cooldownMs = getWaterCooldownMs(slot);
-
-      if (lastActionMs != null && cooldownMs != null) {
-        const deadline = lastActionMs + cooldownMs;
-        const remaining = deadline - blockchainTime;
-
-        if (remaining <= 0) return 'READY';
-        return fmtMMSS(remaining);
-      }
-
-      return null;
-    },
-    [blockchainTime]
-  );
+  const getWaterLabel = useCallback(slot=>{
+    const {waterMs}=farmTimers(slot,blockchainTime);
+    return waterMs===null ? null : waterMs===0 ? 'READY' : formatFarmTime(waterMs);
+  },[blockchainTime]);
+  const getHarvestLabel = useCallback(slot=>harvestLabel(slot,blockchainTime),[blockchainTime]);
 
   // ✅ Filter plots (renders only user's plots when toggle enabled)
   const visiblePlots = ownerFilter
@@ -396,7 +382,19 @@ export default function FarmPlotsGrid({
         </button>
       </div>
 
-      <div className="farm-plots-grid">
+      <p className="farm-timer-note">Harvest estimates assume you water as soon as each tick is ready. Waiting to water extends the estimate.</p><div className="farm-view-toggle" aria-label="Farm view"><button aria-pressed={!view3D} onClick={()=>setView3D(false)}>2D plots</button><button aria-pressed={view3D} onClick={()=>setView3D(true)}>3D farm</button></div>
+      {view3D ? <FarmSceneBoundary><Suspense fallback={<p>Preparing your farm…</p>}><FarmMap3D farm={farm} plots={visiblePlots} onInspect={openSlotDetails} actions={{renderFarm:()=><FarmPlotStakeControl key={`${wallet}:${farmId}`} wallet={wallet} farmId={farmId} blocked={Boolean(slotPending) || waterAllPending} onChanged={async event=>{ await fetchPlots(); await onChanged?.(event); }} />,renderPlot:(plot)=><PlotUnstakeControl plot={plot} wallet={wallet} pending={Boolean(slotPending) || waterAllPending} unstaking={slotPending===`unstake-plot-${plot.plot_asset_id}`} onUnstake={handleUnstakePlot} />,emptyLabel:(plot)=>String(plot.owner)===String(wallet) ? planting.message : 'Empty plot',waterLabel:getWaterLabel,harvestLabel:getHarvestLabel,render:(plot,slot)=>{
+        const owned = Boolean(wallet) && String(plot.owner)===String(wallet);
+        const pending = Boolean(slotPending) || waterAllPending;
+        const state = String(slot.state || '').toUpperCase();
+        return <>
+          {state==='EMPTY' && owned && <small role="status">{planting.message}</small>}
+          {state==='EMPTY' && <button disabled={!owned || pending || !getPlantBatch()} onClick={()=>handlePlant({plotAssetId:plot.plot_asset_id,slotIndex:slot.index})}>Plant seed</button>}
+          {state==='GROWING' && <button disabled={!owned || pending || getWaterLabel(slot)!=='READY'} onClick={()=>handleWater(plot,slot)}>Water · {getWaterLabel(slot) || 'Checking…'}</button>}
+          {state==='READY' && <button disabled={!owned || pending} onClick={()=>handleHarvest(plot,slot)}>Harvest</button>}
+          {!owned && <small>Only the owner can manage this plot.</small>}
+        </>;
+      }}} /></Suspense></FarmSceneBoundary> : <div className="farm-plots-grid">
         {visiblePlots.map((plot) => {
           const isOwner = !!wallet && !!plot.owner && String(plot.owner) === String(wallet);
 
@@ -468,6 +466,7 @@ export default function FarmPlotsGrid({
                           className="plot-slot-svg"
                         />
                       )}
+                      {(slot.state==='GROWING'||slot.state==='READY') && <div className="plot-timer-summary"><strong>{slot.state==='READY'?'Harvest ready':getWaterLabel(slot)==='READY'?'Water ready':getWaterLabel(slot)?`Water in ${getWaterLabel(slot)}`:'Checking water timer…'}</strong>{slot.state==='GROWING' && <small>{getHarvestLabel(slot)}<br/>{farmTimers(slot,blockchainTime).remainingTicks ?? '—'} waterings left</small>}</div>}
                     </div>
                   );
                 })}
@@ -515,6 +514,7 @@ export default function FarmPlotsGrid({
                     <div className="plot-footer">
                       <div className="plot-seed">
                         {slot.seed_name ? slot.seed_name : isEmpty ? 'Empty slot' : '—'}
+                        {isEmpty && isOwner && <small role="status" style={{display:'block'}}>{planting.message}</small>}
                       </div>
 
                       {isEmpty && (
@@ -533,7 +533,7 @@ export default function FarmPlotsGrid({
                             !isOwner
                               ? 'Only the plot owner can plant'
                               : !batch
-                                ? 'No seeds available'
+                                ? planting.message
                                 : 'Click to plant a seed'
                           }
                         >
@@ -595,11 +595,13 @@ export default function FarmPlotsGrid({
             </div>
           );
         })}
-      </div>
+      </div>}
 
       {/* Modal */}
       {selectedSlot && (
         <FarmSlotModal
+          waterLabel={selectedSlot?.slot ? getWaterLabel(selectedSlot.slot) : null}
+          harvestLabel={selectedSlot?.slot ? getHarvestLabel(selectedSlot.slot) : null}
           farmId={selectedSlot.farmId}
           plot={selectedSlot.plot}
           slot={selectedSlot.slot}

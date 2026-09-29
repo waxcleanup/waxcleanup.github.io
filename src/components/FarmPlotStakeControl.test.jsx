@@ -1,0 +1,11 @@
+import React from 'react';
+import {render,screen,fireEvent,waitFor} from '@testing-library/react';
+import '@testing-library/jest-dom';
+import FarmPlotStakeControl from './FarmPlotStakeControl';
+import {stakePlot} from '../services/plotStakeActions';
+jest.mock('../services/plotStakeActions',()=>({stakePlot:jest.fn()}));
+jest.mock('./QuickBagPicker',()=>props=>props.open?<div><button disabled={!!props.pendingAssetId} onClick={()=>props.onConfirm({asset_id:'123'})}>Select owned plot</button>{props.actionError&&<p role="alert">{props.actionError}</p>}</div>:null);
+beforeEach(()=>jest.clearAllMocks());
+test('opens picker and stakes selected NFT into the displayed farm, then refreshes',async()=>{stakePlot.mockResolvedValue('tx');const changed=jest.fn();render(<FarmPlotStakeControl wallet="tester" farmId="456" onChanged={changed}/>);fireEvent.click(screen.getByRole('button',{name:'Stake plot'}));expect(stakePlot).not.toHaveBeenCalled();fireEvent.click(screen.getByText('Select owned plot'));await waitFor(()=>expect(changed).toHaveBeenCalledWith({type:'plot_staked',farmId:'456',plotAssetId:'123'}));expect(stakePlot).toHaveBeenCalledWith('tester','456','123');expect(screen.queryByText('Select owned plot')).not.toBeInTheDocument();});
+test('rejected wallet action stays in picker with an error',async()=>{stakePlot.mockRejectedValue(new Error('Cancelled'));const changed=jest.fn();render(<FarmPlotStakeControl wallet="tester" farmId="456" onChanged={changed}/>);fireEvent.click(screen.getByText('Stake plot'));fireEvent.click(screen.getByText('Select owned plot'));expect(await screen.findByRole('alert')).toHaveTextContent('Cancelled');expect(changed).not.toHaveBeenCalled();});
+test('staking is disabled without a wallet or during another action',()=>{const v=render(<FarmPlotStakeControl farmId="456"/>);expect(screen.getByText('Stake plot')).toBeDisabled();v.rerender(<FarmPlotStakeControl wallet="tester" farmId="456" blocked/>);expect(screen.getByText('Stake plot')).toBeDisabled();});

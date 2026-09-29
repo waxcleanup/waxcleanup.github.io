@@ -1,0 +1,36 @@
+import React from 'react';
+import {render,screen,fireEvent,waitFor} from '@testing-library/react';
+import AlcorFarms from './AlcorFarms';
+import {fetchFarmPortfolio,reviewFarmUnstake,executeFarmUnstake,reviewAllFarmClaims} from '../services/alcorMainnet';
+jest.mock('../services/alcorMainnet',()=>({fetchFarmPortfolio:jest.fn(),reviewFarmUnstake:jest.fn(),executeFarmUnstake:jest.fn(),reviewAllFarmClaims:jest.fn()}));
+jest.mock('./TokenLogo',()=>()=>null);
+jest.mock('../services/tokenMetadata',()=>({tokenMetadata:()=>null}));
+const token={symbol:'CINDER',contract:'cleanuptoken',precision:6};
+const ended={poolId:'1',posId:'2',incentiveId:'3',ended:true,raw:'100',amount:'0.000100',token,group:{tokenA:token,tokenB:token}};
+const active={...ended,incentiveId:'4',ended:false};
+beforeEach(()=>{jest.clearAllMocks();localStorage.clear();HTMLDialogElement.prototype.showModal=jest.fn();fetchFarmPortfolio.mockResolvedValue({rows:[ended,active],updatedAt:Date.now()});});
+test('hides ended rows and remembers the preference while claim all includes them',async()=>{
+ reviewAllFarmClaims.mockResolvedValue({claims:[ended,active],expiresAt:Date.now()+30000});
+ const view=render(<AlcorFarms actor="alice"/>);
+ await screen.findByText('Farm ended');
+ fireEvent.click(screen.getByRole('button',{name:'Hide ended farms (1)'}));
+ expect(screen.queryByText('Farm ended')).toBeNull();
+ expect(screen.getByText('Farm active')).toBeTruthy();
+ expect(localStorage.getItem('cleanupcentr.farms.hideEnded')).toBe('true');
+ fireEvent.click(screen.getByRole('button',{name:'Claim all'}));
+ await waitFor(()=>expect(reviewAllFarmClaims).toHaveBeenCalledWith('alice',[ended,active]));
+ view.unmount();
+ render(<AlcorFarms actor="alice"/>);
+ await screen.findByRole('button',{name:'Show ended farms (1)'});
+ expect(screen.queryByText('Farm ended')).toBeNull();
+});
+test('farm unstake is reviewed before execution',async()=>{
+ reviewFarmUnstake.mockResolvedValue({...ended,actor:'alice',unstake:true,expiresAt:Date.now()+30000});
+ render(<AlcorFarms actor="alice"/>);
+ await screen.findByText('Farm ended');
+ fireEvent.click(screen.getAllByRole('button',{name:'Unstake from farm'})[0]);
+ await screen.findByText('Review farm unstake');
+ expect(reviewFarmUnstake).toHaveBeenCalledWith('alice',ended);
+ expect(executeFarmUnstake).not.toHaveBeenCalled();
+ expect(screen.getByText(/other farm memberships remain unchanged/)).toBeTruthy();
+});

@@ -350,3 +350,66 @@ button:focus-visible {
   }
 }
 
+
+/* Compact project banner above the burn activity. */
+.homepage-dashboard { width: 100%; max-width: 980px; margin: 0 auto 24px; }
+.homepage-burn-activity { width: 100%; max-width: 620px; min-width: 0; margin: 0 auto; }
+.homepage-burn-activity > .burn-total,
+.homepage-burn-activity > .burn-leaderboard { width: 100%; max-width: none; }
+.homepage-burn-activity > .burn-leaderboard { margin-bottom: 0; }
+.homepage-banner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px 32px;
+  width: 100%;
+  margin: 0 0 24px;
+  padding: 20px 24px;
+  border: 1px solid rgba(0, 255, 153, .22);
+  border-radius: 14px;
+  background: linear-gradient(110deg, #13281e, #0e1713);
+  color: #d7ffe9;
+  text-align: left;
+}
+.homepage-banner-copy { min-width: 0; max-width: 460px; }
+.homepage-banner h2 { margin: 0 0 6px; font-size: 19px; line-height: 1.3; color: #c9ffe9; text-align: left; }
+.homepage-banner-copy p { margin: 0; font-size: 14px; line-height: 1.6; color: #aac8b8; }
+.homepage-banner-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.homepage-banner .homepage-shop-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  min-height: 44px;
+  padding: 10px 18px;
+  margin: 0;
+  border: 1px solid #00dd88;
+  border-radius: 9px;
+  background: #00e68a;
+  color: #042216;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.homepage-banner .homepage-shop-link:hover { background: #53f5b4; }
+.homepage-community-links { display: flex; flex-wrap: wrap; align-items: center; gap: 0 16px; }
+.homepage-community-links a { display: inline-flex; align-items: center; gap: 5px; min-height: 36px; padding: 5px 0; color: #bdebd3; font-size: 12px; text-decoration: none; }
+.homepage-community-links a:hover { color: #00ff99; text-decoration: underline; }
+.homepage-banner :focus-visible { outline: 2px solid #00ff99; outline-offset: 3px; }
+.homepage-testnet-help { grid-column: 1 / -1; border-top: 1px solid rgba(0, 255, 153, .18); padding-top: 12px; }
+.homepage-testnet-help summary { cursor: pointer; font-size: 13px; font-weight: 700; color: #d7ffe9; }
+.homepage-banner .testnet-onboarding { margin: 16px 0 0; padding: 0; border: 0; background: transparent; box-shadow: none; }
+.homepage-banner .testnet-onboarding h3 { font-size: 16px; }
+.homepage-banner .testnet-onboarding p,
+.homepage-banner .testnet-onboarding-warning { font-size: 12px; line-height: 1.6; }
+.homepage-banner .testnet-onboarding-actions button { min-width: 0; white-space: normal; font-size: 12px; }
+@media (max-width: 800px) {
+  .homepage-banner { grid-template-columns: minmax(0, 1fr); padding: 18px; gap: 14px; }
+  .homepage-banner-copy { max-width: none; }
+  .homepage-banner-actions { align-items: flex-start; }
+  .homepage-community-links { gap: 0 14px; }
+}
+
+/* Compact home headers, aligned with the Market's slim page header. */
+.homepage-container{padding:20px 24px 32px}.homepage-header{display:flex;align-items:center;gap:12px;text-align:left;margin:0 0 14px;padding:12px 16px;border:1px solid #354a3c;border-radius:12px;background:linear-gradient(115deg,#1b2b22,#17201b)}.homepage-header .homepage-logo{width:48px;height:48px;flex:0 0 48px;padding:2px;border-radius:10px;box-shadow:0 0 12px #00ff9918}.homepage-header .homepage-title{font-size:26px;line-height:1.2;text-align:left;margin:0;letter-spacing:0;text-shadow:none;overflow-wrap:anywhere}.homepage-banner{padding:14px 18px;margin-bottom:16px;gap:10px 24px}.homepage-banner h2{font-size:16px;margin:0 0 5px}.homepage-banner-copy p{font-size:13px;line-height:1.45}.homepage-banner-actions{gap:4px}.homepage-burn-activity .burn-leaderboard-header{padding:13px 16px}.homepage-burn-activity .burn-leaderboard-header h2{font-size:17px;line-height:1.3}.homepage-burn-activity .burn-leaderboard-header p{margin-top:4px;font-size:12px}.homepage-burn-activity .burn-total{padding:16px 20px}.homepage-burn-activity .burn-total-value{font-size:clamp(26px,4vw,36px)}
+@media(max-width:600px){.homepage-container{padding:14px 12px 28px}.homepage-header{padding:10px 12px;gap:10px}.homepage-header .homepage-logo{width:40px;height:40px;flex-basis:40px}.homepage-header .homepage-title{font-size:22px}.homepage-banner{padding:12px 14px;gap:10px}.homepage-banner h2{font-size:15px}.homepage-burn-activity .burn-leaderboard-header{padding:12px}.homepage-burn-activity .burn-leaderboard-header h2{font-size:16px}}

@@ -1,3 +1,5 @@
+import IncineratorUnstakeDialog from './IncineratorUnstakeDialog';
+import { canUnstakeIncinerator } from '../services/incineratorFlow.mjs';
 // src/components/IncineratorModal.js
 import React, { useEffect, useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
@@ -36,6 +38,7 @@ const IncineratorModal = ({
   const [isLoading, setIsLoading] = useState(false);
   const [isPolling, setIsPolling] = useState(false);
   const [message, setMessage] = useState('');
+  const [unstakeTarget, setUnstakeTarget] = useState(null);
 
   const [showRepairModal, setShowRepairModal] = useState(false);
   const [repairTarget, setRepairTarget] = useState(null);
@@ -66,11 +69,11 @@ const IncineratorModal = ({
 
   useEffect(() => {
     const onKey = (e) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape' && !unstakeTarget) onClose();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  }, [onClose, unstakeTarget]);
 
   useEffect(() => {
     setLoadingIncinerators(true);
@@ -167,7 +170,23 @@ const IncineratorModal = ({
 
   const handleUnstakeClick = async (e, inc) => {
     e.stopPropagation();
-    if (!window.confirm('Unstake? Fuel and energy reset to 0. Cannot undo.')) return;
+    const id = String(inc.asset_id || inc.id || '');
+    if (!canUnstakeIncinerator(inc, assignedIds.has(id))) {
+      setMessage('Unequip and fully repair this incinerator before unstaking it to your wallet.');
+      return;
+    }
+    setUnstakeTarget(inc);
+  };
+
+  const confirmUnstake = async () => {
+    const inc = unstakeTarget;
+    if (!inc || isLoading) return;
+    const id = String(inc.asset_id || inc.id || '');
+    setUnstakeTarget(null);
+    if (!canUnstakeIncinerator(inc, assignedIds.has(id))) {
+      setMessage('Unequip and fully repair this incinerator before unstaking it to your wallet.');
+      return;
+    }
 
     setIsLoading(true);
     setMessage('Unstaking in progress...');
@@ -235,9 +254,10 @@ const IncineratorModal = ({
             <>
               <div className="staked-section">
                 <h4 className="incinerator-section-title" style={{ color: '#00ff80' }}>
-                  Staked Incinerators
+                  Unequipped Incinerators
                 </h4>
 
+                <p>Tap an incinerator to equip it. Unstake to Wallet returns the NFT and clears its stored fuel and energy.</p>
                 <div className="incinerator-grid">
                   {stakedDeduped
                     .filter((inc) => {
@@ -285,13 +305,17 @@ const IncineratorModal = ({
                             </div>
                           )}
 
-                          {inc.durability === 500 && (
+                          {[false, 0, '0'].includes(inc.locked) && (
+                            <p role="status">Equip this incinerator into a slot, then choose Unequip before unstaking.</p>
+                          )}
+
+                          {canUnstakeIncinerator(inc, assignedIds.has(String(id))) && (
                             <button
                               className="unstake-button"
                               disabled={isLoading}
                               onClick={(e) => handleUnstakeClick(e, inc)}
                             >
-                              Unstake
+                              Unstake to Wallet
                             </button>
                           )}
                         </div>
@@ -302,7 +326,7 @@ const IncineratorModal = ({
 
               <div className="unstaked-section" style={{ marginTop: 16 }}>
                 <h4 className="incinerator-section-title" style={{ color: '#00bfff' }}>
-                  Unstaked Incinerators
+                  In Your Wallet
                 </h4>
 
                 <div className="incinerator-grid">
@@ -325,6 +349,14 @@ const IncineratorModal = ({
                 </div>
               </div>
             </>
+          )}
+
+          {unstakeTarget && (
+            <IncineratorUnstakeDialog
+              incinerator={unstakeTarget}
+              onCancel={() => setUnstakeTarget(null)}
+              onConfirm={confirmUnstake}
+            />
           )}
 
           {showRepairModal && (
