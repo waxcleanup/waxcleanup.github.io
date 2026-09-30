@@ -13,6 +13,7 @@ import ExchangeUsd from './ExchangeUsd';
 import ExchangeActivity, {SwapRows} from './ExchangeActivity';
 import ExchangePoolComparison from './ExchangePoolComparison';
 import TokenLogo from './TokenLogo';
+import SwapRoute from './SwapRoute';
 import ExchangeTokenInfo from './ExchangeTokenInfo';
 
 const compact = value => Number(value).toLocaleString(undefined, { maximumSignificantDigits: 7 });
@@ -29,7 +30,7 @@ function ReviewDialog({ quote, now, busy, onClose, onConfirm }) {
     <div className="exchange-eyebrow">WAX MAINNET · REAL ASSETS</div><h2 id="exchange-review-title">{title}</h2>
     <dl className="exchange-details">
       <div><dt>Wallet / recipient</dt><dd>{quote.actor}</dd></div>
-      <div><dt>{quote.route ? "Route pools" : "Pool"}</dt><dd>#{quote.route ? quote.route.join(" → #") : quote.poolId} · swap.alcor</dd></div>{quote.route && <div><dt>Token path</dt><dd>{[quote.inputToken,...quote.hops.map(h=>h.outputToken)].map(t=>t.symbol).join(" → ")}</dd></div>}
+      {quote.kind!=='swap' && <div><dt>Pool</dt><dd>#{quote.poolId} · swap.alcor</dd></div>}
       {quote.kind === 'swap' ? <>
         <div><dt>You pay</dt><dd>{asset(quote.inputRaw, quote.inputToken)}</dd></div>
         <div><dt>Estimated receive</dt><dd>{asset(quote.outputRaw, quote.outputToken)}</dd></div>
@@ -44,6 +45,7 @@ function ReviewDialog({ quote, now, busy, onClose, onConfirm }) {
       <div><dt>Slippage tolerance</dt><dd>{quote.slippageBps / 100}%</dd></div>
       <div><dt>Review expires</dt><dd>{remaining ? `In ${remaining}s` : 'Expired — close and refresh'}</dd></div>
     </dl>
+    {quote.kind==='swap' && <SwapRoute quote={quote} expired={!remaining}/>}
     <p className="exchange-muted">{quote.kind === 'add' ? 'Providing liquidity exposes you to changing token prices and impermanent loss. Deposits and position creation are submitted together.' : 'Your wallet receives the exact amounts and on-chain minimums shown here.'}</p>
     {quote.kind === 'swap' && quote.impactBps >= 300 && <p className="exchange-warning">High price impact. Consider a smaller amount or a different pool.</p>}
     <div className="exchange-review-actions"><button disabled={busy} onClick={onClose}>Back</button><button className="exchange-primary" disabled={busy || !remaining} onClick={onConfirm}>{busy ? 'Waiting for wallet…' : 'Confirm in wallet'}</button></div>
@@ -167,7 +169,7 @@ export default function ExchangePage() {
           <div className="exchange-balance-buttons">{[25, 50, 100].map(p => <button key={p} disabled={!actor || balances[from] == null} onClick={() => fillBalance(p)}>{p === 100 ? 'Max' : `${p}%`}</button>)}</div>
           <div className="exchange-output"><span>{mode === 'swap' ? 'Estimated receive' : 'Paired deposit'} <b><TokenLogo token={output}/>{output.symbol}</b></span><strong>{quoting ? 'Calculating…' : quotedOutput || '—'}</strong><ExchangeUsd token={output} amount={quotedOutput} now={now}/></div>
           {quoteError && <p className="exchange-error" role="alert">{quoteError}</p>}
-          {liveQuote && <><dl className="exchange-details">{liveQuote.route ? <><div><dt>Best quoted route</dt><dd>{[liveQuote.inputToken,...liveQuote.hops.map(h=>h.outputToken)].map(t=>t.symbol).join(' → ')}</dd></div><div><dt>Pool fees</dt><dd>{liveQuote.hops.map(h=>h.fee/10000+'%').join(' + ')} · included</dd></div><div><dt>Paths quoted</dt><dd>{liveQuote.coverage.quoted} / {liveQuote.coverage.total}{liveQuote.coverage.quoted<liveQuote.coverage.total ? ' · some unavailable' : ''}</dd></div></> : <div><dt>Pool fee</dt><dd>{liveQuote.fee / 10000}%</dd></div>}{mode === 'swap' ? <><div><dt>Minimum received</dt><dd>{asset(liveQuote.minimum, output)}</dd></div><div><dt>Price impact incl. fee</dt><dd className={liveQuote.impactBps >= 300 ? 'exchange-warning-text' : ''}>{(liveQuote.impactBps / 100).toFixed(2)}%</dd></div></> : <div><dt>Position range</dt><dd>Full range</dd></div>}<div><dt>Quote validity</dt><dd>{expired ? 'Expired' : `${Math.max(0, Math.ceil((liveQuote.expiresAt - now) / 1000))}s remaining`}</dd></div></dl><button className="exchange-refresh-quote" disabled={quoting} onClick={() => setQuoteRefresh(v => v + 1)}>Refresh quote</button></>}
+          {liveQuote && <>{mode==='swap' && <SwapRoute quote={liveQuote} expired={expired}/>}<dl className="exchange-details">{mode!=='swap' && <div><dt>Pool fee</dt><dd>{liveQuote.fee / 10000}%</dd></div>}{mode === 'swap' ? <><div><dt>Minimum received</dt><dd>{asset(liveQuote.minimum, output)}</dd></div><div><dt>Price impact incl. fee</dt><dd className={liveQuote.impactBps >= 300 ? 'exchange-warning-text' : ''}>{(liveQuote.impactBps / 100).toFixed(2)}%</dd></div></> : <div><dt>Position range</dt><dd>Full range</dd></div>}<div><dt>Quote validity</dt><dd>{expired ? 'Expired' : `${Math.max(0, Math.ceil((liveQuote.expiresAt - now) / 1000))}s remaining`}</dd></div></dl><button className="exchange-refresh-quote" disabled={quoting} onClick={() => setQuoteRefresh(v => v + 1)}>Refresh quote</button></>}
           {mode === 'add' && <p className="exchange-muted">Deposit both tokens into a full-range position. Fees accrue while liquidity is active. Token prices and your withdrawal amounts can change.</p>}
           <button className="exchange-primary exchange-submit" disabled={!!actor && (quoting || expired || (!routed && (!selected || !!rowError)) || !!balanceProblem)} onClick={() => actor ? openReview() : handleLogin()}>{!actor ? 'Connect wallet' : quoting ? 'Getting live quote…' : balanceProblem || (expired && liveQuote ? 'Refresh expired quote' : mode === 'swap' ? 'Review swap' : 'Review deposit')}</button>
           {actor && expired && liveQuote && <button className="exchange-refresh-quote" onClick={() => setQuoteRefresh(v => v + 1)}>Get a fresh quote</button>}
