@@ -1,20 +1,22 @@
 /* global BigInt */
 import {TOKENS, identity, requireToken, rawAmount, formatRaw, asset, minimumRaw, assertReview, SWAP_CONTRACT} from './exchangeMath';
 
-// Simple, cycle-free paths through the supported game tokens, at most two pools.
+export const MAX_ROUTE_POOLS = 3;
+
+// Simple, cycle-free paths through supported tokens, bounded to three pools.
 export function candidateRoutes(pools, input, output, allowedTokens=TOKENS) {
   requireToken(input,allowedTokens); requireToken(output,allowedTokens);
   if(identity(input)===identity(output)) throw new Error('Choose two different tokens.');
   const paths=[];
   function visit(token, path, seen) {
-    for(const pool of pools.filter(p=>p.funded && !path.includes(p.id))) {
+    for(const pool of pools.filter(p=>p.funded && !path.includes(String(p.id)))) {
       const pair=[pool.tokenA,pool.tokenB];
       if(!pair.some(t=>identity(t)===identity(token))) continue;
       const next=pair.find(t=>identity(t)!==identity(token));
       if(!next || !allowedTokens.some(t=>identity(t)===identity(next)) || seen.has(identity(next))) continue;
       const ids=[...path,String(pool.id)];
       if(identity(next)===identity(output)) paths.push(ids);
-      else if(ids.length<2) visit(next,ids,new Set([...seen,identity(next)]));
+      else if(ids.length<MAX_ROUTE_POOLS) visit(next,ids,new Set([...seen,identity(next)]));
     }
   }
   visit(input,[],new Set([identity(input)]));
@@ -32,7 +34,7 @@ export function assembleRoute(hops, params, coverage) {
 }
 
 export function assertRouteReview(q, context, now=Date.now(), allowedTokens=TOKENS) {
-  if(!q || q.kind!=='swap' || q.poolId!=='auto' || !Array.isArray(q.hops) || q.hops.length<1 || q.hops.length>2 || !Array.isArray(q.route) || q.route.length!==q.hops.length || new Set(q.route).size!==q.route.length) throw new Error('Invalid swap route.');
+  if(!q || q.kind!=='swap' || q.poolId!=='auto' || !Array.isArray(q.hops) || q.hops.length<1 || q.hops.length>MAX_ROUTE_POOLS || !Array.isArray(q.route) || q.route.length!==q.hops.length || new Set(q.route).size!==q.route.length) throw new Error('Invalid swap route.');
   if(context.kind!=='swap' || context.poolId!=='auto') throw new Error('Routing mode changed. Review again.');
   if(identity(requireToken(q.outputToken,allowedTokens))!==identity(requireToken(context.outputToken,allowedTokens))) throw new Error('Output token changed. Review again.');
   if(q.actor!==context.actor || q.slippageBps!==context.slippageBps || identity(q.inputToken)!==identity(context.inputToken) || q.inputRaw!==rawAmount(context.amount,context.inputToken,false,allowedTokens).toString()) throw new Error('Swap settings changed. Review again.');

@@ -199,11 +199,11 @@ export async function executePortfolioLiquidity(quote, context) {
   return InitTransaction({ actions, expectedActor: context.actor, validUntil: quote.expiresAt });
 }
 
-// Quote all supported direct/two-pool paths with the same local SDK used for direct swaps.
+// Quote all supported paths through up to three pools with the same local SDK used for direct swaps.
 // Pool snapshots are shared across candidates; no API-supplied transaction memo is executed.
 export async function fetchRouteQuote(params) {
   const paths = candidateRoutes(await fetchPools(), params.inputToken, params.outputToken);
-  if (!paths.length) throw new Error('No direct or two-pool route found for these tokens.');
+  if (!paths.length) throw new Error('No route through up to three pools found for these tokens.');
   const snapshots = new Map();
   const getSnapshot = id => {
     if (!snapshots.has(id)) snapshots.set(id, snapshot(id));
@@ -400,7 +400,7 @@ export async function quoteDustConversion(actor,token) {
  const index=await readPoolIndex();
  const pools=index.flatMap(p=>{try{const a=requireToken({...p.tokenA,precision:p.tokenA.decimals},allowedTokens),b=requireToken({...p.tokenB,precision:p.tokenB.decimals},allowedTokens);return p.active&&BigInt(p.liquidity)>0n?[{id:String(p.id),funded:true,tokenA:a,tokenB:b}]:[];}catch{return [];}});
  const paths=candidateRoutes(pools,input,output,allowedTokens);
- if(!paths.length)throw new Error('No direct or two-pool route to TRASH is available.');
+ if(!paths.length)throw new Error('No route through up to three pools to TRASH is available.');
  const budget=await dustTransferBudget(input,input.raw,actor);
  const params={actor,kind:'swap',poolId:'auto',inputToken:input,outputToken:output,amount:formatRaw(budget.spendRaw,input),slippageBps:50,transferFeeReserve:budget.reserveRaw,feeConfig:budget.feeConfig};
  const snapshots=new Map();const get=id=>{if(!snapshots.has(id))snapshots.set(id,snapshot(id,allowedTokens));return snapshots.get(id);};

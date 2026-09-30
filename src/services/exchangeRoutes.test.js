@@ -34,3 +34,28 @@ test('external input is supported only by an explicit exact-token allowlist',()=
  expect(routeAction(q,params,now,allowed).account).toBe('stonerstoken');
  expect(()=>routeAction(q,{...params,inputToken:{...external,contract:'fake.token'}},now,allowed)).toThrow();
 });
+
+test('enumerates three pools but excludes longer paths and repeated tokens',()=>{
+ const [wax,cinder,trash,tomatoe,bananaz,usd]=TOKENS;
+ const pool=(id,a,b,funded=true)=>({id,tokenA:a,tokenB:b,funded});
+ const pools=[pool(1,cinder,trash),pool(2,trash,wax),pool(3,wax,usd),pool(4,trash,tomatoe),pool(5,tomatoe,wax),pool(6,cinder,usd),pool(7,trash,usd,false),pool(8,trash,bananaz),pool(9,bananaz,cinder)];
+ expect(candidateRoutes(pools,cinder,usd)).toEqual([['1','2','3'],['6']]);
+});
+const makeThree=()=>assembleRoute([
+ hop('1',cinder,TOKENS[2],'1000000','20000'),
+ hop('2',TOKENS[2],wax,'20000','100000000'),
+ hop('3',wax,usd,'100000000','6000'),
+],ctx,{quoted:1,total:1});
+
+test('three-pool route uses one transfer and the final minimum',()=>{
+ expect(routeAction(makeThree(),ctx,now).data.memo).toBe('swapexactin#1,2,3#testaccount1#0.005970 WAXUSDC@eth.token#1800000030');
+});
+
+test.each([
+ ['four pools',q=>({...q,hops:[...q.hops,q.hops[2]],route:['1','2','3','4']})],
+ ['third hop amount changed',q=>({...q,hops:q.hops.map((h,i)=>i===2?{...h,inputRaw:'1'}:h)})],
+ ['third hop expired',q=>({...q,hops:q.hops.map((h,i)=>i===2?{...h,expiresAt:now}:h)})],
+ ['third pool changed',q=>({...q,route:['1','2','4']})],
+])('three-pool review rejects %s',(_,change)=>{
+ expect(()=>routeAction(change(makeThree()),ctx,now)).toThrow();
+});
