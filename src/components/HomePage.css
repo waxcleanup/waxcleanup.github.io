@@ -413,3 +413,38 @@ button:focus-visible {
 /* Compact home headers, aligned with the Market's slim page header. */
 .homepage-container{padding:20px 24px 32px}.homepage-header{display:flex;align-items:center;gap:12px;text-align:left;margin:0 0 14px;padding:12px 16px;border:1px solid #354a3c;border-radius:12px;background:linear-gradient(115deg,#1b2b22,#17201b)}.homepage-header .homepage-logo{width:48px;height:48px;flex:0 0 48px;padding:2px;border-radius:10px;box-shadow:0 0 12px #00ff9918}.homepage-header .homepage-title{font-size:26px;line-height:1.2;text-align:left;margin:0;letter-spacing:0;text-shadow:none;overflow-wrap:anywhere}.homepage-banner{padding:14px 18px;margin-bottom:16px;gap:10px 24px}.homepage-banner h2{font-size:16px;margin:0 0 5px}.homepage-banner-copy p{font-size:13px;line-height:1.45}.homepage-banner-actions{gap:4px}.homepage-burn-activity .burn-leaderboard-header{padding:13px 16px}.homepage-burn-activity .burn-leaderboard-header h2{font-size:17px;line-height:1.3}.homepage-burn-activity .burn-leaderboard-header p{margin-top:4px;font-size:12px}.homepage-burn-activity .burn-total{padding:16px 20px}.homepage-burn-activity .burn-total-value{font-size:clamp(26px,4vw,36px)}
 @media(max-width:600px){.homepage-container{padding:14px 12px 28px}.homepage-header{padding:10px 12px;gap:10px}.homepage-header .homepage-logo{width:40px;height:40px;flex-basis:40px}.homepage-header .homepage-title{font-size:22px}.homepage-banner{padding:12px 14px;gap:10px}.homepage-banner h2{font-size:15px}.homepage-burn-activity .burn-leaderboard-header{padding:12px}.homepage-burn-activity .burn-leaderboard-header h2{font-size:16px}}
+
+/* Shallow illustrated welcome banner: keep gameplay content close at hand. */
+.homepage-scene-banner {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-height: 210px;
+  box-sizing: border-box;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: center;
+  gap: 14px;
+  padding: 24px 30px;
+  border-color: #52674a;
+  background: #101c15;
+}
+.homepage-scene-image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; z-index: -2; }
+.homepage-scene-banner::before { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg,rgba(5,16,10,.86),rgba(5,16,10,.64) 48%,rgba(5,16,10,.12)); }
+.homepage-scene-eyebrow { display: block; margin-bottom: 7px; font-size: 10px; letter-spacing: .18em; font-weight: 800; color: #d0e6b5; }
+.homepage-scene-banner h1 { margin: 0 0 8px; color: #f3f4e8; font-size: clamp(22px,3vw,30px); line-height: 1.15; text-align: left; text-shadow: 0 2px 12px #0007; }
+.homepage-scene-banner .homepage-banner-copy { max-width: 470px; }
+.homepage-scene-banner .homepage-banner-copy p { color: #e0e8d8; font-size: 13px; line-height: 1.5; }
+.homepage-scene-banner .homepage-banner-actions { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 8px 20px; }
+.homepage-scene-banner .homepage-shop-link { background: #d2e5b2; border-color: #d2e5b2; color: #152719; }
+.homepage-scene-banner .homepage-shop-link:hover { background: #e2f1c9; }
+.homepage-scene-banner .homepage-community-links { gap: 0 12px; }
+.homepage-scene-banner .homepage-community-links a { color: #e3edd9; text-shadow: 0 1px 4px #000; }
+@media(max-width:600px) {
+  .homepage-scene-banner { min-height: 220px; padding: 20px 18px; gap: 12px; }
+  .homepage-scene-image { object-position: 24% center; }
+  .homepage-scene-banner::before { background: linear-gradient(90deg,rgba(5,16,10,.8),rgba(5,16,10,.5)); }
+  .homepage-scene-banner .homepage-banner-copy p { max-width: 320px; font-size: 12px; }
+  .homepage-scene-banner .homepage-banner-actions { gap: 8px; }
+  .homepage-scene-banner .homepage-community-links { gap: 0 12px; }
+  .homepage-scene-banner .homepage-community-links a { font-size: 11px; min-height: 30px; }
+}
